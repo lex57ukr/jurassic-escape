@@ -413,12 +413,12 @@
         TAR_PIT_MIN_SPACING: 200, // Minimum distance between tar pits
         TAR_PIT_OBSTACLE_CLEARANCE: 50, // Clearance from obstacles
         TAR_PIT_SPAWN_MAX_ATTEMPTS: 100,
-        TAR_PIT_BUBBLE_FREQUENCY: 120, // Frames between bubble animations (2 seconds)
-        TAR_PIT_BUBBLE_DURATION: 20, // Duration of bubble animation in frames
-        TAR_PIT_BUBBLE_BASE_RADIUS: 3, // Starting bubble radius
-        TAR_PIT_BUBBLE_GROWTH: 2, // Bubble radius growth
-        TAR_PIT_BUBBLE_OFFSET_X: 10, // Bubble X offset from center
-        TAR_PIT_BUBBLE_OFFSET_Y: -5, // Bubble Y offset from center
+        TAR_PIT_BUBBLE_FREQUENCY: 30, // Frames between bubble spawns (0.5 seconds)
+        TAR_PIT_BUBBLE_DURATION: 40, // Duration of bubble animation in frames
+        TAR_PIT_BUBBLE_BASE_RADIUS: 2, // Starting bubble radius
+        TAR_PIT_BUBBLE_GROWTH: 4, // Bubble radius growth
+        TAR_PIT_BUBBLE_COUNT: 3, // Number of bubbles per pit
+        TAR_PIT_BUBBLE_SPREAD: 20, // Random spread radius for bubble positions
         TAR_PIT_RIM_WIDTH: 4, // Width of tar pit rim stroke
 
         // Electric Fences
@@ -1009,7 +1009,11 @@
             x: tarX,
             y: tarY,
             radius: GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS,
-            bubbleTimer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY
+            bubbles: Array.from({ length: GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_COUNT }, (_, i) => ({
+              timer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY,
+              offsetX: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD,
+              offsetY: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD
+            }))
           });
         }
 
@@ -1802,23 +1806,28 @@
             ctx.lineWidth = GAME_CONSTANTS.HAZARDS.TAR_PIT_RIM_WIDTH;
             ctx.stroke();
 
-            // Update bubble animation
-            tarPit.bubbleTimer++;
-            if (tarPit.bubbleTimer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
-              tarPit.bubbleTimer = 0;
-            }
+            // Update and draw multiple bubbles
+            tarPit.bubbles.forEach(bubble => {
+              bubble.timer++;
+              if (bubble.timer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
+                bubble.timer = 0;
+                // Randomize position for next cycle
+                bubble.offsetX = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
+                bubble.offsetY = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
+              }
 
-            // Draw bubbles at intervals
-            if (tarPit.bubbleTimer < GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION) {
-              const bubbleProgress = tarPit.bubbleTimer / GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION;
-              const bubbleRadius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_BASE_RADIUS + bubbleProgress * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_GROWTH;
-              const bubbleAlpha = 1 - bubbleProgress;
+              // Draw bubble during active phase
+              if (bubble.timer < GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION) {
+                const bubbleProgress = bubble.timer / GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION;
+                const bubbleRadius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_BASE_RADIUS + bubbleProgress * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_GROWTH;
+                const bubbleAlpha = 1 - bubbleProgress;
 
-              ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
-              ctx.beginPath();
-              ctx.arc(screenX + GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_OFFSET_X, screenY + GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_OFFSET_Y, bubbleRadius, 0, Math.PI * 2);
-              ctx.fill();
-            }
+                ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
+                ctx.beginPath();
+                ctx.arc(screenX + bubble.offsetX, screenY + bubble.offsetY, bubbleRadius, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            });
           });
 
           // Draw electric fences
