@@ -20,6 +20,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 - **WASD** or **Arrow Keys**: Move your character
 - **Spacebar**: Jump over obstacles
+- **Q**: Switch between regular gun (💥) and tranquilizer (💉)
 - **Mouse**: Aim your weapon
 - **Click**: Shoot (consumes ammo)
 - **ESC**: Pause game menu
@@ -28,6 +29,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 **Mobile/Touch:**
 
 - **🕹️ Virtual Joystick** (bottom left): Move in any direction
+- **Weapon Switch Button** (top right): Toggle between gun types
 - **JUMP Button** (bottom right, yellow): Jump over obstacles
 - **FIRE Button** (bottom right, red): Auto-aim at nearest dinosaur
 - **⏸ PAUSE Button**: Access pause menu
@@ -42,24 +44,39 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - Reach the golden EXIT zone to complete each level
 - Survive all 3 levels to win!
 
-## 🦖 Enemy Types
+## 🦖 Dinosaur Types
 
-- **Velociraptor**: Fast and agile hunters (2 HP, 100 points)
-- **Stegosaurus**: Slow but tough (3 HP, 200 points)
-- **T-Rex**: The ultimate predator (5 HP, 300 points)
+**Aggressive Predators** (chase and attack player):
+- **Velociraptor**: Fast and agile hunters (2 HP, 100 points, 1 tranq shot)
+- **Stegosaurus**: Slow but tough (3 HP, 200 points, 2 tranq shots)
+- **T-Rex**: The ultimate predator (4 HP, 300 points, 3 tranq shots)
 
-## 💎 Powerups
+**Peaceful Herbivores** (flee from player, no damage):
+- **Parasaurolophus**: Duck-billed with head crest (2 HP, 50 points, 1 tranq shot)
+- **Triceratops**: Three-horned with frill (3 HP, 75 points, 2 tranq shots)
+
+## 💎 Collectibles & Powerups
 
 - **❤️ Health Pack**: Restores 1 heart (red cross)
 - **⚡ Speed Boost**: Temporary speed increase (lightning bolt)
-- **💥 Ammo**: Dropped by defeated dinosaurs
+- **💥 Ammo**: Regular ammunition, dropped by defeated dinosaurs
+- **💉 Tranquilizer Depot**: Green crate with 5 tranquilizer darts
 
 ## 🎯 Features
 
 - **Three challenging levels** with increasing difficulty
+- **Dual weapon system**: Regular gun and tranquilizer dart
+  - **Tranquilizer**: Non-lethal option that puts dinosaurs to sleep
+  - Multi-shot mechanic: larger dinosaurs need more shots
+  - Awards 50% points when tranquilizing vs 100% for killing
+  - Sleeping dinosaurs display Z-Z-Z animation and don't attack
+- **Five dinosaur species** with distinct behaviors:
+  - Aggressive predators that chase and attack
+  - Peaceful herbivores that flee when approached
 - **Mobile and desktop support** with responsive canvas and touch controls
 - **Hand-drawn canvas graphics** for all game entities
 - **Dynamic camera system** that follows the player
+- **Floating text system** for score popups and feedback
 - **Sound effects** for all major game events (requires .wav files in `./assets/`)
 - **Settings menu** with customizable options - persists across sessions:
   - Sound control (mute/unmute)
@@ -77,10 +94,13 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 Place the following `.wav` files in the `./assets/` folder for full audio experience:
 
-- `shoot.wav` - Firing weapon
+- `shoot.wav` - Firing regular gun
+- `tranq_shoot.wav` - Firing tranquilizer
 - `hit.wav` - Bullet hits dinosaur
+- `tranq_hit.wav` - Tranquilizer hits dinosaur
 - `death.wav` - Dinosaur defeated
 - `pickup_ammo.wav` - Collecting ammunition
+- `pickup_tranq.wav` - Collecting tranquilizer depot
 - `pickup_health.wav` - Collecting health pack
 - `pickup_speed.wav` - Collecting speed boost
 - `player_hurt.wav` - Player takes damage
