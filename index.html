@@ -551,8 +551,63 @@
               dino.vy = Math.sin(dino.patrolAngle) * dino.speed * 0.5;
             }
 
-            dino.x += dino.vx;
-            dino.y += dino.vy;
+            // Calculate new position
+            let newDinoX = dino.x + dino.vx;
+            let newDinoY = dino.y + dino.vy;
+
+            // Check collision with obstacles
+            let dinoCollided = false;
+            for (const obs of game.obstacles) {
+              const obsDx = newDinoX - obs.x;
+              const obsDy = newDinoY - obs.y;
+              const obsDist = Math.sqrt(obsDx * obsDx + obsDy * obsDy);
+              if (obsDist < dino.size + obs.radius) {
+                dinoCollided = true;
+
+                // Obstacle avoidance: try steering around the obstacle
+                // Calculate perpendicular direction to slide around obstacle
+                const angle = Math.atan2(dino.vy, dino.vx);
+                const avoidAngleLeft = angle + Math.PI / 2;
+                const avoidAngleRight = angle - Math.PI / 2;
+
+                // Try turning left
+                const tryLeftX = dino.x + Math.cos(avoidAngleLeft) * dino.speed;
+                const tryLeftY = dino.y + Math.sin(avoidAngleLeft) * dino.speed;
+                const leftDx = tryLeftX - obs.x;
+                const leftDy = tryLeftY - obs.y;
+                const leftDist = Math.sqrt(leftDx * leftDx + leftDy * leftDy);
+
+                // Try turning right
+                const tryRightX = dino.x + Math.cos(avoidAngleRight) * dino.speed;
+                const tryRightY = dino.y + Math.sin(avoidAngleRight) * dino.speed;
+                const rightDx = tryRightX - obs.x;
+                const rightDy = tryRightY - obs.y;
+                const rightDist = Math.sqrt(rightDx * rightDx + rightDy * rightDy);
+
+                // Choose the direction that moves farther from obstacle
+                if (leftDist > rightDist && leftDist > dino.size + obs.radius) {
+                  newDinoX = tryLeftX;
+                  newDinoY = tryLeftY;
+                  dinoCollided = false;
+                } else if (rightDist > dino.size + obs.radius) {
+                  newDinoX = tryRightX;
+                  newDinoY = tryRightY;
+                  dinoCollided = false;
+                } else {
+                  // If both directions blocked, reverse and pick new angle
+                  dino.patrolAngle = Math.random() * Math.PI * 2;
+                  newDinoX = dino.x;
+                  newDinoY = dino.y;
+                }
+                break;
+              }
+            }
+
+            // Apply movement if no collision
+            if (!dinoCollided) {
+              dino.x = newDinoX;
+              dino.y = newDinoY;
+            }
 
             if (dino.x < dino.size) { dino.x = dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
             if (dino.x > game.mapWidth - dino.size) { dino.x = game.mapWidth - dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
