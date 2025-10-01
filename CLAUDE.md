@@ -61,14 +61,23 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
   - Procedurally drawn with safari hat, khaki clothing, and rotating gun
   - Jump physics: velocity starts at 8, gravity of 0.5 per frame
   - Weapon switching: Q key (desktop) or touch button (mobile) to toggle between regular gun and tranquilizer
-- **Dinosaurs** (5 types): Raptor, T-Rex, Stegosaurus (aggressive), Parasaurolophus, Triceratops (herbivores)
-  - Each has unique stats: health, speed, size, points, aggressive flag
+- **Dinosaurs** (6 types): Raptor, T-Rex, Stegosaurus, Dilophosaurus (aggressive), Parasaurolophus, Triceratops (herbivores)
+  - Each has unique stats: health, speed, size, points, aggressive flag, territorial flag
   - **Aggressive dinosaurs** (Raptor, T-Rex, Stego): AI states `patrol` or `chase` (aggro within range), damage player on contact
+  - **Territorial dinosaurs** (Dilophosaurus): AI states `patrol`, `chase`, or `return`
+    - Territory system: 200 pixel radius zone, marked by skull emoji and dashed red circle
+    - Aggressive only when player enters territory (within 250px aggro range)
+    - Spit attack: 180px range, 2 second cooldown, yellow-green projectiles dealing 1 damage
+    - Returns to territory center when straying beyond 80% of radius (50% when already returning)
+    - Territory spawning avoids obstacles and other territories (440px minimum spacing)
+    - Territory marker removed when dinosaur dies
+    - Hysteresis on state transitions prevents rapid flipping at boundaries
   - **Herbivores** (Parasaurolophus, Triceratops): AI states `patrol` or `flee` (flee within range), no damage to player
     - Flee range: 150 pixels, flee speed: 1.5x base speed
     - Lower point values (50/75) vs predators (100-300)
   - Obstacle avoidance: when blocked, try steering left/right; if both blocked, reverse
   - Hand-drawn canvas art with facing direction (horizontal flip for left movement)
+    - Facing direction stored in `facingLeft` property, only updates when horizontal velocity exceeds 0.3
   - Sleep mechanic: tranquilized dinosaurs become `isSleeping`, don't move or attack, show Z-Z-Z animation
 - **Obstacles**: Trees and bushes with circular collision
 - **Powerups**: Health (red cross) and Speed (lightning bolt)
@@ -83,6 +92,7 @@ All collision uses circle-vs-circle distance checks:
 - Dinosaurs vs obstacles (movement blocking with steering avoidance)
 - Player vs aggressive dinosaurs (damage, only when not sleeping)
 - Bullets vs dinosaurs (regular bullets: damage/kill, tranquilizer: track hits and put to sleep)
+- Spit projectiles vs player (1 damage, triggers invincibility)
 - Player vs powerups/ammo/tranq depots (collection)
 
 #### Level Progression
@@ -116,7 +126,7 @@ Levels defined in `levelConfigs` (lines 45-75):
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
-- Layered drawing order: background → exit → obstacles → powerups → tranq depots → dinosaurs → player → bullets → ammo pickups → floating texts
+- Layered drawing order: background → exit → obstacles → powerups → tranq depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
 - Health bars drawn above dinosaurs
 - Sleeping Z-Z-Z animation drawn above sleeping dinosaurs (3 "Z"s of increasing size with bobbing animation)
 - Floating text system: score popups (+N), tranq hit counters (1/2, 2/3), ammo pickups with fade-out over 1 second
@@ -136,15 +146,21 @@ Levels defined in `levelConfigs` (lines 45-75):
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
 - **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
 - **Tranquilizer mechanic**: Multi-shot system based on dinosaur size
-  - Raptor/Para: 1 shot, Stego/Trike: 2 shots, T-Rex: 3 shots
+  - Raptor/Para: 1 shot, Dilo/Stego/Trike: 2 shots, T-Rex: 3 shots
   - Shows hit counter as floating text (1/2, 2/3, etc.)
   - Awards 50% of kill points when dinosaur is put to sleep
-  - Sleep duration: Raptor 8s, Para 7s, Stego/Trike 6s, T-Rex 4s
+  - Sleep duration: Raptor 8s, Para 7s, Dilo/Stego/Trike 6s, T-Rex 4s
   - Sleeping dinosaurs don't move or attack, display Z-Z-Z animation
   - Tranq hit counter resets when dinosaur wakes up
+- **Territory system**: Territorial dinosaurs defend specific zones
+  - Territory spawning uses collision avoidance (obstacles and other territories)
+  - Visual markers: skull emoji at center, dashed red circle outline
+  - Linked data structure: territories array tracks ownership, dinosaurs store territoryIndex
+  - Territory cleanup: removed when dinosaur dies with index rebalancing
 - **Dinosaur art**: Procedurally drawn on canvas with context transformations (scale, rotate, flip)
   - Parasaurolophus: Tan/brown with distinctive swept-back head crest
   - Triceratops: Tan/beige with three horns and prominent neck frill
+  - Dilophosaurus: Lime green with expandable red neck frill (expands when chasing), red eyes
 - **Player art**: Safari explorer with rotating gun using ctx.save/translate/rotate/restore pattern
 - **Floating text system**: Reusable for score popups, hit counters, and ammo pickups with fade-out animation
 - **Input handling**:

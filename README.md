@@ -51,6 +51,13 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **Stegosaurus**: Slow but tough (3 HP, 200 points, 2 tranq shots)
 - **T-Rex**: The ultimate predator (4 HP, 300 points, 3 tranq shots)
 
+**Territorial Predators** (defend marked zones with 💀 skull marker):
+- **Dilophosaurus**: Lime green with expandable neck frill (3 HP, 150 points, 2 tranq shots)
+  - Guards 200-pixel radius territory (shown with dashed red circle)
+  - Aggressive only when player enters territory
+  - Spit attack: ranged projectile dealing 1 damage
+  - Returns to territory center when straying too far
+
 **Peaceful Herbivores** (flee from player, no damage):
 - **Parasaurolophus**: Duck-billed with head crest (2 HP, 50 points, 1 tranq shot)
 - **Triceratops**: Three-horned with frill (3 HP, 75 points, 2 tranq shots)
@@ -70,8 +77,9 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
   - Multi-shot mechanic: larger dinosaurs need more shots
   - Awards 50% points when tranquilizing vs 100% for killing
   - Sleeping dinosaurs display Z-Z-Z animation and don't attack
-- **Five dinosaur species** with distinct behaviors:
+- **Six dinosaur species** with distinct behaviors:
   - Aggressive predators that chase and attack
+  - Territorial predators that defend marked zones with spit attacks
   - Peaceful herbivores that flee when approached
 - **Mobile and desktop support** with responsive canvas and touch controls
 - **Hand-drawn canvas graphics** for all game entities
