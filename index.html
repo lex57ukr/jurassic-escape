@@ -293,10 +293,18 @@
         HERBIVORE_FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
         TERRITORY_RADIUS: 200,         // Radius of territorial zone
         TERRITORY_AGGRO_RANGE: 250,    // Chase range within territory
+        TERRITORY_MARGIN: 30,          // Buffer zone to prevent state flipping at boundaries
+        TERRITORY_RETURN_THRESHOLD_ACTIVE: 0.8, // Return threshold when not already returning
+        TERRITORY_RETURN_THRESHOLD_RETURNING: 0.5, // Return threshold when already returning (closer to center)
+        TERRITORY_SPACING_MULTIPLIER: 2.2, // Minimum spacing between territories (as multiple of radius)
+        TERRITORY_OBSTACLE_CLEARANCE: 20, // Extra clearance from obstacles for territory center
+        TERRITORY_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid territory position
         SPIT_ATTACK_RANGE: 180,        // Range for spit attack
         SPIT_ATTACK_COOLDOWN: 120,     // Frames between spit attacks (2 seconds)
         SPIT_PROJECTILE_SPEED: 4,      // Speed of spit projectiles
+        SPIT_PROJECTILE_RADIUS: 6,     // Radius of spit projectiles
         SPIT_DAMAGE: 1,                // Damage from spit
+        FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
       },
 
       // Touch Controls
@@ -739,8 +747,8 @@
               let territoryX = spawnPos.x;
               let territoryY = spawnPos.y;
               let attempts = 0;
-              const maxAttempts = 50;
-              const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * 2.2; // 20% buffer between territories
+              const maxAttempts = GAME_CONSTANTS.AI.TERRITORY_SPAWN_MAX_ATTEMPTS;
+              const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * GAME_CONSTANTS.AI.TERRITORY_SPACING_MULTIPLIER;
 
               while (attempts < maxAttempts) {
                 let overlapping = false;
@@ -758,7 +766,7 @@
                 if (!overlapping) {
                   for (const obstacle of game.obstacles) {
                     const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
-                    if (dist < obstacle.radius + dinoType.size + 20) {
+                    if (dist < obstacle.radius + dinoType.size + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
                       overlapping = true;
                       break;
                     }
@@ -1233,8 +1241,8 @@
               const playerDistFromTerritory = distance(game.player.x, game.player.y, dino.territoryX, dino.territoryY);
 
               // Use hysteresis to prevent rapid state switching at boundaries
-              const territoryMargin = 30; // Buffer zone to prevent flipping
-              const returnThreshold = dino.state === 'return' ? 0.5 : 0.8; // Stay in return until closer to center
+              const territoryMargin = GAME_CONSTANTS.AI.TERRITORY_MARGIN;
+              const returnThreshold = dino.state === 'return' ? GAME_CONSTANTS.AI.TERRITORY_RETURN_THRESHOLD_RETURNING : GAME_CONSTANTS.AI.TERRITORY_RETURN_THRESHOLD_ACTIVE;
 
               if (playerDistFromTerritory < dino.territoryRadius + territoryMargin && dist < GAME_CONSTANTS.AI.TERRITORY_AGGRO_RANGE) {
                 // Chase player if they're in/near territory
@@ -1254,7 +1262,7 @@
                     y: dino.y,
                     vx: Math.cos(spitAngle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
                     vy: Math.sin(spitAngle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
-                    radius: 6
+                    radius: GAME_CONSTANTS.AI.SPIT_PROJECTILE_RADIUS
                   });
                   dino.spitCooldown = GAME_CONSTANTS.AI.SPIT_ATTACK_COOLDOWN;
                 }
@@ -1363,7 +1371,7 @@
             }
 
             // Update facing direction only when velocity has significant horizontal component
-            if (Math.abs(dino.vx) > 0.3) {
+            if (Math.abs(dino.vx) > GAME_CONSTANTS.AI.FACING_DIRECTION_THRESHOLD) {
               dino.facingLeft = dino.vx < 0;
             }
 
