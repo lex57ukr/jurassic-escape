@@ -23,6 +23,7 @@
       const [playerAmmo, setPlayerAmmo] = useState(10);
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
+      const [showPauseMenu, setShowPauseMenu] = useState(false);
 
       // Sound system with pooling for simultaneous playback
       const soundsRef = useRef({});
@@ -194,6 +195,12 @@
           const key = e.key.toLowerCase();
           game.keys[key] = true;
 
+          // Handle ESC to pause
+          if (key === 'escape') {
+            setShowPauseMenu(true);
+            return;
+          }
+
           // Handle jump on spacebar press
           if (key === ' ' && !game.player.isJumping) {
             game.player.isJumping = true;
@@ -242,6 +249,12 @@
         window.addEventListener('keyup', handleKeyUp);
 
         const gameLoop = () => {
+          // Pause if pause menu is showing
+          if (showPauseMenu) {
+            animationId = requestAnimationFrame(gameLoop);
+            return;
+          }
+
           // Update speed boost timer
           if (game.speedBoostTimer > 0) {
             game.speedBoostTimer--;
@@ -970,7 +983,7 @@
           window.removeEventListener('keydown', handleKeyDown);
           window.removeEventListener('keyup', handleKeyUp);
         };
-      }, [gameState, currentLevel, playSound]);
+      }, [gameState, currentLevel, playSound, showPauseMenu]);
 
       const startGame = () => {
         setCurrentLevel(1);
@@ -1043,6 +1056,41 @@
                 className="border-4 border-green-600 bg-green-900 cursor-crosshair"
               />
               <p className="text-gray-400 mt-2">Collect powerups and defeat dinosaurs to survive!</p>
+
+              {showPauseMenu && (
+                <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center">
+                  <div className="bg-gray-800 p-8 rounded-lg text-center shadow-xl">
+                    <h2 className="text-3xl font-bold text-green-400 mb-6">PAUSED</h2>
+                    <div className="flex flex-col gap-4">
+                      <button
+                        onClick={() => setShowPauseMenu(false)}
+                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
+                      >
+                        Continue
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowPauseMenu(false);
+                          initGame(currentLevel);
+                          setGameState('playing');
+                        }}
+                        className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
+                      >
+                        Restart Level
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowPauseMenu(false);
+                          setGameState('menu');
+                        }}
+                        className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+                      >
+                        Exit to Menu
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
