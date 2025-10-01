@@ -76,11 +76,12 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **Tar Pits**: Dark, bubbling pools that slow down movement to 50% speed
   - Affects both player and dinosaurs
   - No damage, but makes it harder to escape from predators
-  - Can be identified by dark brown/black coloring with bubbling animation
+  - Can be identified by dark brown/black coloring with bubbling animation (3 bubbles per pit)
 - **Electric Fences**: High-voltage barriers that shock on contact
   - Player: Takes 1 damage (can jump over to avoid)
   - Dinosaurs: Knocked back and stunned temporarily
-  - Yellow electric wires with sparking effects
+  - **Smart AI**: Dinosaurs learn to avoid fences after getting zapped, but forget after ~10 seconds
+  - Yellow electric wires with sparking effects and electric zap animation
   - Strategically placed throughout levels
 
 ## 🎯 Features
