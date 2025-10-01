@@ -47,11 +47,13 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 ## 🦖 Dinosaur Types
 
 **Aggressive Predators** (chase and attack player):
+
 - **Velociraptor**: Fast and agile hunters (2 HP, 100 points, 1 tranq shot)
 - **Stegosaurus**: Slow but tough (3 HP, 200 points, 2 tranq shots)
 - **T-Rex**: The ultimate predator (4 HP, 300 points, 3 tranq shots)
 
 **Territorial Predators** (defend marked zones with 💀 skull marker):
+
 - **Dilophosaurus**: Lime green with expandable neck frill (3 HP, 150 points, 2 tranq shots)
   - Guards 200-pixel radius territory (shown with dashed red circle)
   - Aggressive only when player enters territory
@@ -59,6 +61,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
   - Returns to territory center when straying too far
 
 **Peaceful Herbivores** (flee from player, no damage):
+
 - **Parasaurolophus**: Duck-billed with head crest (2 HP, 50 points, 1 tranq shot)
 - **Triceratops**: Three-horned with frill (3 HP, 75 points, 2 tranq shots)
 
