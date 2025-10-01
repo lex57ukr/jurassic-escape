@@ -61,12 +61,15 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **Hand-drawn canvas graphics** for all game entities
 - **Dynamic camera system** that follows the player
 - **Sound effects** for all major game events (requires .wav files in `./assets/`)
-- **Settings menu** with sound control (mute/unmute) - persists across sessions
+- **Settings menu** with customizable options - persists across sessions:
+  - Sound control (mute/unmute)
+  - Viewport size (Small: 800x600, Medium: 1000x750, Large: 1200x900)
 - **Jump mechanic** to escape tight spots and stuck positions
 - **Pause menu** with options to continue, restart, or exit
 - **Speed boost powerup** with visual glow effect
 - **Health and ammo management** for strategic gameplay
 - **Auto-aim** for touch controls (mobile)
+- **Invincibility frames** after taking damage for fair gameplay
 
 ## 🔊 Sound Files
 
