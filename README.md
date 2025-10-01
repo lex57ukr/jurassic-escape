@@ -23,12 +23,15 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **Mouse**: Aim your weapon
 - **Click**: Shoot (consumes ammo)
 - **ESC**: Pause game menu
+- **⚙️ Settings Button**: Access game settings
 
 **Mobile/Touch:**
 
 - **🕹️ Virtual Joystick** (bottom left): Move in any direction
 - **JUMP Button** (bottom right, yellow): Jump over obstacles
 - **FIRE Button** (bottom right, red): Auto-aim at nearest dinosaur
+- **⏸ PAUSE Button**: Access pause menu
+- **⚙️ Settings Button**: Access game settings
 - Touch controls automatically appear on mobile devices
 
 ### Objective
@@ -58,6 +61,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **Hand-drawn canvas graphics** for all game entities
 - **Dynamic camera system** that follows the player
 - **Sound effects** for all major game events (requires .wav files in `./assets/`)
+- **Settings menu** with sound control (mute/unmute) - persists across sessions
 - **Jump mechanic** to escape tight spots and stuck positions
 - **Pause menu** with options to continue, restart, or exit
 - **Speed boost powerup** with visual glow effect
