@@ -61,6 +61,7 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 - **Dinosaurs** (3 types): Raptor, T-Rex, Stegosaurus
   - Each has unique stats: health, speed, size, points
   - AI states: `patrol` (random wandering) or `chase` (aggro within range)
+  - Obstacle avoidance: when blocked, try steering left/right; if both blocked, reverse
   - Hand-drawn canvas art with facing direction (horizontal flip for left movement)
 - **Obstacles**: Trees and bushes with circular collision
 - **Powerups**: Health (red cross) and Speed (lightning bolt)
@@ -71,6 +72,7 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 All collision uses circle-vs-circle distance checks:
 
 - Player vs obstacles (movement blocking, bypassed when jump height >= 25)
+- Dinosaurs vs obstacles (movement blocking with steering avoidance)
 - Player vs dinosaurs (damage)
 - Bullets vs dinosaurs (damage)
 - Player vs powerups/ammo (collection)
@@ -111,7 +113,7 @@ Levels defined in `levelConfigs` (lines 45-75):
 
 ## Key Implementation Details
 
-- **No collision between game entities** except player (dinosaurs don't collide with obstacles or each other)
+- **Collision system**: Player and dinosaurs collide with obstacles; dinosaurs don't collide with each other
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
 - **Ammo economy**: Start with 10, dinosaurs drop ammo equal to their max health when killed
