@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Jurassic Escape</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    const JurassicEscape = () => {
+      const canvasRef = useRef(null);
+      const [gameState, setGameState] = useState('menu');
+      const [score, setScore] = useState(0);
+      const [playerHealth, setPlayerHealth] = useState(5);
+      const [playerAmmo, setPlayerAmmo] = useState(10);
+      const [currentLevel, setCurrentLevel] = useState(1);
+      const [speedBoostActive, setSpeedBoostActive] = useState(false);
+
+      const gameRef = useRef({
+        player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15 },
+        bullets: [],
+        dinosaurs: [],
+        ammoPickups: [],
+        powerups: [],
+        obstacles: [],
+        mouseX: 0,
+        mouseY: 0,
+        keys: {},
+        exit: { x: 1800, y: 1400, width: 60, height: 60 },
+        cameraX: 0,
+        cameraY: 0,
+        mapWidth: 2400,
+        mapHeight: 1800,
+        speedBoostTimer: 0
+      });
+
+      const levelConfigs = {
+        1: {
+          name: "The Beginning",
+          dinosaurs: [
+            { type: 'raptor', count: 3, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100 },
+            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200 }
+          ],
+          obstacles: 40,
+          powerups: 3
+        },
+        2: {
+          name: "Deeper Danger",
+          dinosaurs: [
+            { type: 'raptor', count: 5, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100 },
+            { type: 'trex', count: 2, health: 4, speed: 1, size: 35, color: '#654321', points: 300 },
+            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200 }
+          ],
+          obstacles: 50,
+          powerups: 4
+        },
+        3: {
+          name: "Final Escape",
+          dinosaurs: [
+            { type: 'raptor', count: 6, health: 2, speed: 1.7, size: 20, color: '#8B4513', points: 100 },
+            { type: 'trex', count: 3, health: 4, speed: 1.2, size: 35, color: '#654321', points: 300 },
+            { type: 'stego', count: 3, health: 3, speed: 0.9, size: 30, color: '#556B2F', points: 200 }
+          ],
+          obstacles: 60,
+          powerups: 5
+        }
+      };
+
+      const initGame = useCallback((level) => {
+        const game = gameRef.current;
+        const config = levelConfigs[level];
+
+        game.player = { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15 };
+        game.bullets = [];
+        game.ammoPickups = [];
+        game.powerups = [];
+        game.dinosaurs = [];
+        game.obstacles = [];
+        game.keys = {};
+        game.speedBoostTimer = 0;
+
+        setPlayerHealth(5);
+        setPlayerAmmo(10);
+        setSpeedBoostActive(false);
+
+        // Create obstacles
+        for (let i = 0; i < config.obstacles; i++) {
+          game.obstacles.push({
+            x: Math.random() * (game.mapWidth - 100) + 50,
+            y: Math.random() * (game.mapHeight - 100) + 50,
+            radius: 15 + Math.random() * 20,
+            type: Math.random() > 0.5 ? 'tree' : 'bush'
+          });
+        }
+
+        // Create dinosaurs
+        let dinoIndex = 0;
+        config.dinosaurs.forEach(dinoType => {
+          for (let i = 0; i < dinoType.count; i++) {
+            game.dinosaurs.push({
+              x: 300 + (dinoIndex % 4) * 250 + Math.random() * 100,
+              y: 200 + Math.floor(dinoIndex / 4) * 300 + Math.random() * 100,
+              vx: 0,
+              vy: 0,
+              health: dinoType.health,
+              maxHealth: dinoType.health,
+              speed: dinoType.speed,
+              size: dinoType.size,
+              color: dinoType.color,
+              type: dinoType.type,
+              points: dinoType.points,
+              aggroRange: 200,
+              state: 'patrol',
+              patrolAngle: Math.random() * Math.PI * 2
+            });
+            dinoIndex++;
+          }
+        });
+
+        // Create powerups
+        for (let i = 0; i < config.powerups; i++) {
+          const type = Math.random() > 0.5 ? 'health' : 'speed';
+          game.powerups.push({
+            x: 400 + Math.random() * (game.mapWidth - 800),
+            y: 400 + Math.random() * (game.mapHeight - 800),
+            type: type,
+            radius: 12,
+            active: true
+          });
+        }
+      }, []);
+
+      useEffect(() => {
+        if (gameState !== 'playing') return;
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const game = gameRef.current;
+
+        let animationId;
+
+        const handleKeyDown = (e) => {
+          game.keys[e.key.toLowerCase()] = true;
+        };
+
+        const handleKeyUp = (e) => {
+          game.keys[e.key.toLowerCase()] = false;
+        };
+
+        const handleMouseMove = (e) => {
+          const rect = canvas.getBoundingClientRect();
+          game.mouseX = e.clientX - rect.left + game.cameraX;
+          game.mouseY = e.clientY - rect.top + game.cameraY;
+        };
+
+        const handleClick = (e) => {
+          if (game.player.ammo > 0) {
+            const rect = canvas.getBoundingClientRect();
+            const targetX = e.clientX - rect.left + game.cameraX;
+            const targetY = e.clientY - rect.top + game.cameraY;
+
+            const dx = targetX - game.player.x;
+            const dy = targetY - game.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            game.bullets.push({
+              x: game.player.x,
+              y: game.player.y,
+              vx: (dx / dist) * 8,
+              vy: (dy / dist) * 8,
+              radius: 4
+            });
+
+            game.player.ammo--;
+            setPlayerAmmo(game.player.ammo);
+          }
+        };
+
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('click', handleClick);
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        const gameLoop = () => {
+          // Update speed boost timer
+          if (game.speedBoostTimer > 0) {
+            game.speedBoostTimer--;
+            game.player.speed = game.player.baseSpeed * 1.8;
+            if (game.speedBoostTimer === 0) {
+              game.player.speed = game.player.baseSpeed;
+              setSpeedBoostActive(false);
+            }
+          }
+
+          // Update player
+          let newX = game.player.x;
+          let newY = game.player.y;
+
+          if (game.keys['w']) newY -= game.player.speed;
+          if (game.keys['s']) newY += game.player.speed;
+          if (game.keys['a']) newX -= game.player.speed;
+          if (game.keys['d']) newX += game.player.speed;
+          if (game.keys['arrowup']) newY -= game.player.speed;
+          if (game.keys['arrowdown']) newY += game.player.speed;
+          if (game.keys['arrowleft']) newX -= game.player.speed;
+          if (game.keys['arrowright']) newX += game.player.speed;
+
+          // Boundary check
+          newX = Math.max(game.player.radius, Math.min(game.mapWidth - game.player.radius, newX));
+          newY = Math.max(game.player.radius, Math.min(game.mapHeight - game.player.radius, newY));
+
+          // Collision with obstacles
+          let collided = false;
+          for (const obs of game.obstacles) {
+            const dx = newX - obs.x;
+            const dy = newY - obs.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < game.player.radius + obs.radius) {
+              collided = true;
+              break;
+            }
+          }
+
+          if (!collided) {
+            game.player.x = newX;
+            game.player.y = newY;
+          }
+
+          // Update camera
+          game.cameraX = game.player.x - canvas.width / 2;
+          game.cameraY = game.player.y - canvas.height / 2;
+          game.cameraX = Math.max(0, Math.min(game.mapWidth - canvas.width, game.cameraX));
+          game.cameraY = Math.max(0, Math.min(game.mapHeight - canvas.height, game.cameraY));
+
+          // Check powerup collection
+          game.powerups.forEach(powerup => {
+            if (!powerup.active) return;
+
+            const dx = game.player.x - powerup.x;
+            const dy = game.player.y - powerup.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < game.player.radius + powerup.radius) {
+              powerup.active = false;
+
+              if (powerup.type === 'health') {
+                if (game.player.health < game.player.maxHealth) {
+                  game.player.health++;
+                  setPlayerHealth(game.player.health);
+                }
+              } else if (powerup.type === 'speed') {
+                game.speedBoostTimer = 300; // 5 seconds at 60fps
+                setSpeedBoostActive(true);
+              }
+            }
+          });
+
+          // Update bullets
+          game.bullets = game.bullets.filter(bullet => {
+            bullet.x += bullet.vx;
+            bullet.y += bullet.vy;
+
+            if (bullet.x < 0 || bullet.x > game.mapWidth || bullet.y < 0 || bullet.y > game.mapHeight) {
+              return false;
+            }
+
+            for (let i = 0; i < game.dinosaurs.length; i++) {
+              const dino = game.dinosaurs[i];
+              const dx = bullet.x - dino.x;
+              const dy = bullet.y - dino.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist < dino.size) {
+                dino.health--;
+                if (dino.health <= 0) {
+                  for (let j = 0; j < dino.maxHealth; j++) {
+                    game.ammoPickups.push({
+                      x: dino.x,
+                      y: dino.y,
+                      startY: dino.y,
+                      vx: (Math.random() - 0.5) * 2,
+                      vy: -2 - Math.random() * 1.5,
+                      bounces: 0,
+                      maxBounces: 3,
+                      life: 400,
+                      radius: 8
+                    });
+                  }
+                  setScore(s => s + dino.points);
+                  game.dinosaurs.splice(i, 1);
+                }
+                return false;
+              }
+            }
+
+            return true;
+          });
+
+          // Update ammo pickups
+          game.ammoPickups = game.ammoPickups.filter(pickup => {
+            pickup.x += pickup.vx;
+            pickup.y += pickup.vy;
+            pickup.vy += 0.15;
+            pickup.life--;
+
+            if (pickup.y >= pickup.startY && pickup.vy > 0) {
+              pickup.y = pickup.startY;
+              pickup.vy *= -0.5;
+              pickup.vx *= 0.7;
+              pickup.bounces++;
+
+              if (pickup.bounces >= pickup.maxBounces) {
+                pickup.vx = 0;
+                pickup.vy = 0;
+              }
+            }
+
+            const dx = pickup.x - game.player.x;
+            const dy = pickup.y - game.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < game.player.radius + pickup.radius + 10) {
+              game.player.ammo++;
+              setPlayerAmmo(game.player.ammo);
+              return false;
+            }
+
+            return pickup.life > 0;
+          });
+
+          // Update dinosaurs
+          game.dinosaurs.forEach(dino => {
+            const dx = game.player.x - dino.x;
+            const dy = game.player.y - dino.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < dino.aggroRange) {
+              dino.state = 'chase';
+              dino.vx = (dx / dist) * dino.speed;
+              dino.vy = (dy / dist) * dino.speed;
+            } else {
+              dino.state = 'patrol';
+              dino.patrolAngle += (Math.random() - 0.5) * 0.1;
+              dino.vx = Math.cos(dino.patrolAngle) * dino.speed * 0.5;
+              dino.vy = Math.sin(dino.patrolAngle) * dino.speed * 0.5;
+            }
+
+            dino.x += dino.vx;
+            dino.y += dino.vy;
+
+            if (dino.x < dino.size) { dino.x = dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
+            if (dino.x > game.mapWidth - dino.size) { dino.x = game.mapWidth - dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
+            if (dino.y < dino.size) { dino.y = dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
+            if (dino.y > game.mapHeight - dino.size) { dino.y = game.mapHeight - dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
+
+            if (dist < game.player.radius + dino.size) {
+              game.player.health--;
+              setPlayerHealth(game.player.health);
+              dino.x -= dx * 2;
+              dino.y -= dy * 2;
+
+              if (game.player.health <= 0) {
+                setGameState('lost');
+              }
+            }
+          });
+
+          // Check win condition
+          const exitDx = game.player.x - game.exit.x - game.exit.width / 2;
+          const exitDy = game.player.y - game.exit.y - game.exit.height / 2;
+          const exitDist = Math.sqrt(exitDx * exitDx + exitDy * exitDy);
+          if (exitDist < game.player.radius + 30) {
+            if (currentLevel < 3) {
+              setGameState('levelComplete');
+            } else {
+              setGameState('won');
+            }
+          }
+
+          // Render
+          ctx.fillStyle = '#3a5f3a';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.fillStyle = '#2d4a2d';
+          for (let i = 0; i < 50; i++) {
+            const gx = (i * 73) % game.mapWidth - game.cameraX;
+            const gy = (i * 97) % game.mapHeight - game.cameraY;
+            ctx.fillRect(gx, gy, 20, 20);
+          }
+
+          // Draw exit
+          const exitScreenX = game.exit.x - game.cameraX;
+          const exitScreenY = game.exit.y - game.cameraY;
+          ctx.fillStyle = '#FFD700';
+          ctx.fillRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
+          ctx.strokeStyle = '#FFA500';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
+          ctx.fillStyle = '#000';
+          ctx.font = '14px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('EXIT', exitScreenX + game.exit.width / 2, exitScreenY + game.exit.height / 2 + 5);
+
+          // Draw obstacles
+          game.obstacles.forEach(obs => {
+            const screenX = obs.x - game.cameraX;
+            const screenY = obs.y - game.cameraY;
+
+            if (obs.type === 'tree') {
+              ctx.fillStyle = '#654321';
+              ctx.fillRect(screenX - 5, screenY - 5, 10, 15);
+              ctx.fillStyle = '#228B22';
+              ctx.beginPath();
+              ctx.arc(screenX, screenY - 10, obs.radius, 0, Math.PI * 2);
+              ctx.fill();
+            } else {
+              ctx.fillStyle = '#2F4F2F';
+              ctx.beginPath();
+              ctx.arc(screenX, screenY, obs.radius, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          // Draw powerups
+          game.powerups.forEach(powerup => {
+            if (!powerup.active) return;
+
+            const screenX = powerup.x - game.cameraX;
+            const screenY = powerup.y - game.cameraY;
+
+            if (powerup.type === 'health') {
+              ctx.fillStyle = '#ff1744';
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+
+              // Draw cross
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.moveTo(screenX - 5, screenY);
+              ctx.lineTo(screenX + 5, screenY);
+              ctx.moveTo(screenX, screenY - 5);
+              ctx.lineTo(screenX, screenY + 5);
+              ctx.stroke();
+            } else if (powerup.type === 'speed') {
+              ctx.fillStyle = '#00e5ff';
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+
+              // Draw lightning bolt
+              ctx.fillStyle = '#fff';
+              ctx.beginPath();
+              ctx.moveTo(screenX + 2, screenY - 6);
+              ctx.lineTo(screenX - 2, screenY);
+              ctx.lineTo(screenX + 1, screenY);
+              ctx.lineTo(screenX - 2, screenY + 6);
+              ctx.lineTo(screenX + 2, screenY);
+              ctx.lineTo(screenX - 1, screenY);
+              ctx.closePath();
+              ctx.fill();
+            }
+          });
+
+          // Draw dinosaurs
+          game.dinosaurs.forEach(dino => {
+            const screenX = dino.x - game.cameraX;
+            const screenY = dino.y - game.cameraY;
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+
+            // Determine if moving left or right (flip horizontally if moving left)
+            const movingLeft = dino.vx < 0;
+            if (movingLeft) {
+              ctx.scale(-1, 1);
+            }
+
+            if (dino.type === 'raptor') {
+              // Velociraptor - lean, aggressive predator stance
+              const scale = dino.size / 20;
+
+              // Tail (long and curved upward)
+              ctx.fillStyle = '#CD7F32';
+              ctx.beginPath();
+              ctx.moveTo(-15 * scale, 2 * scale);
+              ctx.quadraticCurveTo(-30 * scale, -5 * scale, -40 * scale, -10 * scale);
+              ctx.lineTo(-38 * scale, -7 * scale);
+              ctx.quadraticCurveTo(-28 * scale, -3 * scale, -15 * scale, 4 * scale);
+              ctx.fill();
+
+              // Back leg (powerful haunches)
+              ctx.fillStyle = '#B8860B';
+              ctx.beginPath();
+              ctx.ellipse(-8 * scale, 8 * scale, 6 * scale, 10 * scale, Math.PI * 0.2, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Lower leg
+              ctx.fillStyle = '#CD7F32';
+              ctx.fillRect(-10 * scale, 15 * scale, 3 * scale, 8 * scale);
+
+              // Clawed foot
+              ctx.fillStyle = '#8B4513';
+              ctx.beginPath();
+              ctx.moveTo(-12 * scale, 23 * scale);
+              ctx.lineTo(-10 * scale, 20 * scale);
+              ctx.lineTo(-8 * scale, 23 * scale);
+              ctx.lineTo(-10 * scale, 24 * scale);
+              ctx.fill();
+
+              // Body (lean and muscular)
+              ctx.fillStyle = '#DAA520';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 18 * scale, 10 * scale, -Math.PI * 0.1, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Neck
+              ctx.fillStyle = '#DAA520';
+              ctx.beginPath();
+              ctx.ellipse(12 * scale, -5 * scale, 6 * scale, 5 * scale, Math.PI * 0.3, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Head (elongated snout)
+              ctx.fillStyle = '#CD7F32';
+              ctx.beginPath();
+              ctx.ellipse(20 * scale, -8 * scale, 10 * scale, 6 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Snout detail
+              ctx.fillStyle = '#8B4513';
+              ctx.beginPath();
+              ctx.ellipse(26 * scale, -8 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Eye (predatory)
+              ctx.fillStyle = '#FFD700';
+              ctx.beginPath();
+              ctx.ellipse(18 * scale, -10 * scale, 3 * scale, 4 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#000';
+              ctx.beginPath();
+              ctx.ellipse(19 * scale, -10 * scale, 1.5 * scale, 2 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Teeth
+              ctx.strokeStyle = '#FFF';
+              ctx.lineWidth = 1.5 * scale;
+              for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(20 * scale + i * 2 * scale, -6 * scale);
+                ctx.lineTo(20 * scale + i * 2 * scale, -4 * scale);
+                ctx.stroke();
+              }
+
+              // Small arms
+              ctx.fillStyle = '#CD7F32';
+              ctx.beginPath();
+              ctx.ellipse(8 * scale, 4 * scale, 3 * scale, 5 * scale, Math.PI * 0.5, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Stripes on back
+              ctx.strokeStyle = '#8B4513';
+              ctx.lineWidth = 2 * scale;
+              for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-5 * scale + i * 6 * scale, -8 * scale);
+                ctx.lineTo(-8 * scale + i * 6 * scale, -2 * scale);
+                ctx.stroke();
+              }
+
+            } else if (dino.type === 'trex') {
+              // T-Rex - massive head, tiny arms, powerful build
+              const scale = dino.size / 35;
+
+              // Tail (thick and powerful)
+              ctx.fillStyle = '#2E7D32';
+              ctx.beginPath();
+              ctx.moveTo(-20 * scale, 0);
+              ctx.quadraticCurveTo(-40 * scale, 5 * scale, -50 * scale, 0);
+              ctx.lineTo(-48 * scale, 3 * scale);
+              ctx.quadraticCurveTo(-38 * scale, 8 * scale, -20 * scale, 5 * scale);
+              ctx.fill();
+
+              // Massive leg
+              ctx.fillStyle = '#1B5E20';
+              ctx.beginPath();
+              ctx.ellipse(-10 * scale, 12 * scale, 10 * scale, 15 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Lower leg
+              ctx.fillStyle = '#2E7D32';
+              ctx.fillRect(-13 * scale, 22 * scale, 6 * scale, 12 * scale);
+
+              // Large foot
+              ctx.fillStyle = '#1B5E20';
+              ctx.beginPath();
+              ctx.ellipse(-10 * scale, 34 * scale, 8 * scale, 4 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Three-toed claws
+              ctx.fillStyle = '#000';
+              for (let i = -1; i <= 1; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-10 * scale + i * 4 * scale, 34 * scale);
+                ctx.lineTo(-10 * scale + i * 5 * scale, 38 * scale);
+                ctx.lineTo(-10 * scale + i * 3 * scale, 36 * scale);
+                ctx.fill();
+              }
+
+              // Body (massive and robust)
+              ctx.fillStyle = '#388E3C';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 25 * scale, 18 * scale, -Math.PI * 0.15, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Chest (lighter belly)
+              ctx.fillStyle = '#81C784';
+              ctx.beginPath();
+              ctx.ellipse(5 * scale, 5 * scale, 15 * scale, 12 * scale, -Math.PI * 0.15, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Neck (thick)
+              ctx.fillStyle = '#388E3C';
+              ctx.beginPath();
+              ctx.ellipse(18 * scale, -8 * scale, 10 * scale, 8 * scale, Math.PI * 0.4, 0, Math.PI * 2);
+              ctx.fill();
+
+              // MASSIVE head
+              ctx.fillStyle = '#2E7D32';
+              ctx.beginPath();
+              ctx.ellipse(32 * scale, -12 * scale, 18 * scale, 12 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Lower jaw
+              ctx.fillStyle = '#1B5E20';
+              ctx.beginPath();
+              ctx.ellipse(35 * scale, -5 * scale, 15 * scale, 6 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Eye (small and menacing)
+              ctx.fillStyle = '#FFF';
+              ctx.beginPath();
+              ctx.arc(28 * scale, -16 * scale, 4 * scale, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#8B0000';
+              ctx.beginPath();
+              ctx.arc(29 * scale, -16 * scale, 2 * scale, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Nostril
+              ctx.fillStyle = '#000';
+              ctx.beginPath();
+              ctx.ellipse(42 * scale, -10 * scale, 2 * scale, 1.5 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Large teeth
+              ctx.fillStyle = '#FFF';
+              for (let i = 0; i < 8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(25 * scale + i * 3.5 * scale, -8 * scale);
+                ctx.lineTo(26 * scale + i * 3.5 * scale, -15 * scale);
+                ctx.lineTo(27 * scale + i * 3.5 * scale, -8 * scale);
+                ctx.fill();
+
+                // Bottom teeth
+                ctx.beginPath();
+                ctx.moveTo(25 * scale + i * 3.5 * scale, -2 * scale);
+                ctx.lineTo(26 * scale + i * 3.5 * scale, 2 * scale);
+                ctx.lineTo(27 * scale + i * 3.5 * scale, -2 * scale);
+                ctx.fill();
+              }
+
+              // Comically tiny arms
+              ctx.fillStyle = '#388E3C';
+              ctx.beginPath();
+              ctx.ellipse(12 * scale, 6 * scale, 3 * scale, 6 * scale, Math.PI * 0.3, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Tiny claws
+              ctx.strokeStyle = '#1B5E20';
+              ctx.lineWidth = 1 * scale;
+              ctx.beginPath();
+              ctx.moveTo(13 * scale, 11 * scale);
+              ctx.lineTo(14 * scale, 13 * scale);
+              ctx.stroke();
+
+            } else if (dino.type === 'stego') {
+              // Stegosaurus - distinctive plates and spiked tail
+              const scale = dino.size / 30;
+
+              // Tail with spikes
+              ctx.fillStyle = '#7B1FA2';
+              ctx.beginPath();
+              ctx.moveTo(-18 * scale, 2 * scale);
+              ctx.quadraticCurveTo(-35 * scale, -2 * scale, -45 * scale, -5 * scale);
+              ctx.lineTo(-43 * scale, -2 * scale);
+              ctx.quadraticCurveTo(-33 * scale, 1 * scale, -18 * scale, 5 * scale);
+              ctx.fill();
+
+              // Tail spikes (thagomizer)
+              ctx.fillStyle = '#F06292';
+              for (let i = 0; i < 4; i++) {
+                ctx.beginPath();
+                ctx.moveTo(-35 * scale - i * 5 * scale, -3 * scale);
+                ctx.lineTo(-38 * scale - i * 5 * scale, -12 * scale);
+                ctx.lineTo(-32 * scale - i * 5 * scale, -5 * scale);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#C2185B';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+              }
+
+              // Back legs (sturdy)
+              ctx.fillStyle = '#6A1B9A';
+              ctx.fillRect(-12 * scale, 10 * scale, 8 * scale, 12 * scale);
+              ctx.fillRect(-2 * scale, 10 * scale, 8 * scale, 12 * scale);
+
+              // Feet
+              ctx.fillStyle = '#4A148C';
+              ctx.fillRect(-13 * scale, 22 * scale, 10 * scale, 3 * scale);
+              ctx.fillRect(-3 * scale, 22 * scale, 10 * scale, 3 * scale);
+
+              // Front legs (shorter)
+              ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
+              ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
+
+              // Body (large and rounded)
+              ctx.fillStyle = '#9C27B0';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 28 * scale, 14 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Belly (lighter)
+              ctx.fillStyle = '#BA68C8';
+              ctx.beginPath();
+              ctx.ellipse(0, 6 * scale, 22 * scale, 10 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Distinctive back plates (alternating heights)
+              for (let i = 0; i < 7; i++) {
+                const isHigh = i % 2 === 0;
+                const height = isHigh ? 22 : 16;
+                const xPos = -15 * scale + i * 6 * scale;
+
+                ctx.fillStyle = '#E91E63';
+                ctx.beginPath();
+                ctx.moveTo(xPos - 3 * scale, -8 * scale);
+                ctx.lineTo(xPos, -height * scale);
+                ctx.lineTo(xPos + 3 * scale, -8 * scale);
+                ctx.closePath();
+                ctx.fill();
+
+                // Plate outline and details
+                ctx.strokeStyle = '#C2185B';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Inner detail
+                ctx.strokeStyle = '#F48FB1';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(xPos - 1.5 * scale, -8 * scale);
+                ctx.lineTo(xPos, -(height - 2) * scale);
+                ctx.lineTo(xPos + 1.5 * scale, -8 * scale);
+                ctx.stroke();
+              }
+
+              // Neck
+              ctx.fillStyle = '#9C27B0';
+              ctx.beginPath();
+              ctx.ellipse(20 * scale, -2 * scale, 8 * scale, 6 * scale, -Math.PI * 0.3, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Head (small and low)
+              ctx.fillStyle = '#7B1FA2';
+              ctx.beginPath();
+              ctx.ellipse(30 * scale, 0, 8 * scale, 6 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Eye (gentle herbivore)
+              ctx.fillStyle = '#FFF';
+              ctx.beginPath();
+              ctx.arc(32 * scale, -2 * scale, 3 * scale, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#000';
+              ctx.beginPath();
+              ctx.arc(33 * scale, -2 * scale, 1.5 * scale, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Nostril
+              ctx.fillStyle = '#4A148C';
+              ctx.beginPath();
+              ctx.arc(36 * scale, 1 * scale, 1.5 * scale, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Beak-like mouth
+              ctx.strokeStyle = '#4A148C';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.arc(34 * scale, 3 * scale, 3 * scale, 0, Math.PI);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Health bar
+            const barWidth = dino.size * 2.5;
+            const barHeight = 5;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(screenX - barWidth / 2 - 1, screenY - dino.size * 1.5 - 1, barWidth + 2, barHeight + 2);
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth, barHeight);
+            ctx.fillStyle = '#0f0';
+            ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth * (dino.health / dino.maxHealth), barHeight);
+          });
+
+          // Draw player
+          const playerScreenX = game.player.x - game.cameraX;
+          const playerScreenY = game.player.y - game.cameraY;
+
+          // Speed boost glow effect
+          if (game.speedBoostTimer > 0) {
+            ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+            ctx.beginPath();
+            ctx.arc(playerScreenX, playerScreenY, game.player.radius + 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.fillStyle = '#4169E1';
+          ctx.beginPath();
+          ctx.arc(playerScreenX, playerScreenY, game.player.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          const mouseAngle = Math.atan2(game.mouseY - game.player.y, game.mouseX - game.player.x);
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(playerScreenX, playerScreenY);
+          ctx.lineTo(
+            playerScreenX + Math.cos(mouseAngle) * game.player.radius,
+            playerScreenY + Math.sin(mouseAngle) * game.player.radius
+          );
+          ctx.stroke();
+
+          // Draw bullets
+          ctx.fillStyle = '#ff0';
+          game.bullets.forEach(bullet => {
+            ctx.beginPath();
+            ctx.arc(bullet.x - game.cameraX, bullet.y - game.cameraY, bullet.radius, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Draw ammo pickups
+          ctx.fillStyle = '#FFD700';
+          game.ammoPickups.forEach(pickup => {
+            ctx.beginPath();
+            ctx.arc(pickup.x - game.cameraX, pickup.y - game.cameraY, pickup.radius, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          animationId = requestAnimationFrame(gameLoop);
+        };
+
+        gameLoop();
+
+        return () => {
+          cancelAnimationFrame(animationId);
+          canvas.removeEventListener('mousemove', handleMouseMove);
+          canvas.removeEventListener('click', handleClick);
+          window.removeEventListener('keydown', handleKeyDown);
+          window.removeEventListener('keyup', handleKeyUp);
+        };
+      }, [gameState, currentLevel]);
+
+      const startGame = () => {
+        setCurrentLevel(1);
+        setScore(0);
+        initGame(1);
+        setGameState('playing');
+      };
+
+      const nextLevel = () => {
+        const next = currentLevel + 1;
+        setCurrentLevel(next);
+        initGame(next);
+        setGameState('playing');
+      };
+
+      const game = gameRef.current;
+
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
+          {gameState === 'menu' && (
+            <div className="text-center">
+              <h1 className="text-5xl font-bold text-green-400 mb-4">JURASSIC ESCAPE</h1>
+              <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
+              <p className="text-gray-400 mb-2">WASD or Arrow Keys to move • Mouse to aim • Click to shoot</p>
+              <div className="text-gray-300 mb-6 space-y-2">
+                <p className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-4 h-4 bg-red-500 rounded-full"></span>
+                  Health Pack - Restores 1 heart
+                </p>
+                <p className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-4 h-4 bg-cyan-400 rounded-full"></span>
+                  Speed Boost - Temporary speed increase
+                </p>
+              </div>
+              <button
+                onClick={startGame}
+                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
+              >
+                START GAME
+              </button>
+            </div>
+          )}
+
+          {gameState === 'playing' && (
+            <div className="flex flex-col items-center">
+              <div className="flex gap-8 mb-4 text-white items-center">
+                <div className="text-xl font-bold">Level {currentLevel}</div>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i}>{i < playerHealth ? '❤️' : '🖤'}</span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>🎯</span>
+                  <span className="text-xl font-bold">{playerAmmo}</span>
+                </div>
+                {speedBoostActive && (
+                  <div className="flex items-center gap-2 bg-cyan-500 px-3 py-1 rounded-full">
+                    <span>⚡</span>
+                    <span className="text-sm font-bold">SPEED BOOST</span>
+                  </div>
+                )}
+                <div className="text-xl font-bold">Score: {score}</div>
+              </div>
+              <canvas
+                ref={canvasRef}
+                width={800}
+                height={600}
+                className="border-4 border-green-600 bg-green-900 cursor-crosshair"
+              />
+              <p className="text-gray-400 mt-2">Collect powerups and defeat dinosaurs to survive!</p>
+            </div>
+          )}
+
+          {gameState === 'levelComplete' && (
+            <div className="text-center">
+              <h1 className="text-5xl font-bold text-green-400 mb-4">LEVEL {currentLevel} COMPLETE!</h1>
+              <p className="text-2xl text-white mb-4">Score: {score}</p>
+              <button
+                onClick={nextLevel}
+                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
+              >
+                NEXT LEVEL
+              </button>
+            </div>
+          )}
+
+          {gameState === 'won' && (
+            <div className="text-center">
+              <h1 className="text-5xl font-bold text-green-400 mb-4">YOU ESCAPED!</h1>
+              <p className="text-3xl text-yellow-400 mb-2">ALL LEVELS COMPLETE!</p>
+              <p className="text-2xl text-white mb-4">Final Score: {score}</p>
+              <button
+                onClick={startGame}
+                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
+              >
+                PLAY AGAIN
+              </button>
+            </div>
+          )}
+
+          {gameState === 'lost' && (
+            <div className="text-center">
+              <h1 className="text-5xl font-bold text-red-500 mb-4">GAME OVER</h1>
+              <p className="text-xl text-white mb-2">Level {currentLevel}</p>
+              <p className="text-2xl text-white mb-4">Final Score: {score}</p>
+              <button
+                onClick={startGame}
+                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
+              >
+                TRY AGAIN
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<JurassicEscape />);
+  </script>
+</body>
+
+</html>
