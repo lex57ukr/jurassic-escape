@@ -90,7 +90,38 @@
         y: fromY,
         vx: dx * speed,
         vy: dy * speed,
-        radius: GAME_CONSTANTS.BULLET.RADIUS
+        radius: GAME_CONSTANTS.BULLET.RADIUS,
+        type: 'regular'
+      };
+    };
+
+    /**
+     * Create a tranquilizer dart object
+     */
+    const createTranquilizer = (fromX, fromY, toX, toY) => {
+      const { dx, dy } = normalize(toX - fromX, toY - fromY);
+      return {
+        x: fromX,
+        y: fromY,
+        vx: dx * GAME_CONSTANTS.TRANQUILIZER.SPEED,
+        vy: dy * GAME_CONSTANTS.TRANQUILIZER.SPEED,
+        radius: GAME_CONSTANTS.TRANQUILIZER.RADIUS,
+        type: 'tranquilizer'
+      };
+    };
+
+    /**
+     * Create a floating text object
+     */
+    const createFloatingText = (x, y, text, color = '#FFD700') => {
+      return {
+        x,
+        y,
+        startY: y,
+        text,
+        color,
+        lifetime: GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES,
+        age: 0
       };
     };
 
@@ -186,6 +217,20 @@
         RADIUS: 4,
       },
 
+      // Tranquilizer
+      TRANQUILIZER: {
+        SPEED: 6,
+        RADIUS: 5,
+        START_AMMO: 15,
+        SLEEP_DURATION_RAPTOR: 480, // 8 seconds at 60fps
+        SLEEP_DURATION_STEGO: 360,  // 6 seconds at 60fps
+        SLEEP_DURATION_TREX: 240,   // 4 seconds at 60fps
+        SCORE_MULTIPLIER: 0.5,      // 50% of kill points
+        SHOTS_NEEDED_RAPTOR: 1,     // 1 shot to tranquilize raptor
+        SHOTS_NEEDED_STEGO: 2,      // 2 shots to tranquilize stego
+        SHOTS_NEEDED_TREX: 3,       // 3 shots to tranquilize trex
+      },
+
       // Speed Boost
       SPEED_BOOST: {
         DURATION_FRAMES: 300, // 5 seconds at 60fps
@@ -219,6 +264,8 @@
         POWERUP_SAFE_ZONE_MARGIN: 400,
         POWERUP_SAFE_ZONE_PADDING: 800,
         POWERUP_RADIUS: 12,
+        TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
+        TRANQ_DEPOT_RADIUS: 15,
       },
 
       // Ammo Pickup
@@ -250,6 +297,13 @@
         GRASS_PATCHES: 50,
         GRASS_PATCH_SIZE: 20,
       },
+
+      // Floating Text
+      FLOATING_TEXT: {
+        LIFETIME_FRAMES: 60, // 1 second at 60fps
+        RISE_SPEED: 1,
+        FADE_START_FRAME: 30,
+      },
     };
 
     // ============================================================================
@@ -261,6 +315,7 @@
         label: 'Easy',
         playerHealthMultiplier: 1.4,      // 7 hearts (5 * 1.4)
         playerAmmoMultiplier: 1.5,        // 15 ammo (10 * 1.5)
+        playerTranqAmmoMultiplier: 1.5,   // 22 tranq (15 * 1.5)
         enemySpeedMultiplier: 0.8,        // 20% slower
         invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
       },
@@ -268,6 +323,7 @@
         label: 'Normal',
         playerHealthMultiplier: 1.0,      // 5 hearts
         playerAmmoMultiplier: 1.0,        // 10 ammo
+        playerTranqAmmoMultiplier: 1.0,   // 15 tranq
         enemySpeedMultiplier: 1.0,        // Normal speed
         invincibilityMultiplier: 1.0,     // 60 frames
       },
@@ -275,6 +331,7 @@
         label: 'Hard',
         playerHealthMultiplier: 0.6,      // 3 hearts (5 * 0.6)
         playerAmmoMultiplier: 0.5,        // 5 ammo (10 * 0.5)
+        playerTranqAmmoMultiplier: 0.7,   // 10 tranq (15 * 0.7)
         enemySpeedMultiplier: 1.3,        // 30% faster
         invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
       },
@@ -372,6 +429,8 @@
       const [score, setScore] = useState(0);
       const [playerHealth, setPlayerHealth] = useState(5);
       const [playerAmmo, setPlayerAmmo] = useState(10);
+      const [playerTranqAmmo, setPlayerTranqAmmo] = useState(15);
+      const [currentWeapon, setCurrentWeapon] = useState('regular');
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
@@ -430,7 +489,10 @@
           victory: new Audio('./assets/victory.wav'),
           game_start: new Audio('./assets/game_start.wav'),
           jump: new Audio('./assets/jump.wav'),
-          pause: new Audio('./assets/pause.wav')
+          pause: new Audio('./assets/pause.wav'),
+          tranq_shoot: new Audio('./assets/tranq_shoot.wav'),
+          tranq_hit: new Audio('./assets/tranq_hit.wav'),
+          pickup_tranq: new Audio('./assets/pickup_tranq.wav')
         };
 
         // Map unpause to game_start
@@ -480,6 +542,8 @@
           health: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
           maxHealth: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
           ammo: GAME_CONSTANTS.PLAYER.START_AMMO,
+          tranqAmmo: GAME_CONSTANTS.TRANQUILIZER.START_AMMO,
+          currentWeapon: 'regular',
           speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           radius: GAME_CONSTANTS.PLAYER.RADIUS,
@@ -491,6 +555,8 @@
         bullets: [],
         dinosaurs: [],
         ammoPickups: [],
+        tranqDepots: [],
+        floatingTexts: [],
         powerups: [],
         obstacles: [],
         mouseX: 0,
@@ -510,7 +576,8 @@
         touch: {
           joystick: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 },
           shoot: false,
-          jump: false
+          jump: false,
+          switchWeapon: false
         }
       });
 
@@ -554,6 +621,7 @@
         const diffMod = DIFFICULTY_MODIFIERS[difficulty];
         const playerMaxHealth = Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * diffMod.playerHealthMultiplier);
         const playerStartAmmo = Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * diffMod.playerAmmoMultiplier);
+        const playerStartTranqAmmo = Math.round(GAME_CONSTANTS.TRANQUILIZER.START_AMMO * diffMod.playerTranqAmmoMultiplier);
 
         game.player = {
           x: GAME_CONSTANTS.PLAYER.START_X,
@@ -561,6 +629,8 @@
           health: playerMaxHealth,
           maxHealth: playerMaxHealth,
           ammo: playerStartAmmo,
+          tranqAmmo: playerStartTranqAmmo,
+          currentWeapon: 'regular',
           speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           radius: GAME_CONSTANTS.PLAYER.RADIUS,
@@ -571,6 +641,8 @@
         };
         game.bullets = [];
         game.ammoPickups = [];
+        game.tranqDepots = [];
+        game.floatingTexts = [];
         game.powerups = [];
         game.dinosaurs = [];
         game.obstacles = [];
@@ -579,6 +651,8 @@
 
         setPlayerHealth(playerMaxHealth);
         setPlayerAmmo(playerStartAmmo);
+        setPlayerTranqAmmo(playerStartTranqAmmo);
+        setCurrentWeapon('regular');
         setSpeedBoostActive(false);
 
         // Create obstacles
@@ -622,7 +696,10 @@
               points: dinoType.points,
               aggroRange: GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE,
               state: 'patrol',
-              patrolAngle: Math.random() * Math.PI * 2
+              patrolAngle: Math.random() * Math.PI * 2,
+              isSleeping: false,
+              sleepTimer: 0,
+              tranqHits: 0
             });
             dinoIndex++;
           }
@@ -636,6 +713,18 @@
             y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
             type: type,
             radius: GAME_CONSTANTS.SPAWN.POWERUP_RADIUS,
+            active: true
+          });
+        }
+
+        // Create tranquilizer depots
+        const depotCount = GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_COUNT_BASE + level;
+        for (let i = 0; i < depotCount; i++) {
+          game.tranqDepots.push({
+            x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+            y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+            radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
+            ammo: 5,
             active: true
           });
         }
@@ -667,6 +756,12 @@
             game.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
             playSound('jump');
           }
+
+          // Handle weapon switching with Q key
+          if (key === 'q') {
+            game.player.currentWeapon = game.player.currentWeapon === 'regular' ? 'tranquilizer' : 'regular';
+            setCurrentWeapon(game.player.currentWeapon);
+          }
         };
 
         const handleKeyUp = (e) => {
@@ -680,16 +775,24 @@
         };
 
         const handleClick = (e) => {
-          if (game.player.ammo > 0) {
-            const rect = canvas.getBoundingClientRect();
-            const targetX = e.clientX - rect.left + game.cameraX;
-            const targetY = e.clientY - rect.top + game.cameraY;
+          const rect = canvas.getBoundingClientRect();
+          const targetX = e.clientX - rect.left + game.cameraX;
+          const targetY = e.clientY - rect.top + game.cameraY;
 
-            game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
-
-            game.player.ammo--;
-            setPlayerAmmo(game.player.ammo);
-            playSound('shoot');
+          if (game.player.currentWeapon === 'regular') {
+            if (game.player.ammo > 0) {
+              game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
+              game.player.ammo--;
+              setPlayerAmmo(game.player.ammo);
+              playSound('shoot');
+            }
+          } else if (game.player.currentWeapon === 'tranquilizer') {
+            if (game.player.tranqAmmo > 0) {
+              game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
+              game.player.tranqAmmo--;
+              setPlayerTranqAmmo(game.player.tranqAmmo);
+              playSound('tranq_shoot');
+            }
           }
         };
 
@@ -770,22 +873,34 @@
             game.player.y = newY;
           }
 
+          // Handle touch weapon switching
+          if (game.touch.switchWeapon) {
+            game.player.currentWeapon = game.player.currentWeapon === 'regular' ? 'tranquilizer' : 'regular';
+            setCurrentWeapon(game.player.currentWeapon);
+            game.touch.switchWeapon = false;
+          }
+
           // Handle touch shooting (auto-aim at nearest dinosaur)
-          if (game.touch.shoot && game.player.ammo > 0) {
+          if (game.touch.shoot) {
             const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
 
             // Shoot at nearest dinosaur or default direction (right)
             const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
             const targetY = nearestDino ? nearestDino.y : game.player.y;
 
-            game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
-
-            game.player.ammo--;
-            setPlayerAmmo(game.player.ammo);
-            playSound('shoot');
-
-            // Add cooldown to prevent rapid fire
-            game.touch.shoot = false;
+            if (game.player.currentWeapon === 'regular' && game.player.ammo > 0) {
+              game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
+              game.player.ammo--;
+              setPlayerAmmo(game.player.ammo);
+              playSound('shoot');
+              game.touch.shoot = false;
+            } else if (game.player.currentWeapon === 'tranquilizer' && game.player.tranqAmmo > 0) {
+              game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
+              game.player.tranqAmmo--;
+              setPlayerTranqAmmo(game.player.tranqAmmo);
+              playSound('tranq_shoot');
+              game.touch.shoot = false;
+            }
           }
 
           // Update camera
@@ -813,6 +928,19 @@
             }
           });
 
+          // Check tranquilizer depot collection
+          game.tranqDepots.forEach(depot => {
+            if (!depot.active) return;
+
+            if (circleCollision(game.player.x, game.player.y, game.player.radius, depot.x, depot.y, depot.radius)) {
+              depot.active = false;
+              game.player.tranqAmmo += depot.ammo;
+              setPlayerTranqAmmo(game.player.tranqAmmo);
+              playSound('pickup_tranq');
+              game.floatingTexts.push(createFloatingText(depot.x, depot.y, `+${depot.ammo}`, '#00FF00'));
+            }
+          });
+
           // Update bullets
           game.bullets = game.bullets.filter(bullet => {
             bullet.x += bullet.vx;
@@ -826,25 +954,66 @@
               const dino = game.dinosaurs[i];
 
               if (circleCollision(bullet.x, bullet.y, bullet.radius, dino.x, dino.y, dino.size)) {
-                dino.health--;
-                playSound('hit');
-                if (dino.health <= 0) {
-                  for (let j = 0; j < dino.maxHealth; j++) {
-                    game.ammoPickups.push({
-                      x: dino.x,
-                      y: dino.y,
-                      startY: dino.y,
-                      vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
-                      vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE,
-                      bounces: 0,
-                      maxBounces: GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES,
-                      life: GAME_CONSTANTS.AMMO_PICKUP.LIFETIME_FRAMES,
-                      radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS
-                    });
+                if (bullet.type === 'tranquilizer') {
+                  // Tranquilizer dart - track hits and put to sleep when threshold reached
+                  if (!dino.isSleeping) {
+                    dino.tranqHits++;
+                    playSound('tranq_hit');
+
+                    // Determine shots needed based on dinosaur type
+                    let shotsNeeded;
+                    if (dino.type === 'raptor') {
+                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_RAPTOR;
+                    } else if (dino.type === 'stego') {
+                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_STEGO;
+                    } else if (dino.type === 'trex') {
+                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TREX;
+                    }
+
+                    // Show hit indicator
+                    game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `${dino.tranqHits}/${shotsNeeded}`, '#00FF00'));
+
+                    // Put to sleep if enough hits
+                    if (dino.tranqHits >= shotsNeeded) {
+                      dino.isSleeping = true;
+
+                      // Sleep duration based on dinosaur size
+                      if (dino.type === 'raptor') {
+                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
+                      } else if (dino.type === 'stego') {
+                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_STEGO;
+                      } else if (dino.type === 'trex') {
+                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TREX;
+                      }
+
+                      const tranqPoints = Math.round(dino.points * GAME_CONSTANTS.TRANQUILIZER.SCORE_MULTIPLIER);
+                      setScore(s => s + tranqPoints);
+                      game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size - 20, `+${tranqPoints} SLEEP`, '#00E5FF'));
+                    }
                   }
-                  setScore(s => s + dino.points);
-                  game.dinosaurs.splice(i, 1);
-                  playSound('death');
+                } else {
+                  // Regular bullet damages dinosaur
+                  dino.health--;
+                  playSound('hit');
+                  if (dino.health <= 0) {
+                    for (let j = 0; j < dino.maxHealth; j++) {
+                      game.ammoPickups.push({
+                        x: dino.x,
+                        y: dino.y,
+                        startY: dino.y,
+                        vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
+                        vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE,
+                        bounces: 0,
+                        maxBounces: GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES,
+                        life: GAME_CONSTANTS.AMMO_PICKUP.LIFETIME_FRAMES,
+                        radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS
+                      });
+                    }
+                    setScore(s => s + dino.points);
+                    game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
+                    game.dinosaurs.splice(i, 1);
+                    playSound('death');
+                  }
                 }
                 return false;
               }
@@ -885,8 +1054,29 @@
           // Update player invincibility
           updateInvincibility(game.player);
 
+          // Update floating texts
+          game.floatingTexts = game.floatingTexts.filter(text => {
+            text.age++;
+            text.y -= GAME_CONSTANTS.FLOATING_TEXT.RISE_SPEED;
+            return text.age < text.lifetime;
+          });
+
           // Update dinosaurs
           game.dinosaurs.forEach(dino => {
+            // Update sleep status
+            if (dino.isSleeping) {
+              dino.sleepTimer--;
+              if (dino.sleepTimer <= 0) {
+                dino.isSleeping = false;
+                dino.sleepTimer = 0;
+                dino.tranqHits = 0; // Reset tranq hits when waking up
+              }
+              // Sleeping dinosaurs don't move
+              dino.vx = 0;
+              dino.vy = 0;
+              return;
+            }
+
             const dist = distance(dino.x, dino.y, game.player.x, game.player.y);
 
             if (dist < dino.aggroRange) {
@@ -959,7 +1149,8 @@
               dino.patrolAngle = Math.random() * Math.PI * 2;
             }
 
-            if (circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
+            // Sleeping dinosaurs don't collide with player
+            if (!dino.isSleeping && circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
               const diffMod = DIFFICULTY_MODIFIERS[difficulty];
               const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
 
@@ -1089,6 +1280,30 @@
               ctx.closePath();
               ctx.fill();
             }
+          });
+
+          // Draw tranquilizer depots
+          game.tranqDepots.forEach(depot => {
+            if (!depot.active) return;
+
+            const screenX = depot.x - game.cameraX;
+            const screenY = depot.y - game.cameraY;
+
+            // Draw green crate
+            ctx.fillStyle = '#228B22';
+            ctx.strokeStyle = '#006400';
+            ctx.lineWidth = 2;
+            ctx.fillRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
+            ctx.strokeRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
+
+            // Draw syringe icon
+            ctx.fillStyle = '#00FF00';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(screenX - 1, screenY, 2, 6);
+            ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
           });
 
           // Draw dinosaurs
@@ -1442,6 +1657,27 @@
             ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth, barHeight);
             ctx.fillStyle = '#0f0';
             ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth * (dino.health / dino.maxHealth), barHeight);
+
+            // Sleeping Z-Z-Z
+            if (dino.isSleeping) {
+              ctx.fillStyle = '#FFF';
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 1;
+              ctx.font = 'bold 16px Arial';
+              ctx.textAlign = 'center';
+
+              const zOffset = Math.sin(Date.now() / 200) * 3;
+              ctx.strokeText('Z', screenX + dino.size, screenY - dino.size - 10 + zOffset);
+              ctx.fillText('Z', screenX + dino.size, screenY - dino.size - 10 + zOffset);
+
+              ctx.font = 'bold 20px Arial';
+              ctx.strokeText('Z', screenX + dino.size + 8, screenY - dino.size - 18 + zOffset);
+              ctx.fillText('Z', screenX + dino.size + 8, screenY - dino.size - 18 + zOffset);
+
+              ctx.font = 'bold 24px Arial';
+              ctx.strokeText('Z', screenX + dino.size + 18, screenY - dino.size - 28 + zOffset);
+              ctx.fillText('Z', screenX + dino.size + 18, screenY - dino.size - 28 + zOffset);
+            }
           });
 
           // Draw player
@@ -1539,8 +1775,8 @@
           ctx.restore();
 
           // Draw bullets
-          ctx.fillStyle = '#ff0';
           game.bullets.forEach(bullet => {
+            ctx.fillStyle = bullet.type === 'tranquilizer' ? '#00FF00' : '#ff0';
             ctx.beginPath();
             ctx.arc(bullet.x - game.cameraX, bullet.y - game.cameraY, bullet.radius, 0, Math.PI * 2);
             ctx.fill();
@@ -1552,6 +1788,23 @@
             ctx.beginPath();
             ctx.arc(pickup.x - game.cameraX, pickup.y - game.cameraY, pickup.radius, 0, Math.PI * 2);
             ctx.fill();
+          });
+
+          // Draw floating texts
+          game.floatingTexts.forEach(text => {
+            const alpha = text.age < GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME ? 1.0 : 1.0 - ((text.age - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME) / (GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME));
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = text.color;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            const screenX = text.x - game.cameraX;
+            const screenY = text.y - game.cameraY;
+            ctx.strokeText(text.text, screenX, screenY);
+            ctx.fillText(text.text, screenX, screenY);
+            ctx.restore();
           });
 
           animationId = requestAnimationFrame(gameLoop);
@@ -1593,9 +1846,9 @@
               <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
               <p className="text-gray-400 mb-2">
                 {isTouchDevice ? (
-                  <span>Use joystick to move • JUMP to clear obstacles • FIRE to shoot</span>
+                  <span>Use joystick to move • JUMP to clear obstacles • FIRE to shoot • Q to switch weapon</span>
                 ) : (
-                  <span>WASD or Arrow Keys to move • Spacebar to jump • Mouse to aim • Click to shoot</span>
+                  <span>WASD or Arrow Keys to move • Spacebar to jump • Q to switch weapon • Mouse to aim • Click to shoot</span>
                 )}
               </p>
               <div className="text-gray-300 mb-6 space-y-2">
@@ -1606,6 +1859,10 @@
                 <p className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 bg-cyan-400 rounded-full"></span>
                   Speed Boost - Temporary speed increase
+                </p>
+                <p className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-4 h-4 bg-green-600 rounded"></span>
+                  Tranquilizer Depot - Refills 💉 ammo
                 </p>
               </div>
               <div className="flex flex-col gap-3">
@@ -1635,9 +1892,13 @@
                     <span key={i}>{i < playerHealth ? '❤️' : '🖤'}</span>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === 'regular' ? 'bg-yellow-600' : 'bg-gray-700'}`}>
                   <span>💥</span>
                   <span className="text-xl font-bold">{playerAmmo}</span>
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === 'tranquilizer' ? 'bg-green-600' : 'bg-gray-700'}`}>
+                  <span>💉</span>
+                  <span className="text-xl font-bold">{playerTranqAmmo}</span>
                 </div>
                 {speedBoostActive && (
                   <div className="flex items-center gap-2 bg-cyan-500 px-3 py-1 rounded-full">
@@ -1724,6 +1985,19 @@
                     )}
                   </div>
 
+                  {/* Weapon Switch Button */}
+                  <div
+                    className="absolute right-4 top-4 w-16 h-16 pointer-events-auto"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      gameRef.current.touch.switchWeapon = true;
+                    }}
+                  >
+                    <div className={`w-full h-full rounded-full ${gameRef.current.player.currentWeapon === 'regular' ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${gameRef.current.player.currentWeapon === 'regular' ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
+                      {gameRef.current.player.currentWeapon === 'regular' ? '💥' : '💉'}
+                    </div>
+                  </div>
+
                   {/* Jump Button */}
                   <div
                     className="absolute right-28 bottom-4 w-20 h-20 pointer-events-auto"
@@ -1762,9 +2036,9 @@
               </div>
               <p className="text-gray-400 mt-2 text-center">
                 {isTouchDevice ? (
-                  <span>Use the joystick to move, FIRE to auto-aim at dinosaurs, JUMP to escape obstacles!</span>
+                  <span>Joystick to move • Tap 💥/💉 to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
                 ) : (
-                  <span>Use WASD/Arrows to move, Mouse to aim, Click to shoot, Spacebar to jump!</span>
+                  <span>WASD/Arrows to move • Q to switch weapon • Mouse to aim • Click to shoot • Spacebar to jump!</span>
                 )}
               </p>
 
