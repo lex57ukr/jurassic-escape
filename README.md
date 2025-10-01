@@ -131,7 +131,7 @@ Place the following `.wav` files in the `./assets/` folder for full audio experi
 - `game_start.wav` - Game starts / unpause
 - `jump.wav` - Player jumps
 - `pause.wav` - Pause menu opened
-- `electric_shock.wav` - Player touches electric fence
+- `electric_shock.wav` - Player or dinosaur touches electric fence
 
 ## 🎨 Technical Details
 

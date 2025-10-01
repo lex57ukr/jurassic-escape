@@ -187,6 +187,42 @@
     };
 
     /**
+     * Draw electric zap effect on an entity
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} size - Entity size/radius
+     * @param {number} zapTimer - Current zap timer value
+     */
+    const drawZapEffect = (ctx, screenX, screenY, size, zapTimer) => {
+      if (zapTimer <= 0) return;
+
+      const zapAlpha = zapTimer / GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
+
+      // Electric aura
+      ctx.fillStyle = `rgba(255, 255, 0, ${zapAlpha * GAME_CONSTANTS.HAZARDS.ZAP_AURA_ALPHA})`;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size + GAME_CONSTANTS.HAZARDS.ZAP_AURA_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lightning bolts around the entity
+      ctx.strokeStyle = `rgba(255, 255, 100, ${zapAlpha})`;
+      ctx.lineWidth = GAME_CONSTANTS.HAZARDS.ZAP_BOLT_WIDTH;
+      for (let i = 0; i < GAME_CONSTANTS.HAZARDS.ZAP_BOLT_COUNT; i++) {
+        const angle = (Date.now() / GAME_CONSTANTS.HAZARDS.ZAP_BOLT_ROTATION_SPEED + i * Math.PI / 2) % (Math.PI * 2);
+        const startX = screenX + Math.cos(angle) * size;
+        const startY = screenY + Math.sin(angle) * size;
+        const endX = screenX + Math.cos(angle) * (size + GAME_CONSTANTS.HAZARDS.ZAP_BOLT_LENGTH);
+        const endY = screenY + Math.sin(angle) * (size + GAME_CONSTANTS.HAZARDS.ZAP_BOLT_LENGTH);
+
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+      }
+    };
+
+    /**
      * Find a valid spawn position that doesn't collide with obstacles
      * @param {number} x - Initial x position
      * @param {number} y - Initial y position
@@ -400,6 +436,14 @@
         FENCE_SPARK_DURATION: 10, // Duration of spark animation in frames
         FENCE_SPARK_RADIUS: 3, // Radius of spark particles
         FENCE_WIRE_WIDTH: 2, // Width of electric wires
+        ZAP_EFFECT_DURATION: 30, // Duration of zap animation on dinosaurs (0.5 seconds)
+        ZAP_AURA_ALPHA: 0.3, // Opacity of yellow zap aura
+        ZAP_AURA_RADIUS: 5, // Extra radius for zap aura
+        ZAP_BOLT_LENGTH: 10, // Length of lightning bolts
+        ZAP_BOLT_COUNT: 4, // Number of lightning bolts
+        ZAP_BOLT_WIDTH: 2, // Width of lightning bolts
+        ZAP_BOLT_ROTATION_SPEED: 50, // Milliseconds divisor for bolt rotation speed
+        ZAP_SOUND_MAX_DISTANCE: 400, // Maximum distance from player to hear zap sound
       },
     };
 
@@ -750,7 +794,8 @@
           isJumping: false,
           jumpVelocity: 0,
           jumpHeight: 0,
-          invincibilityTimer: 0
+          invincibilityTimer: 0,
+          zapTimer: 0
         };
         game.bullets = [];
         game.spit = [];
@@ -822,7 +867,8 @@
               sleepTimer: 0,
               tranqHits: 0,
               spitCooldown: 0,
-              facingLeft: false // Track facing direction to prevent rapid flipping
+              facingLeft: false, // Track facing direction to prevent rapid flipping
+              zapTimer: 0 // Electric shock animation timer
             };
 
             // Create territory for territorial dinosaurs
@@ -1127,6 +1173,7 @@
                   game.player.health -= GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE;
                   setPlayerHealth(game.player.health);
                   game.player.invincibilityTimer = invincibilityFrames;
+                  game.player.zapTimer = GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
                   fence.playerDamageCooldown = GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE_COOLDOWN;
                   playSound('electric_shock');
 
@@ -1174,6 +1221,11 @@
           }
 
           game.player.speed = game.player.baseSpeed * speedMultiplier;
+
+          // Update player zap timer
+          if (game.player.zapTimer > 0) {
+            game.player.zapTimer--;
+          }
 
           // Update jump physics
           if (game.player.isJumping) {
@@ -1462,6 +1514,11 @@
 
           // Update dinosaurs
           game.dinosaurs.forEach(dino => {
+            // Update zap timer
+            if (dino.zapTimer > 0) {
+              dino.zapTimer--;
+            }
+
             // Update sleep status
             if (dino.isSleeping) {
               dino.sleepTimer--;
@@ -1647,6 +1704,14 @@
                   const baseSleepDuration = getSleepDuration(dino.type);
                   dino.isSleeping = true;
                   dino.sleepTimer = Math.round(baseSleepDuration * GAME_CONSTANTS.HAZARDS.FENCE_STUN_DURATION_MULTIPLIER);
+                  dino.zapTimer = GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
+
+                  // Play sound only if player is close enough to hear it
+                  const distToPlayer = distance(dino.x, dino.y, game.player.x, game.player.y);
+                  if (distToPlayer < GAME_CONSTANTS.HAZARDS.ZAP_SOUND_MAX_DISTANCE) {
+                    playSound('electric_shock');
+                  }
+
                   // Don't reset tranq hits or affect scoring - this is stun, not tranq
                 }
                 break;
@@ -2542,6 +2607,9 @@
               ctx.strokeText('Z', screenX + dino.size + 18, screenY - dino.size - 28 + zOffset);
               ctx.fillText('Z', screenX + dino.size + 18, screenY - dino.size - 28 + zOffset);
             }
+
+            // Zap effect (electric shock animation)
+            drawZapEffect(ctx, screenX, screenY, dino.size, dino.zapTimer);
           });
 
           // Draw player
@@ -2563,6 +2631,9 @@
             ctx.arc(playerScreenX, playerScreenY, game.player.radius + 5, 0, Math.PI * 2);
             ctx.fill();
           }
+
+          // Zap effect (electric shock animation)
+          drawZapEffect(ctx, playerScreenX, playerScreenY, game.player.radius, game.player.zapTimer);
 
           const mouseAngle = Math.atan2(game.mouseY - game.player.y, game.mouseX - game.player.x);
 

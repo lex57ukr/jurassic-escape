@@ -206,3 +206,4 @@ Levels defined in `levelConfigs`:
 - **When adding or updating features**: Consider how the feature works on both desktop and mobile
 - Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
+- Avoid magic numbers - prefer constants
