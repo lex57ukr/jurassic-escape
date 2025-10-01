@@ -54,7 +54,8 @@
           player_hurt: new Audio('../assets/player_hurt.wav'),
           level_complete: new Audio('../assets/level_complete.wav'),
           game_over: new Audio('../assets/game_over.wav'),
-          victory: new Audio('../assets/victory.wav')
+          victory: new Audio('../assets/victory.wav'),
+          game_start: new Audio('../assets/game_start.wav')
         };
 
         // Preload all audio files
@@ -944,6 +945,7 @@
         setScore(0);
         initGame(1);
         setGameState('playing');
+        playSound('game_start');
       };
 
       const nextLevel = () => {
