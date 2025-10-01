@@ -1162,7 +1162,13 @@
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">JURASSIC ESCAPE</h1>
               <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
-              <p className="text-gray-400 mb-2">WASD or Arrow Keys to move • Spacebar to jump • Mouse to aim • Click to shoot</p>
+              <p className="text-gray-400 mb-2">
+                {isTouchDevice ? (
+                  <span>Use joystick to move • JUMP to clear obstacles • FIRE to shoot</span>
+                ) : (
+                  <span>WASD or Arrow Keys to move • Spacebar to jump • Mouse to aim • Click to shoot</span>
+                )}
+              </p>
               <div className="text-gray-300 mb-6 space-y-2">
                 <p className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 bg-red-500 rounded-full"></span>
@@ -1184,7 +1190,7 @@
 
           {gameState === 'playing' && (
             <div className="flex flex-col items-center">
-              <div className="flex gap-8 mb-4 text-white items-center">
+              <div className="flex gap-4 md:gap-8 mb-4 text-white items-center flex-wrap justify-center">
                 <div className="text-xl font-bold">Level {currentLevel}</div>
                 <div className="flex items-center gap-2">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -1202,6 +1208,17 @@
                   </div>
                 )}
                 <div className="text-xl font-bold">Score: {score}</div>
+                {isTouchDevice && (
+                  <button
+                    onClick={() => {
+                      setShowPauseMenu(true);
+                      playSound('pause');
+                    }}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
+                  >
+                    ⏸ PAUSE
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <canvas
