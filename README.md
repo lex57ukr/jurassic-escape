@@ -2,6 +2,8 @@
 
 A thrilling single-player browser-based survival game where you navigate through a dangerous prehistoric park, avoiding dinosaurs and obstacles while trying to reach the exit.
 
+*Inspired by the classic [Jurassic Park NES game](https://en.wikipedia.org/wiki/Jurassic_Park_(NES_video_game)).*
+
 ## 🎮 Game Overview
 
 Jurassic Escape is a top-down action game built entirely in a single HTML file using React, Canvas API, and Tailwind CSS. Battle your way through three increasingly difficult levels filled with velociraptors, T-Rexes, and stegosauruses while managing your health and ammunition.
