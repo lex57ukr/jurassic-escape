@@ -112,6 +112,41 @@
       return nearest;
     };
 
+    /**
+     * Find a valid spawn position that doesn't collide with obstacles
+     * @param {number} x - Initial x position
+     * @param {number} y - Initial y position
+     * @param {number} radius - Collision radius
+     * @param {Array} obstacles - Array of obstacle objects
+     * @param {Object} game - Game reference for map dimensions
+     * @param {number} maxAttempts - Maximum number of spawn attempts
+     * @returns {Object} Valid position {x, y}
+     */
+    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = 50) => {
+      // Check if initial position is valid
+      if (!checkObstacleCollision(x, y, radius, obstacles)) {
+        return { x, y };
+      }
+
+      // Try random positions near the initial spawn point
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const randomX = x + (Math.random() - 0.5) * 400; // ±200 pixel range
+        const randomY = y + (Math.random() - 0.5) * 400;
+
+        // Clamp to map bounds
+        const clampedX = clamp(randomX, radius, game.mapWidth - radius);
+        const clampedY = clamp(randomY, radius, game.mapHeight - radius);
+
+        // Check if this position is valid
+        if (!checkObstacleCollision(clampedX, clampedY, radius, obstacles)) {
+          return { x: clampedX, y: clampedY };
+        }
+      }
+
+      // Fallback: return original position (dinosaur will have to navigate out)
+      return { x, y };
+    };
+
     // ============================================================================
     // VIEWPORT SCALE CONFIGURATION
     // ============================================================================
@@ -363,9 +398,23 @@
         let dinoIndex = 0;
         config.dinosaurs.forEach(dinoType => {
           for (let i = 0; i < dinoType.count; i++) {
+            // Calculate initial spawn position
+            const initialX = 300 + (dinoIndex % 4) * 250 + Math.random() * 100;
+            const initialY = 200 + Math.floor(dinoIndex / 4) * 300 + Math.random() * 100;
+
+            // Find collision-free spawn position
+            const spawnPos = findValidSpawnPosition(
+              initialX,
+              initialY,
+              dinoType.size,
+              game.obstacles,
+              game,
+              50
+            );
+
             game.dinosaurs.push({
-              x: 300 + (dinoIndex % 4) * 250 + Math.random() * 100,
-              y: 200 + Math.floor(dinoIndex / 4) * 300 + Math.random() * 100,
+              x: spawnPos.x,
+              y: spawnPos.y,
               vx: 0,
               vy: 0,
               health: dinoType.health,
