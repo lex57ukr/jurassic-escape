@@ -141,3 +141,4 @@ Levels defined in `levelConfigs` (lines 45-75):
   - Exit to Menu: plays `victory`
   - Pause: plays `pause`
 - **When adding or updating features**: Consider how the feature works on both desktop and mobile
+- Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
