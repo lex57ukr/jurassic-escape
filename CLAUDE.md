@@ -13,13 +13,17 @@ Open `src/jurassic-escape-game.html` directly in a web browser. No build process
 ## Architecture
 
 ### Single-File Structure
+
 The entire game exists in one HTML file with embedded JavaScript using Babel standalone for JSX transformation:
+
 - React components and game logic in `<script type="text/babel">`
 - External dependencies loaded via CDN (React 18, Babel standalone, Tailwind CSS)
 - Canvas-based rendering with 2D context
 
 ### Game State Management
+
 The main `JurassicEscape` component manages:
+
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
 - **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `canvasSize`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
@@ -28,14 +32,17 @@ The main `JurassicEscape` component manages:
   - Touch controls state (joystick, shoot, jump)
 
 ### Game Loop Pattern
+
 Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-889):
+
 1. **Update phase**: Physics, collision detection, AI
 2. **Render phase**: Canvas drawing with camera offset
 3. Loop continues until component unmounts or game state changes
 
 ### Core Systems
 
-**Movement & Controls**
+#### Movement & Controls
+
 - **Desktop**: WASD/Arrow keys for player movement
 - **Mobile**: Virtual joystick (touch and drag) with variable speed based on joystick displacement
 - Spacebar (desktop) or JUMP button (mobile) to jump (clears obstacles when jump height >= 25)
@@ -45,7 +52,8 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 - ESC to pause (shows pause menu with Continue/Restart/Exit options)
 - Camera follows player with map boundary constraints
 
-**Entities**
+#### Entities
+
 - **Player**: Safari explorer character with gun that aims at mouse cursor
   - Properties: health, ammo, speed (base + boost modifier), jump physics (isJumping, jumpVelocity, jumpHeight)
   - Procedurally drawn with safari hat, khaki clothing, and rotating gun
@@ -58,20 +66,25 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 - **Powerups**: Health (red cross) and Speed (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics (bouncing animation)
 
-**Collision Detection**
+#### Collision Detection
+
 All collision uses circle-vs-circle distance checks:
+
 - Player vs obstacles (movement blocking, bypassed when jump height >= 25)
 - Player vs dinosaurs (damage)
 - Bullets vs dinosaurs (damage)
 - Player vs powerups/ammo (collection)
 
-**Level Progression**
+#### Level Progression
+
 Levels defined in `levelConfigs` (lines 45-75):
+
 - Each level specifies dinosaur types/counts, obstacle count, powerup count
 - Win condition: Reach exit zone (golden EXIT rectangle at map coordinates 1800, 1400)
 - Player stats reset between levels, score persists
 
-**Sound System**
+#### Sound System
+
 - Uses `soundsRef` with `useCallback` for audio management
 - Audio pooling via `cloneNode()` for simultaneous playback (prevents freezing and enables mixing)
 - 13 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause
@@ -80,6 +93,7 @@ Levels defined in `levelConfigs` (lines 45-75):
 - Volume set to 0.3, with cleanup via 'ended' event listener
 
 ### Rendering
+
 - 800x600 canvas viewport into 2400x1800 game world (logical resolution)
 - Responsive canvas sizing: scales to fit screen on mobile while maintaining 4:3 aspect ratio
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
