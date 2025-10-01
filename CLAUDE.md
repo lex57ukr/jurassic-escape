@@ -129,3 +129,4 @@ Levels defined in `levelConfigs` (lines 45-75):
   - Continue/Restart: plays `unpause` (mapped to `game_start`)
   - Exit to Menu: plays `victory`
   - Pause: plays `pause`
+- **When adding or updating features**: Consider how the feature works on both desktop and mobile
