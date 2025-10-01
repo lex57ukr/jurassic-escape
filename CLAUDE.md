@@ -25,7 +25,7 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 The main `JurassicEscape` component manages:
 
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
-- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `viewportScale`, `canvasSize`, `isTouchDevice`
+- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
   - Camera position, map dimensions, input tracking
@@ -92,9 +92,9 @@ Levels defined in `levelConfigs` (lines 45-75):
 - 13 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause
 - `unpause` mapped to `game_start` for reuse
 - All sounds are .wav files in `./assets/` folder
-- Volume set to 0.3, with cleanup via 'ended' event listener
+- **Volume control**: `volume` state (0.0-1.0, default 0.3) controls audio volume; applied to all sounds in `playSound` function
 - **Sound control**: `soundEnabled` state controls whether audio plays; checked at start of `playSound` function
-- Settings persisted in localStorage as `jurassicEscapeSoundEnabled` (boolean)
+- Settings persisted in localStorage as `jurassicEscapeSoundEnabled` (boolean) and `jurassicEscapeVolume` (number)
 
 ### Rendering
 
@@ -140,9 +140,10 @@ Levels defined in `levelConfigs` (lines 45-75):
 - **Settings system**:
   - Modal overlay with configurable options
   - Sound toggle (🔊/🔇 icon, ON/OFF button)
+  - Volume slider (🔊 icon, 0-100% range with visual fill and percentage display)
   - Viewport size selector (📐 icon, Small/Medium/Large buttons with active state)
   - Accessible from: main menu (below START GAME), pause menu (4th option), gameplay HUD (⚙️ gear button)
-  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeViewportScale`)
+  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeVolume`, `jurassicEscapeViewportScale`)
   - When sound is enabled, plays test sound (`game_start`) for immediate feedback
   - Clicking settings from gameplay also triggers pause menu state
   - Viewport scale changes trigger canvas resize via useEffect dependency
