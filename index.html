@@ -16,6 +16,102 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Calculate distance between two points
+     */
+    const distance = (x1, y1, x2, y2) => {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    /**
+     * Normalize a vector (dx, dy) and return unit vector with magnitude
+     */
+    const normalize = (dx, dy) => {
+      const mag = Math.sqrt(dx * dx + dy * dy);
+      return mag > 0 ? { dx: dx / mag, dy: dy / mag, magnitude: mag } : { dx: 0, dy: 0, magnitude: 0 };
+    };
+
+    /**
+     * Clamp a value between min and max
+     */
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+    /**
+     * Convert world coordinates to screen coordinates
+     */
+    const toScreenCoords = (worldX, worldY, cameraX, cameraY) => ({
+      x: worldX - cameraX,
+      y: worldY - cameraY
+    });
+
+    /**
+     * Check if two circles collide
+     */
+    const circleCollision = (x1, y1, r1, x2, y2, r2) => {
+      return distance(x1, y1, x2, y2) < r1 + r2;
+    };
+
+    /**
+     * Check if entity collides with any obstacle
+     */
+    const checkObstacleCollision = (x, y, radius, obstacles, jumpHeight = 0) => {
+      // Jump over obstacles if high enough
+      if (jumpHeight >= 25) return false;
+
+      for (const obs of obstacles) {
+        if (circleCollision(x, y, radius, obs.x, obs.y, obs.radius)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    /**
+     * Clamp entity position to map boundaries
+     */
+    const clampToBounds = (entity, size, mapWidth, mapHeight) => {
+      entity.x = clamp(entity.x, size, mapWidth - size);
+      entity.y = clamp(entity.y, size, mapHeight - size);
+    };
+
+    /**
+     * Create a bullet object
+     */
+    const createBullet = (fromX, fromY, toX, toY, speed = 8) => {
+      const { dx, dy } = normalize(toX - fromX, toY - fromY);
+      return {
+        x: fromX,
+        y: fromY,
+        vx: dx * speed,
+        vy: dy * speed,
+        radius: 4
+      };
+    };
+
+    /**
+     * Find nearest dinosaur to a position
+     */
+    const findNearestDinosaur = (x, y, dinosaurs) => {
+      let nearest = null;
+      let nearestDist = Infinity;
+
+      dinosaurs.forEach(dino => {
+        const dist = distance(x, y, dino.x, dino.y);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearest = dino;
+        }
+      });
+
+      return nearest;
+    };
+
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
       const [gameState, setGameState] = useState('menu');
@@ -273,17 +369,7 @@
             const targetX = e.clientX - rect.left + game.cameraX;
             const targetY = e.clientY - rect.top + game.cameraY;
 
-            const dx = targetX - game.player.x;
-            const dy = targetY - game.player.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            game.bullets.push({
-              x: game.player.x,
-              y: game.player.y,
-              vx: (dx / dist) * 8,
-              vy: (dy / dist) * 8,
-              radius: 4
-            });
+            game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
 
             game.player.ammo--;
             setPlayerAmmo(game.player.ammo);
@@ -357,22 +443,11 @@
           }
 
           // Boundary check
-          newX = Math.max(game.player.radius, Math.min(game.mapWidth - game.player.radius, newX));
-          newY = Math.max(game.player.radius, Math.min(game.mapHeight - game.player.radius, newY));
+          newX = clamp(newX, game.player.radius, game.mapWidth - game.player.radius);
+          newY = clamp(newY, game.player.radius, game.mapHeight - game.player.radius);
 
           // Collision with obstacles (only when not jumping high enough)
-          let collided = false;
-          if (game.player.jumpHeight < 25) {
-            for (const obs of game.obstacles) {
-              const dx = newX - obs.x;
-              const dy = newY - obs.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < game.player.radius + obs.radius) {
-                collided = true;
-                break;
-              }
-            }
-          }
+          const collided = checkObstacleCollision(newX, newY, game.player.radius, game.obstacles, game.player.jumpHeight);
 
           if (!collided) {
             game.player.x = newX;
@@ -381,67 +456,31 @@
 
           // Handle touch shooting (auto-aim at nearest dinosaur)
           if (game.touch.shoot && game.player.ammo > 0) {
-            // Find nearest dinosaur
-            let nearestDino = null;
-            let nearestDist = Infinity;
-
-            game.dinosaurs.forEach(dino => {
-              const dx = dino.x - game.player.x;
-              const dy = dino.y - game.player.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < nearestDist) {
-                nearestDist = dist;
-                nearestDino = dino;
-              }
-            });
+            const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
 
             // Shoot at nearest dinosaur or default direction (right)
-            let targetX, targetY;
-            if (nearestDino) {
-              targetX = nearestDino.x;
-              targetY = nearestDino.y;
-            } else {
-              targetX = game.player.x + 100;
-              targetY = game.player.y;
-            }
+            const targetX = nearestDino ? nearestDino.x : game.player.x + 100;
+            const targetY = nearestDino ? nearestDino.y : game.player.y;
 
-            const dx = targetX - game.player.x;
-            const dy = targetY - game.player.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
 
-            if (dist > 0) {
-              game.bullets.push({
-                x: game.player.x,
-                y: game.player.y,
-                vx: (dx / dist) * 8,
-                vy: (dy / dist) * 8,
-                radius: 4
-              });
+            game.player.ammo--;
+            setPlayerAmmo(game.player.ammo);
+            playSound('shoot');
 
-              game.player.ammo--;
-              setPlayerAmmo(game.player.ammo);
-              playSound('shoot');
-
-              // Add cooldown to prevent rapid fire
-              game.touch.shoot = false;
-            }
+            // Add cooldown to prevent rapid fire
+            game.touch.shoot = false;
           }
 
           // Update camera
-          game.cameraX = game.player.x - canvas.width / 2;
-          game.cameraY = game.player.y - canvas.height / 2;
-          game.cameraX = Math.max(0, Math.min(game.mapWidth - canvas.width, game.cameraX));
-          game.cameraY = Math.max(0, Math.min(game.mapHeight - canvas.height, game.cameraY));
+          game.cameraX = clamp(game.player.x - canvas.width / 2, 0, game.mapWidth - canvas.width);
+          game.cameraY = clamp(game.player.y - canvas.height / 2, 0, game.mapHeight - canvas.height);
 
           // Check powerup collection
           game.powerups.forEach(powerup => {
             if (!powerup.active) return;
 
-            const dx = game.player.x - powerup.x;
-            const dy = game.player.y - powerup.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < game.player.radius + powerup.radius) {
+            if (circleCollision(game.player.x, game.player.y, game.player.radius, powerup.x, powerup.y, powerup.radius)) {
               powerup.active = false;
 
               if (powerup.type === 'health') {
@@ -469,11 +508,8 @@
 
             for (let i = 0; i < game.dinosaurs.length; i++) {
               const dino = game.dinosaurs[i];
-              const dx = bullet.x - dino.x;
-              const dy = bullet.y - dino.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
 
-              if (dist < dino.size) {
+              if (circleCollision(bullet.x, bullet.y, bullet.radius, dino.x, dino.y, dino.size)) {
                 dino.health--;
                 playSound('hit');
                 if (dino.health <= 0) {
@@ -520,11 +556,7 @@
               }
             }
 
-            const dx = pickup.x - game.player.x;
-            const dy = pickup.y - game.player.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist < game.player.radius + pickup.radius + 10) {
+            if (circleCollision(pickup.x, pickup.y, pickup.radius + 10, game.player.x, game.player.y, game.player.radius)) {
               game.player.ammo++;
               setPlayerAmmo(game.player.ammo);
               playSound('pickup_ammo');
@@ -536,14 +568,13 @@
 
           // Update dinosaurs
           game.dinosaurs.forEach(dino => {
-            const dx = game.player.x - dino.x;
-            const dy = game.player.y - dino.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const dist = distance(dino.x, dino.y, game.player.x, game.player.y);
 
             if (dist < dino.aggroRange) {
               dino.state = 'chase';
-              dino.vx = (dx / dist) * dino.speed;
-              dino.vy = (dy / dist) * dino.speed;
+              const { dx, dy } = normalize(game.player.x - dino.x, game.player.y - dino.y);
+              dino.vx = dx * dino.speed;
+              dino.vy = dy * dino.speed;
             } else {
               dino.state = 'patrol';
               dino.patrolAngle += (Math.random() - 0.5) * 0.1;
@@ -558,14 +589,10 @@
             // Check collision with obstacles
             let dinoCollided = false;
             for (const obs of game.obstacles) {
-              const obsDx = newDinoX - obs.x;
-              const obsDy = newDinoY - obs.y;
-              const obsDist = Math.sqrt(obsDx * obsDx + obsDy * obsDy);
-              if (obsDist < dino.size + obs.radius) {
+              if (circleCollision(newDinoX, newDinoY, dino.size, obs.x, obs.y, obs.radius)) {
                 dinoCollided = true;
 
                 // Obstacle avoidance: try steering around the obstacle
-                // Calculate perpendicular direction to slide around obstacle
                 const angle = Math.atan2(dino.vy, dino.vx);
                 const avoidAngleLeft = angle + Math.PI / 2;
                 const avoidAngleRight = angle - Math.PI / 2;
@@ -573,16 +600,12 @@
                 // Try turning left
                 const tryLeftX = dino.x + Math.cos(avoidAngleLeft) * dino.speed;
                 const tryLeftY = dino.y + Math.sin(avoidAngleLeft) * dino.speed;
-                const leftDx = tryLeftX - obs.x;
-                const leftDy = tryLeftY - obs.y;
-                const leftDist = Math.sqrt(leftDx * leftDx + leftDy * leftDy);
+                const leftDist = distance(tryLeftX, tryLeftY, obs.x, obs.y);
 
                 // Try turning right
                 const tryRightX = dino.x + Math.cos(avoidAngleRight) * dino.speed;
                 const tryRightY = dino.y + Math.sin(avoidAngleRight) * dino.speed;
-                const rightDx = tryRightX - obs.x;
-                const rightDy = tryRightY - obs.y;
-                const rightDist = Math.sqrt(rightDx * rightDx + rightDy * rightDy);
+                const rightDist = distance(tryRightX, tryRightY, obs.x, obs.y);
 
                 // Choose the direction that moves farther from obstacle
                 if (leftDist > rightDist && leftDist > dino.size + obs.radius) {
@@ -609,15 +632,20 @@
               dino.y = newDinoY;
             }
 
-            if (dino.x < dino.size) { dino.x = dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
-            if (dino.x > game.mapWidth - dino.size) { dino.x = game.mapWidth - dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
-            if (dino.y < dino.size) { dino.y = dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
-            if (dino.y > game.mapHeight - dino.size) { dino.y = game.mapHeight - dino.size; dino.patrolAngle = Math.random() * Math.PI * 2; }
+            // Keep dinosaur in bounds
+            const prevX = dino.x;
+            const prevY = dino.y;
+            clampToBounds(dino, dino.size, game.mapWidth, game.mapHeight);
+            if (dino.x !== prevX || dino.y !== prevY) {
+              dino.patrolAngle = Math.random() * Math.PI * 2;
+            }
 
-            if (dist < game.player.radius + dino.size) {
+            if (circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
               game.player.health--;
               setPlayerHealth(game.player.health);
               playSound('player_hurt');
+              // Push dinosaur back
+              const { dx, dy } = normalize(game.player.x - dino.x, game.player.y - dino.y);
               dino.x -= dx * 2;
               dino.y -= dy * 2;
 
@@ -629,10 +657,9 @@
           });
 
           // Check win condition
-          const exitDx = game.player.x - game.exit.x - game.exit.width / 2;
-          const exitDy = game.player.y - game.exit.y - game.exit.height / 2;
-          const exitDist = Math.sqrt(exitDx * exitDx + exitDy * exitDy);
-          if (exitDist < game.player.radius + 30) {
+          const exitCenterX = game.exit.x + game.exit.width / 2;
+          const exitCenterY = game.exit.y + game.exit.height / 2;
+          if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + 30) {
             if (currentLevel < 3) {
               setGameState('levelComplete');
               playSound('level_complete');
