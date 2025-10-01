@@ -19,13 +19,15 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 - React components and game logic in `<script type="text/babel">`
 - External dependencies loaded via CDN (React 18, Babel standalone, Tailwind CSS)
 - Canvas-based rendering with 2D context
+- **Game constants** defined in `GAME_CONSTANTS` object - all magic numbers extracted into documented constants (player stats, physics values, combat parameters, spawning rules, AI behavior, etc.)
+- **Difficulty modifiers** in `DIFFICULTY_MODIFIERS` object - multipliers that adjust gameplay balance (player health/ammo, enemy speed, invincibility duration)
 
 ### Game State Management
 
 The main `JurassicEscape` component manages:
 
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
-- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `canvasSize`, `isTouchDevice`
+- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
   - Camera position, map dimensions, input tracking
@@ -142,11 +144,12 @@ Levels defined in `levelConfigs` (lines 45-75):
   - Sound toggle (🔊/🔇 icon, ON/OFF button)
   - Volume slider (🔊 icon, 0-100% range with visual fill and percentage display)
   - Viewport size selector (📐 icon, Small/Medium/Large buttons with active state)
+  - Difficulty selector (⚔️ icon, Easy/Normal/Hard buttons with active state and stat preview)
   - Accessible from: main menu (below START GAME), pause menu (4th option), gameplay HUD (⚙️ gear button)
-  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeVolume`, `jurassicEscapeViewportScale`)
+  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeVolume`, `jurassicEscapeViewportScale`, `jurassicEscapeDifficulty`)
   - When sound is enabled, plays test sound (`game_start`) for immediate feedback
   - Clicking settings from gameplay also triggers pause menu state
-  - Viewport scale changes trigger canvas resize via useEffect dependency
+  - Viewport scale and difficulty changes require restarting level to take effect
 - **Sound on menu actions**:
   - Continue/Restart: plays `unpause` (mapped to `game_start`)
   - Exit to Menu: plays `victory`

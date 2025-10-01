@@ -65,6 +65,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
   - Sound control (mute/unmute)
   - Volume control (0-100% slider)
   - Viewport size (Small: 800x600, Medium: 1000x750, Large: 1200x900)
+  - Difficulty (Easy/Normal/Hard) - affects player health, ammo, enemy speed, and invincibility duration
 - **Jump mechanic** to escape tight spots and stuck positions
 - **Pause menu** with options to continue, restart, or exit
 - **Speed boost powerup** with visual glow effect
