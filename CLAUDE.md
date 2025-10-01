@@ -25,7 +25,7 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 The main `JurassicEscape` component manages:
 
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
-- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `canvasSize`, `isTouchDevice`
+- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `viewportScale`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
   - Camera position, map dimensions, input tracking
@@ -98,14 +98,21 @@ Levels defined in `levelConfigs` (lines 45-75):
 
 ### Rendering
 
-- 800x600 canvas viewport into 2400x1800 game world (logical resolution)
-- Responsive canvas sizing: scales to fit screen on mobile while maintaining 4:3 aspect ratio
+- **Viewport scaling system**: Configurable canvas resolution via `VIEWPORT_SCALES` constant (lines 119-123)
+  - Small: 800x600 (default)
+  - Medium: 1000x750
+  - Large: 1200x900
+  - All scales maintain 4:3 aspect ratio
+  - Game world remains 2400x1800 regardless of viewport size
+  - Larger viewports show more of the game world at once
+- **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
 - Layered drawing order: background → exit → obstacles → powerups → dinosaurs → player → bullets → ammo pickups
 - Health bars drawn above dinosaurs
 - Jump shadow drawn below player when airborne
 - Speed boost glow effect (cyan aura) around player
+- Invincibility flashing effect (semi-transparent on alternating frames)
 - UI overlay in React (hearts, 💥 ammo count, score, speed boost indicator, settings gear button)
 - Touch controls overlay (virtual joystick, JUMP button, FIRE button) positioned absolutely over canvas
 - Pause menu overlay with semi-transparent backdrop when ESC pressed
@@ -131,11 +138,14 @@ Levels defined in `levelConfigs` (lines 45-75):
   - Touch shoot has cooldown to prevent rapid fire (sets `game.touch.shoot = false` after firing)
 - **Pause system**: Game loop continues but returns early when `showPauseMenu` is true; ESC key toggles pause
 - **Settings system**:
-  - Modal overlay with sound toggle (🔊/🔇 icon, ON/OFF button)
+  - Modal overlay with configurable options
+  - Sound toggle (🔊/🔇 icon, ON/OFF button)
+  - Viewport size selector (📐 icon, Small/Medium/Large buttons with active state)
   - Accessible from: main menu (below START GAME), pause menu (4th option), gameplay HUD (⚙️ gear button)
-  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`)
+  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeViewportScale`)
   - When sound is enabled, plays test sound (`game_start`) for immediate feedback
   - Clicking settings from gameplay also triggers pause menu state
+  - Viewport scale changes trigger canvas resize via useEffect dependency
 - **Sound on menu actions**:
   - Continue/Restart: plays `unpause` (mapped to `game_start`)
   - Exit to Menu: plays `victory`

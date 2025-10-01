@@ -113,6 +113,16 @@
     };
 
     // ============================================================================
+    // VIEWPORT SCALE CONFIGURATION
+    // ============================================================================
+
+    const VIEWPORT_SCALES = {
+      small: { width: 800, height: 600, label: 'Small' },
+      medium: { width: 1000, height: 750, label: 'Medium' },
+      large: { width: 1200, height: 900, label: 'Large' }
+    };
+
+    // ============================================================================
     // COLLISION RESPONSE FUNCTIONS
     // ============================================================================
 
@@ -177,11 +187,15 @@
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
-      const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+      const [canvasSize, setCanvasSize] = useState(VIEWPORT_SCALES.medium);
       const [isTouchDevice, setIsTouchDevice] = useState(false);
       const [soundEnabled, setSoundEnabled] = useState(() => {
         const saved = localStorage.getItem('jurassicEscapeSoundEnabled');
         return saved !== null ? JSON.parse(saved) : true;
+      });
+      const [viewportScale, setViewportScale] = useState(() => {
+        const saved = localStorage.getItem('jurassicEscapeViewportScale');
+        return saved || 'medium';
       });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
@@ -241,9 +255,10 @@
         setIsTouchDevice(hasTouchSupport);
 
         const updateCanvasSize = () => {
-          const maxWidth = Math.min(window.innerWidth - 20, 800);
-          const maxHeight = Math.min(window.innerHeight - 200, 600);
-          const aspectRatio = 800 / 600;
+          const baseScale = VIEWPORT_SCALES[viewportScale];
+          const maxWidth = Math.min(window.innerWidth - 20, baseScale.width);
+          const maxHeight = Math.min(window.innerHeight - 200, baseScale.height);
+          const aspectRatio = baseScale.width / baseScale.height;
 
           let width = maxWidth;
           let height = maxWidth / aspectRatio;
@@ -260,7 +275,7 @@
         window.addEventListener('resize', updateCanvasSize);
 
         return () => window.removeEventListener('resize', updateCanvasSize);
-      }, []);
+      }, [viewportScale]);
 
       const gameRef = useRef({
         player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0, invincibilityTimer: 0 },
@@ -1408,8 +1423,8 @@
               <div className="relative">
                 <canvas
                   ref={canvasRef}
-                  width={800}
-                  height={600}
+                  width={VIEWPORT_SCALES[viewportScale].width}
+                  height={VIEWPORT_SCALES[viewportScale].height}
                   style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
                   className="border-4 border-green-600 bg-green-900 cursor-crosshair"
                 />
@@ -1625,6 +1640,32 @@
                       >
                         {soundEnabled ? 'ON' : 'OFF'}
                       </button>
+                    </div>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">📐</span>
+                        <span className="text-white font-semibold text-lg">Viewport Size</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {Object.entries(VIEWPORT_SCALES).map(([key, config]) => (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              setViewportScale(key);
+                              localStorage.setItem('jurassicEscapeViewportScale', key);
+                            }}
+                            className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
+                              viewportScale === key
+                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                            }`}
+                          >
+                            {config.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <button
