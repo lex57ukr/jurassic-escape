@@ -122,7 +122,7 @@ This is a personal project created for educational and entertainment purposes.
 ## 🐛 Known Issues
 
 - Player may occasionally spawn between obstacles at level start (use jump to escape)
-- Audio files must be manually added to `./assets/` folder
+- Audio files must be available in the `./assets/` folder
 
 ---
 
