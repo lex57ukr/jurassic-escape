@@ -26,6 +26,7 @@
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
       const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
+      const [isTouchDevice, setIsTouchDevice] = useState(false);
 
       // Sound system with pooling for simultaneous playback
       const soundsRef = useRef({});
@@ -74,8 +75,12 @@
         soundsRef.current = sounds;
       }, []);
 
-      // Responsive canvas sizing
+      // Detect touch device and responsive canvas sizing
       useEffect(() => {
+        // Detect if touch is supported
+        const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        setIsTouchDevice(hasTouchSupport);
+
         const updateCanvasSize = () => {
           const maxWidth = Math.min(window.innerWidth - 20, 800);
           const maxHeight = Math.min(window.innerHeight - 200, 600);
@@ -1208,7 +1213,8 @@
                 />
 
                 {/* Touch Controls Overlay */}
-                <div className="absolute inset-0 pointer-events-none md:hidden">
+                {isTouchDevice && (
+                <div className="absolute inset-0 pointer-events-none">
                   {/* Virtual Joystick Area (left side) */}
                   <div
                     className="absolute left-4 bottom-4 w-32 h-32 pointer-events-auto"
@@ -1287,10 +1293,14 @@
                     </div>
                   </div>
                 </div>
+                )}
               </div>
               <p className="text-gray-400 mt-2 text-center">
-                <span className="hidden md:inline">Use WASD/Arrows to move, Mouse to aim, Click to shoot, Spacebar to jump!</span>
-                <span className="md:hidden">Use the joystick to move, FIRE to auto-aim at dinosaurs, JUMP to escape obstacles!</span>
+                {isTouchDevice ? (
+                  <span>Use the joystick to move, FIRE to auto-aim at dinosaurs, JUMP to escape obstacles!</span>
+                ) : (
+                  <span>Use WASD/Arrows to move, Mouse to aim, Click to shoot, Spacebar to jump!</span>
+                )}
               </p>
 
               {showPauseMenu && (
