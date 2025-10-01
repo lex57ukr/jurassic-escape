@@ -57,8 +57,12 @@
           game_over: new Audio('../assets/game_over.wav'),
           victory: new Audio('../assets/victory.wav'),
           game_start: new Audio('../assets/game_start.wav'),
-          jump: new Audio('../assets/jump.wav')
+          jump: new Audio('../assets/jump.wav'),
+          pause: new Audio('../assets/pause.wav')
         };
+
+        // Map unpause to game_start
+        sounds.unpause = sounds.game_start;
 
         // Preload all audio files
         Object.values(sounds).forEach(audio => {
@@ -198,6 +202,7 @@
           // Handle ESC to pause
           if (key === 'escape') {
             setShowPauseMenu(true);
+            playSound('pause');
             return;
           }
 
@@ -1063,7 +1068,10 @@
                     <h2 className="text-3xl font-bold text-green-400 mb-6">PAUSED</h2>
                     <div className="flex flex-col gap-4">
                       <button
-                        onClick={() => setShowPauseMenu(false)}
+                        onClick={() => {
+                          setShowPauseMenu(false);
+                          playSound('unpause');
+                        }}
                         className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
                       >
                         Continue
@@ -1071,6 +1079,7 @@
                       <button
                         onClick={() => {
                           setShowPauseMenu(false);
+                          playSound('unpause');
                           initGame(currentLevel);
                           setGameState('playing');
                         }}
@@ -1081,6 +1090,7 @@
                       <button
                         onClick={() => {
                           setShowPauseMenu(false);
+                          playSound('unpause');
                           setGameState('menu');
                         }}
                         className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
