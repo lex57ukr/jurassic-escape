@@ -232,6 +232,10 @@
         const saved = localStorage.getItem('jurassicEscapeViewportScale');
         return saved || 'medium';
       });
+      const [volume, setVolume] = useState(() => {
+        const saved = localStorage.getItem('jurassicEscapeVolume');
+        return saved !== null ? parseFloat(saved) : 0.3;
+      });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
       // Sound system with pooling for simultaneous playback
@@ -245,14 +249,14 @@
 
         // Clone the audio element for simultaneous playback
         const audio = soundData.cloneNode();
-        audio.volume = 0.3;
+        audio.volume = volume;
         audio.play().catch(e => console.log('Audio play failed:', e));
 
         // Clean up after playing
         audio.addEventListener('ended', () => {
           audio.remove();
         });
-      }, [soundEnabled]);
+      }, [soundEnabled, volume]);
 
       useEffect(() => {
         // Preload all sounds as base templates
@@ -1689,6 +1693,34 @@
                       >
                         {soundEnabled ? 'ON' : 'OFF'}
                       </button>
+                    </div>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🔊</span>
+                        <span className="text-white font-semibold text-lg">Volume</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={Math.round(volume * 100)}
+                          onChange={(e) => {
+                            const newVolume = parseInt(e.target.value) / 100;
+                            setVolume(newVolume);
+                            localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
+                          }}
+                          className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                          style={{
+                            background: `linear-gradient(to right, #16a34a 0%, #16a34a ${volume * 100}%, #4b5563 ${volume * 100}%, #4b5563 100%)`
+                          }}
+                        />
+                        <span className="text-white font-semibold text-lg min-w-[3rem] text-right">
+                          {Math.round(volume * 100)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div className="bg-gray-700 p-4 rounded-lg">
