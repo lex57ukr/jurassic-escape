@@ -62,7 +62,7 @@
      */
     const checkObstacleCollision = (x, y, radius, obstacles, jumpHeight = 0) => {
       // Jump over obstacles if high enough
-      if (jumpHeight >= 25) return false;
+      if (jumpHeight >= GAME_CONSTANTS.PLAYER.JUMP_CLEAR_HEIGHT) return false;
 
       for (const obs of obstacles) {
         if (circleCollision(x, y, radius, obs.x, obs.y, obs.radius)) {
@@ -83,14 +83,14 @@
     /**
      * Create a bullet object
      */
-    const createBullet = (fromX, fromY, toX, toY, speed = 8) => {
+    const createBullet = (fromX, fromY, toX, toY, speed = GAME_CONSTANTS.BULLET.SPEED) => {
       const { dx, dy } = normalize(toX - fromX, toY - fromY);
       return {
         x: fromX,
         y: fromY,
         vx: dx * speed,
         vy: dy * speed,
-        radius: 4
+        radius: GAME_CONSTANTS.BULLET.RADIUS
       };
     };
 
@@ -122,7 +122,7 @@
      * @param {number} maxAttempts - Maximum number of spawn attempts
      * @returns {Object} Valid position {x, y}
      */
-    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = 50) => {
+    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_MAX_ATTEMPTS) => {
       // Check if initial position is valid
       if (!checkObstacleCollision(x, y, radius, obstacles)) {
         return { x, y };
@@ -130,8 +130,8 @@
 
       // Try random positions near the initial spawn point
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const randomX = x + (Math.random() - 0.5) * 400; // ±200 pixel range
-        const randomY = y + (Math.random() - 0.5) * 400;
+        const randomX = x + (Math.random() - 0.5) * GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE;
+        const randomY = y + (Math.random() - 0.5) * GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE;
 
         // Clamp to map bounds
         const clampedX = clamp(randomX, radius, game.mapWidth - radius);
@@ -145,6 +145,159 @@
 
       // Fallback: return original position (dinosaur will have to navigate out)
       return { x, y };
+    };
+
+    // ============================================================================
+    // GAME CONSTANTS
+    // ============================================================================
+
+    const GAME_CONSTANTS = {
+      // Player
+      PLAYER: {
+        START_X: 100,
+        START_Y: 100,
+        MAX_HEALTH: 5,
+        START_AMMO: 10,
+        BASE_SPEED: 2.5,
+        RADIUS: 15,
+        JUMP_VELOCITY: 8,
+        JUMP_CLEAR_HEIGHT: 25, // Height needed to clear obstacles
+      },
+
+      // Physics
+      PHYSICS: {
+        GRAVITY: 0.5,
+        AMMO_GRAVITY: 0.15,
+        AMMO_BOUNCE_DAMPING: -0.5,
+        AMMO_FRICTION: 0.7,
+      },
+
+      // Combat
+      COMBAT: {
+        DINOSAUR_DAMAGE: 1,
+        PUSHBACK_FORCE: 20,
+        INVINCIBILITY_FRAMES: 60, // ~1 second at 60fps
+        DINOSAUR_AGGRO_RANGE: 200,
+      },
+
+      // Bullet
+      BULLET: {
+        SPEED: 8,
+        RADIUS: 4,
+      },
+
+      // Speed Boost
+      SPEED_BOOST: {
+        DURATION_FRAMES: 300, // 5 seconds at 60fps
+        SPEED_MULTIPLIER: 1.8,
+      },
+
+      // Map
+      MAP: {
+        WIDTH: 2400,
+        HEIGHT: 1800,
+        EXIT_X: 1800,
+        EXIT_Y: 1400,
+        EXIT_WIDTH: 60,
+        EXIT_HEIGHT: 60,
+        EXIT_COLLISION_RADIUS: 30,
+      },
+
+      // Spawning
+      SPAWN: {
+        OBSTACLE_MIN_RADIUS: 15,
+        OBSTACLE_MAX_RADIUS: 35, // 15 + 20
+        OBSTACLE_PADDING: 100,
+        OBSTACLE_MIN_MARGIN: 50,
+        DINOSAUR_GRID_START_X: 300,
+        DINOSAUR_GRID_START_Y: 200,
+        DINOSAUR_GRID_SPACING_X: 250,
+        DINOSAUR_GRID_SPACING_Y: 300,
+        DINOSAUR_GRID_RANDOM_OFFSET: 100,
+        DINOSAUR_SPAWN_MAX_ATTEMPTS: 50,
+        DINOSAUR_SPAWN_SEARCH_RANGE: 400, // ±200 pixels
+        POWERUP_SAFE_ZONE_MARGIN: 400,
+        POWERUP_SAFE_ZONE_PADDING: 800,
+        POWERUP_RADIUS: 12,
+      },
+
+      // Ammo Pickup
+      AMMO_PICKUP: {
+        RADIUS: 8,
+        COLLECTION_BONUS_RADIUS: 10,
+        HORIZONTAL_VELOCITY_RANGE: 2,
+        INITIAL_UPWARD_VELOCITY_MIN: -2,
+        INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
+        MAX_BOUNCES: 3,
+        LIFETIME_FRAMES: 400,
+      },
+
+      // AI Behavior
+      AI: {
+        PATROL_ANGLE_CHANGE_RATE: 0.1,
+        PATROL_SPEED_MULTIPLIER: 0.5,
+      },
+
+      // Touch Controls
+      TOUCH: {
+        JOYSTICK_DEAD_ZONE: 10,
+        JOYSTICK_MAX_RANGE: 40,
+        AUTO_AIM_FALLBACK_DISTANCE: 100,
+      },
+
+      // Rendering
+      RENDER: {
+        GRASS_PATCHES: 50,
+        GRASS_PATCH_SIZE: 20,
+      },
+    };
+
+    // ============================================================================
+    // DIFFICULTY CONFIGURATION
+    // ============================================================================
+
+    const DIFFICULTY_MODIFIERS = {
+      easy: {
+        label: 'Easy',
+        playerHealthMultiplier: 1.4,      // 7 hearts (5 * 1.4)
+        playerAmmoMultiplier: 1.5,        // 15 ammo (10 * 1.5)
+        enemySpeedMultiplier: 0.8,        // 20% slower
+        invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
+      },
+      normal: {
+        label: 'Normal',
+        playerHealthMultiplier: 1.0,      // 5 hearts
+        playerAmmoMultiplier: 1.0,        // 10 ammo
+        enemySpeedMultiplier: 1.0,        // Normal speed
+        invincibilityMultiplier: 1.0,     // 60 frames
+      },
+      hard: {
+        label: 'Hard',
+        playerHealthMultiplier: 0.6,      // 3 hearts (5 * 0.6)
+        playerAmmoMultiplier: 0.5,        // 5 ammo (10 * 0.5)
+        enemySpeedMultiplier: 1.3,        // 30% faster
+        invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
+      },
+    };
+
+    /**
+     * Apply difficulty modifiers to base game constants
+     */
+    const getAdjustedConstants = (difficulty) => {
+      const modifier = DIFFICULTY_MODIFIERS[difficulty];
+      return {
+        ...GAME_CONSTANTS,
+        PLAYER: {
+          ...GAME_CONSTANTS.PLAYER,
+          MAX_HEALTH: Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * modifier.playerHealthMultiplier),
+          START_AMMO: Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * modifier.playerAmmoMultiplier),
+        },
+        COMBAT: {
+          ...GAME_CONSTANTS.COMBAT,
+          INVINCIBILITY_FRAMES: Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * modifier.invincibilityMultiplier),
+        },
+        _difficultyModifier: modifier, // Store for enemy speed adjustments
+      };
     };
 
     // ============================================================================
@@ -236,6 +389,10 @@
         const saved = localStorage.getItem('jurassicEscapeVolume');
         return saved !== null ? parseFloat(saved) : 0.3;
       });
+      const [difficulty, setDifficulty] = useState(() => {
+        const saved = localStorage.getItem('jurassicEscapeDifficulty');
+        return saved || 'normal';
+      });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
       // Sound system with pooling for simultaneous playback
@@ -317,7 +474,20 @@
       }, [viewportScale]);
 
       const gameRef = useRef({
-        player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0, invincibilityTimer: 0 },
+        player: {
+          x: GAME_CONSTANTS.PLAYER.START_X,
+          y: GAME_CONSTANTS.PLAYER.START_Y,
+          health: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
+          maxHealth: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
+          ammo: GAME_CONSTANTS.PLAYER.START_AMMO,
+          speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
+          baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
+          radius: GAME_CONSTANTS.PLAYER.RADIUS,
+          isJumping: false,
+          jumpVelocity: 0,
+          jumpHeight: 0,
+          invincibilityTimer: 0
+        },
         bullets: [],
         dinosaurs: [],
         ammoPickups: [],
@@ -326,11 +496,16 @@
         mouseX: 0,
         mouseY: 0,
         keys: {},
-        exit: { x: 1800, y: 1400, width: 60, height: 60 },
+        exit: {
+          x: GAME_CONSTANTS.MAP.EXIT_X,
+          y: GAME_CONSTANTS.MAP.EXIT_Y,
+          width: GAME_CONSTANTS.MAP.EXIT_WIDTH,
+          height: GAME_CONSTANTS.MAP.EXIT_HEIGHT
+        },
         cameraX: 0,
         cameraY: 0,
-        mapWidth: 2400,
-        mapHeight: 1800,
+        mapWidth: GAME_CONSTANTS.MAP.WIDTH,
+        mapHeight: GAME_CONSTANTS.MAP.HEIGHT,
         speedBoostTimer: 0,
         touch: {
           joystick: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 },
@@ -375,7 +550,25 @@
         const game = gameRef.current;
         const config = levelConfigs[level];
 
-        game.player = { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0, invincibilityTimer: 0 };
+        // Apply difficulty modifiers
+        const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+        const playerMaxHealth = Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * diffMod.playerHealthMultiplier);
+        const playerStartAmmo = Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * diffMod.playerAmmoMultiplier);
+
+        game.player = {
+          x: GAME_CONSTANTS.PLAYER.START_X,
+          y: GAME_CONSTANTS.PLAYER.START_Y,
+          health: playerMaxHealth,
+          maxHealth: playerMaxHealth,
+          ammo: playerStartAmmo,
+          speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
+          baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
+          radius: GAME_CONSTANTS.PLAYER.RADIUS,
+          isJumping: false,
+          jumpVelocity: 0,
+          jumpHeight: 0,
+          invincibilityTimer: 0
+        };
         game.bullets = [];
         game.ammoPickups = [];
         game.powerups = [];
@@ -384,16 +577,16 @@
         game.keys = {};
         game.speedBoostTimer = 0;
 
-        setPlayerHealth(5);
-        setPlayerAmmo(10);
+        setPlayerHealth(playerMaxHealth);
+        setPlayerAmmo(playerStartAmmo);
         setSpeedBoostActive(false);
 
         // Create obstacles
         for (let i = 0; i < config.obstacles; i++) {
           game.obstacles.push({
-            x: Math.random() * (game.mapWidth - 100) + 50,
-            y: Math.random() * (game.mapHeight - 100) + 50,
-            radius: 15 + Math.random() * 20,
+            x: Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
+            y: Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
+            radius: GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS),
             type: Math.random() > 0.5 ? 'tree' : 'bush'
           });
         }
@@ -403,8 +596,8 @@
         config.dinosaurs.forEach(dinoType => {
           for (let i = 0; i < dinoType.count; i++) {
             // Calculate initial spawn position
-            const initialX = 300 + (dinoIndex % 4) * 250 + Math.random() * 100;
-            const initialY = 200 + Math.floor(dinoIndex / 4) * 300 + Math.random() * 100;
+            const initialX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_X + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
+            const initialY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
 
             // Find collision-free spawn position
             const spawnPos = findValidSpawnPosition(
@@ -412,8 +605,7 @@
               initialY,
               dinoType.size,
               game.obstacles,
-              game,
-              50
+              game
             );
 
             game.dinosaurs.push({
@@ -423,12 +615,12 @@
               vy: 0,
               health: dinoType.health,
               maxHealth: dinoType.health,
-              speed: dinoType.speed,
+              speed: dinoType.speed * diffMod.enemySpeedMultiplier, // Apply difficulty
               size: dinoType.size,
               color: dinoType.color,
               type: dinoType.type,
               points: dinoType.points,
-              aggroRange: 200,
+              aggroRange: GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE,
               state: 'patrol',
               patrolAngle: Math.random() * Math.PI * 2
             });
@@ -440,14 +632,14 @@
         for (let i = 0; i < config.powerups; i++) {
           const type = Math.random() > 0.5 ? 'health' : 'speed';
           game.powerups.push({
-            x: 400 + Math.random() * (game.mapWidth - 800),
-            y: 400 + Math.random() * (game.mapHeight - 800),
+            x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+            y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
             type: type,
-            radius: 12,
+            radius: GAME_CONSTANTS.SPAWN.POWERUP_RADIUS,
             active: true
           });
         }
-      }, []);
+      }, [difficulty]);
 
       useEffect(() => {
         if (gameState !== 'playing') return;
@@ -472,7 +664,7 @@
           // Handle jump on spacebar press
           if (key === ' ' && !game.player.isJumping) {
             game.player.isJumping = true;
-            game.player.jumpVelocity = 8; // Initial jump velocity
+            game.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
             playSound('jump');
           }
         };
@@ -516,7 +708,7 @@
           // Update speed boost timer
           if (game.speedBoostTimer > 0) {
             game.speedBoostTimer--;
-            game.player.speed = game.player.baseSpeed * 1.8;
+            game.player.speed = game.player.baseSpeed * GAME_CONSTANTS.SPEED_BOOST.SPEED_MULTIPLIER;
             if (game.speedBoostTimer === 0) {
               game.player.speed = game.player.baseSpeed;
               setSpeedBoostActive(false);
@@ -526,7 +718,7 @@
           // Update jump physics
           if (game.player.isJumping) {
             game.player.jumpHeight += game.player.jumpVelocity;
-            game.player.jumpVelocity -= 0.5; // Gravity
+            game.player.jumpVelocity -= GAME_CONSTANTS.PHYSICS.GRAVITY;
 
             // Land
             if (game.player.jumpHeight <= 0) {
@@ -556,10 +748,10 @@
             const dy = game.touch.joystick.currentY - game.touch.joystick.startY;
             const magnitude = Math.sqrt(dx * dx + dy * dy);
 
-            if (magnitude > 10) {
+            if (magnitude > GAME_CONSTANTS.TOUCH.JOYSTICK_DEAD_ZONE) {
               const normalizedDx = dx / magnitude;
               const normalizedDy = dy / magnitude;
-              const speedMultiplier = Math.min(magnitude / 40, 1);
+              const speedMultiplier = Math.min(magnitude / GAME_CONSTANTS.TOUCH.JOYSTICK_MAX_RANGE, 1);
 
               newX += normalizedDx * game.player.speed * speedMultiplier;
               newY += normalizedDy * game.player.speed * speedMultiplier;
@@ -583,7 +775,7 @@
             const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
 
             // Shoot at nearest dinosaur or default direction (right)
-            const targetX = nearestDino ? nearestDino.x : game.player.x + 100;
+            const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
             const targetY = nearestDino ? nearestDino.y : game.player.y;
 
             game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
@@ -614,7 +806,7 @@
                 }
                 playSound('pickup_health');
               } else if (powerup.type === 'speed') {
-                game.speedBoostTimer = 300; // 5 seconds at 60fps
+                game.speedBoostTimer = GAME_CONSTANTS.SPEED_BOOST.DURATION_FRAMES;
                 setSpeedBoostActive(true);
                 playSound('pickup_speed');
               }
@@ -642,12 +834,12 @@
                       x: dino.x,
                       y: dino.y,
                       startY: dino.y,
-                      vx: (Math.random() - 0.5) * 2,
-                      vy: -2 - Math.random() * 1.5,
+                      vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
+                      vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE,
                       bounces: 0,
-                      maxBounces: 3,
-                      life: 400,
-                      radius: 8
+                      maxBounces: GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES,
+                      life: GAME_CONSTANTS.AMMO_PICKUP.LIFETIME_FRAMES,
+                      radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS
                     });
                   }
                   setScore(s => s + dino.points);
@@ -665,13 +857,13 @@
           game.ammoPickups = game.ammoPickups.filter(pickup => {
             pickup.x += pickup.vx;
             pickup.y += pickup.vy;
-            pickup.vy += 0.15;
+            pickup.vy += GAME_CONSTANTS.PHYSICS.AMMO_GRAVITY;
             pickup.life--;
 
             if (pickup.y >= pickup.startY && pickup.vy > 0) {
               pickup.y = pickup.startY;
-              pickup.vy *= -0.5;
-              pickup.vx *= 0.7;
+              pickup.vy *= GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING;
+              pickup.vx *= GAME_CONSTANTS.PHYSICS.AMMO_FRICTION;
               pickup.bounces++;
 
               if (pickup.bounces >= pickup.maxBounces) {
@@ -680,7 +872,7 @@
               }
             }
 
-            if (circleCollision(pickup.x, pickup.y, pickup.radius + 10, game.player.x, game.player.y, game.player.radius)) {
+            if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
               game.player.ammo++;
               setPlayerAmmo(game.player.ammo);
               playSound('pickup_ammo');
@@ -704,9 +896,9 @@
               dino.vy = dy * dino.speed;
             } else {
               dino.state = 'patrol';
-              dino.patrolAngle += (Math.random() - 0.5) * 0.1;
-              dino.vx = Math.cos(dino.patrolAngle) * dino.speed * 0.5;
-              dino.vy = Math.sin(dino.patrolAngle) * dino.speed * 0.5;
+              dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
+              dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+              dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
             }
 
             // Calculate new position
@@ -768,12 +960,15 @@
             }
 
             if (circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
+              const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+              const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
+
               const damageTaken = handleCollisionDamage(
                 dino,           // attacker
                 game.player,    // victim
-                1,              // damage
-                20,             // push back force
-                60,             // invincibility frames (~1 second at 60fps)
+                GAME_CONSTANTS.COMBAT.DINOSAUR_DAMAGE,
+                GAME_CONSTANTS.COMBAT.PUSHBACK_FORCE,
+                invincibilityFrames,
                 playSound       // sound callback
               );
 
@@ -794,7 +989,7 @@
           // Check win condition
           const exitCenterX = game.exit.x + game.exit.width / 2;
           const exitCenterY = game.exit.y + game.exit.height / 2;
-          if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + 30) {
+          if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
             if (currentLevel < 3) {
               setGameState('levelComplete');
               playSound('level_complete');
@@ -809,10 +1004,10 @@
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
           ctx.fillStyle = '#2d4a2d';
-          for (let i = 0; i < 50; i++) {
+          for (let i = 0; i < GAME_CONSTANTS.RENDER.GRASS_PATCHES; i++) {
             const gx = (i * 73) % game.mapWidth - game.cameraX;
             const gy = (i * 97) % game.mapHeight - game.cameraY;
-            ctx.fillRect(gx, gy, 20, 20);
+            ctx.fillRect(gx, gy, GAME_CONSTANTS.RENDER.GRASS_PATCH_SIZE, GAME_CONSTANTS.RENDER.GRASS_PATCH_SIZE);
           }
 
           // Draw exit
@@ -1746,6 +1941,37 @@
                             {config.label}
                           </button>
                         ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">⚔️</span>
+                        <span className="text-white font-semibold text-lg">Difficulty</span>
+                      </div>
+                      <div className="flex gap-2">
+                        {Object.entries(DIFFICULTY_MODIFIERS).map(([key, config]) => (
+                          <button
+                            key={key}
+                            onClick={() => {
+                              setDifficulty(key);
+                              localStorage.setItem('jurassicEscapeDifficulty', key);
+                            }}
+                            className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
+                              difficulty === key
+                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                            }`}
+                          >
+                            {config.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="text-sm text-gray-300 text-center mt-1">
+                        {difficulty === 'easy' && '7 ❤️  15 💥  Slower enemies  90f invincibility'}
+                        {difficulty === 'normal' && '5 ❤️  10 💥  Normal enemies  60f invincibility'}
+                        {difficulty === 'hard' && '3 ❤️  5 💥  Faster enemies  45f invincibility'}
                       </div>
                     </div>
                   </div>
