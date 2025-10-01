@@ -57,17 +57,23 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 #### Entities
 
 - **Player**: Safari explorer character with gun that aims at mouse cursor
-  - Properties: health, ammo, speed (base + boost modifier), jump physics (isJumping, jumpVelocity, jumpHeight)
+  - Properties: health, ammo, tranqAmmo, currentWeapon, speed (base + boost modifier), jump physics (isJumping, jumpVelocity, jumpHeight)
   - Procedurally drawn with safari hat, khaki clothing, and rotating gun
   - Jump physics: velocity starts at 8, gravity of 0.5 per frame
-- **Dinosaurs** (3 types): Raptor, T-Rex, Stegosaurus
-  - Each has unique stats: health, speed, size, points
-  - AI states: `patrol` (random wandering) or `chase` (aggro within range)
+  - Weapon switching: Q key (desktop) or touch button (mobile) to toggle between regular gun and tranquilizer
+- **Dinosaurs** (5 types): Raptor, T-Rex, Stegosaurus (aggressive), Parasaurolophus, Triceratops (herbivores)
+  - Each has unique stats: health, speed, size, points, aggressive flag
+  - **Aggressive dinosaurs** (Raptor, T-Rex, Stego): AI states `patrol` or `chase` (aggro within range), damage player on contact
+  - **Herbivores** (Parasaurolophus, Triceratops): AI states `patrol` or `flee` (flee within range), no damage to player
+    - Flee range: 150 pixels, flee speed: 1.5x base speed
+    - Lower point values (50/75) vs predators (100-300)
   - Obstacle avoidance: when blocked, try steering left/right; if both blocked, reverse
   - Hand-drawn canvas art with facing direction (horizontal flip for left movement)
+  - Sleep mechanic: tranquilized dinosaurs become `isSleeping`, don't move or attack, show Z-Z-Z animation
 - **Obstacles**: Trees and bushes with circular collision
 - **Powerups**: Health (red cross) and Speed (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics (bouncing animation)
+- **Tranquilizer depots**: Green crates with syringe icons, provide 5 tranq ammo each
 
 #### Collision Detection
 
@@ -75,9 +81,9 @@ All collision uses circle-vs-circle distance checks:
 
 - Player vs obstacles (movement blocking, bypassed when jump height >= 25)
 - Dinosaurs vs obstacles (movement blocking with steering avoidance)
-- Player vs dinosaurs (damage)
-- Bullets vs dinosaurs (damage)
-- Player vs powerups/ammo (collection)
+- Player vs aggressive dinosaurs (damage, only when not sleeping)
+- Bullets vs dinosaurs (regular bullets: damage/kill, tranquilizer: track hits and put to sleep)
+- Player vs powerups/ammo/tranq depots (collection)
 
 #### Level Progression
 
@@ -91,7 +97,7 @@ Levels defined in `levelConfigs` (lines 45-75):
 
 - Uses `soundsRef` with `useCallback` for audio management
 - Audio pooling via `cloneNode()` for simultaneous playback (prevents freezing and enables mixing)
-- 13 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause
+- 16 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause, tranq_shoot, tranq_hit, pickup_tranq
 - `unpause` mapped to `game_start` for reuse
 - All sounds are .wav files in `./assets/` folder
 - **Volume control**: `volume` state (0.0-1.0, default 0.3) controls audio volume; applied to all sounds in `playSound` function
@@ -110,24 +116,37 @@ Levels defined in `levelConfigs` (lines 45-75):
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
-- Layered drawing order: background → exit → obstacles → powerups → dinosaurs → player → bullets → ammo pickups
+- Layered drawing order: background → exit → obstacles → powerups → tranq depots → dinosaurs → player → bullets → ammo pickups → floating texts
 - Health bars drawn above dinosaurs
+- Sleeping Z-Z-Z animation drawn above sleeping dinosaurs (3 "Z"s of increasing size with bobbing animation)
+- Floating text system: score popups (+N), tranq hit counters (1/2, 2/3), ammo pickups with fade-out over 1 second
 - Jump shadow drawn below player when airborne
 - Speed boost glow effect (cyan aura) around player
 - Invincibility flashing effect (semi-transparent on alternating frames)
-- UI overlay in React (hearts, 💥 ammo count, score, speed boost indicator, settings gear button)
-- Touch controls overlay (virtual joystick, JUMP button, FIRE button) positioned absolutely over canvas
+- Bullet coloring: yellow for regular, green for tranquilizer
+- UI overlay in React (hearts, 💥 regular ammo, 💉 tranq ammo with weapon highlighting, score, speed boost indicator, settings gear button)
+- Touch controls overlay (virtual joystick, weapon switch button, JUMP button, FIRE button) positioned absolutely over canvas
 - Pause menu overlay with semi-transparent backdrop when ESC pressed
 - Settings menu overlay accessible from main menu, pause menu, and gameplay HUD (gear button)
 
 ## Key Implementation Details
 
-- **Collision system**: Player and dinosaurs collide with obstacles; dinosaurs don't collide with each other
+- **Collision system**: Player and aggressive dinosaurs collide with obstacles; dinosaurs don't collide with each other; herbivores don't damage player
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
-- **Ammo economy**: Start with 10, dinosaurs drop ammo equal to their max health when killed
+- **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
+- **Tranquilizer mechanic**: Multi-shot system based on dinosaur size
+  - Raptor/Para: 1 shot, Stego/Trike: 2 shots, T-Rex: 3 shots
+  - Shows hit counter as floating text (1/2, 2/3, etc.)
+  - Awards 50% of kill points when dinosaur is put to sleep
+  - Sleep duration: Raptor 8s, Para 7s, Stego/Trike 6s, T-Rex 4s
+  - Sleeping dinosaurs don't move or attack, display Z-Z-Z animation
+  - Tranq hit counter resets when dinosaur wakes up
 - **Dinosaur art**: Procedurally drawn on canvas with context transformations (scale, rotate, flip)
+  - Parasaurolophus: Tan/brown with distinctive swept-back head crest
+  - Triceratops: Tan/beige with three horns and prominent neck frill
 - **Player art**: Safari explorer with rotating gun using ctx.save/translate/rotate/restore pattern
+- **Floating text system**: Reusable for score popups, hit counters, and ammo pickups with fade-out animation
 - **Input handling**:
   - Keyboard state stored in `game.keys` object, mouse position relative to canvas
   - Touch state in `game.touch` object with joystick (active, startX/Y, currentX/Y) and button states (shoot, jump)
