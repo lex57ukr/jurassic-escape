@@ -21,10 +21,11 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 ### Game State Management
 The main `JurassicEscape` component manages:
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
-- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`
+- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `canvasSize`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
   - Camera position, map dimensions, input tracking
+  - Touch controls state (joystick, shoot, jump)
 
 ### Game Loop Pattern
 Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-889):
@@ -35,10 +36,12 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 ### Core Systems
 
 **Movement & Controls**
-- WASD/Arrow keys for player movement
-- Spacebar to jump (clears obstacles when jump height >= 25)
-- Mouse position tracked for aiming
-- Click to shoot (consumes ammo)
+- **Desktop**: WASD/Arrow keys for player movement
+- **Mobile**: Virtual joystick (touch and drag) with variable speed based on joystick displacement
+- Spacebar (desktop) or JUMP button (mobile) to jump (clears obstacles when jump height >= 25)
+- Mouse position tracked for aiming (desktop)
+- Click to shoot (desktop) or FIRE button with auto-aim (mobile)
+- Touch controls automatically hidden on desktop (using Tailwind `md:hidden`)
 - ESC to pause (shows pause menu with Continue/Restart/Exit options)
 - Camera follows player with map boundary constraints
 
@@ -77,13 +80,16 @@ Levels defined in `levelConfigs` (lines 45-75):
 - Volume set to 0.3, with cleanup via 'ended' event listener
 
 ### Rendering
-- 800x600 canvas viewport into 2400x1800 game world
+- 800x600 canvas viewport into 2400x1800 game world (logical resolution)
+- Responsive canvas sizing: scales to fit screen on mobile while maintaining 4:3 aspect ratio
+- Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
 - Layered drawing order: background → exit → obstacles → powerups → dinosaurs → player → bullets → ammo pickups
 - Health bars drawn above dinosaurs
 - Jump shadow drawn below player when airborne
 - Speed boost glow effect (cyan aura) around player
 - UI overlay in React (hearts, 💥 ammo count, score, speed boost indicator)
+- Touch controls overlay (virtual joystick, JUMP button, FIRE button) positioned absolutely over canvas
 - Pause menu overlay with semi-transparent backdrop when ESC pressed
 
 ## Key Implementation Details
@@ -94,7 +100,16 @@ Levels defined in `levelConfigs` (lines 45-75):
 - **Ammo economy**: Start with 10, dinosaurs drop ammo equal to their max health when killed
 - **Dinosaur art**: Procedurally drawn on canvas with context transformations (scale, rotate, flip)
 - **Player art**: Safari explorer with rotating gun using ctx.save/translate/rotate/restore pattern
-- **Input handling**: Keyboard state stored in `game.keys` object, mouse position relative to canvas
+- **Input handling**:
+  - Keyboard state stored in `game.keys` object, mouse position relative to canvas
+  - Touch state in `game.touch` object with joystick (active, startX/Y, currentX/Y) and button states (shoot, jump)
+  - Virtual joystick calculates normalized direction vector and speed multiplier from displacement
+- **Mobile support**:
+  - Viewport meta tag prevents zoom and enables proper mobile rendering
+  - Responsive canvas sizing effect updates on window resize
+  - Touch controls overlay with `pointer-events-auto` on interactive areas
+  - Auto-aim on mobile: FIRE button targets nearest dinosaur, falls back to shooting right
+  - Touch shoot has cooldown to prevent rapid fire (sets `game.touch.shoot = false` after firing)
 - **Pause system**: Game loop continues but returns early when `showPauseMenu` is true; ESC key toggles pause
 - **Sound on menu actions**:
   - Continue/Restart: plays `unpause` (mapped to `game_start`)

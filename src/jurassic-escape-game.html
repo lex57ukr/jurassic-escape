@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Jurassic Escape</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -24,6 +25,7 @@
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
+      const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
       // Sound system with pooling for simultaneous playback
       const soundsRef = useRef({});
@@ -72,6 +74,30 @@
         soundsRef.current = sounds;
       }, []);
 
+      // Responsive canvas sizing
+      useEffect(() => {
+        const updateCanvasSize = () => {
+          const maxWidth = Math.min(window.innerWidth - 20, 800);
+          const maxHeight = Math.min(window.innerHeight - 200, 600);
+          const aspectRatio = 800 / 600;
+
+          let width = maxWidth;
+          let height = maxWidth / aspectRatio;
+
+          if (height > maxHeight) {
+            height = maxHeight;
+            width = maxHeight * aspectRatio;
+          }
+
+          setCanvasSize({ width, height });
+        };
+
+        updateCanvasSize();
+        window.addEventListener('resize', updateCanvasSize);
+
+        return () => window.removeEventListener('resize', updateCanvasSize);
+      }, []);
+
       const gameRef = useRef({
         player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0 },
         bullets: [],
@@ -87,7 +113,12 @@
         cameraY: 0,
         mapWidth: 2400,
         mapHeight: 1800,
-        speedBoostTimer: 0
+        speedBoostTimer: 0,
+        touch: {
+          joystick: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 },
+          shoot: false,
+          jump: false
+        }
       });
 
       const levelConfigs = {
@@ -287,6 +318,7 @@
           let newX = game.player.x;
           let newY = game.player.y;
 
+          // Handle keyboard input
           if (game.keys['w']) newY -= game.player.speed;
           if (game.keys['s']) newY += game.player.speed;
           if (game.keys['a']) newX -= game.player.speed;
@@ -295,6 +327,22 @@
           if (game.keys['arrowdown']) newY += game.player.speed;
           if (game.keys['arrowleft']) newX -= game.player.speed;
           if (game.keys['arrowright']) newX += game.player.speed;
+
+          // Handle touch joystick input
+          if (game.touch.joystick.active) {
+            const dx = game.touch.joystick.currentX - game.touch.joystick.startX;
+            const dy = game.touch.joystick.currentY - game.touch.joystick.startY;
+            const magnitude = Math.sqrt(dx * dx + dy * dy);
+
+            if (magnitude > 10) {
+              const normalizedDx = dx / magnitude;
+              const normalizedDy = dy / magnitude;
+              const speedMultiplier = Math.min(magnitude / 40, 1);
+
+              newX += normalizedDx * game.player.speed * speedMultiplier;
+              newY += normalizedDy * game.player.speed * speedMultiplier;
+            }
+          }
 
           // Boundary check
           newX = Math.max(game.player.radius, Math.min(game.mapWidth - game.player.radius, newX));
@@ -317,6 +365,54 @@
           if (!collided) {
             game.player.x = newX;
             game.player.y = newY;
+          }
+
+          // Handle touch shooting (auto-aim at nearest dinosaur)
+          if (game.touch.shoot && game.player.ammo > 0) {
+            // Find nearest dinosaur
+            let nearestDino = null;
+            let nearestDist = Infinity;
+
+            game.dinosaurs.forEach(dino => {
+              const dx = dino.x - game.player.x;
+              const dy = dino.y - game.player.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < nearestDist) {
+                nearestDist = dist;
+                nearestDino = dino;
+              }
+            });
+
+            // Shoot at nearest dinosaur or default direction (right)
+            let targetX, targetY;
+            if (nearestDino) {
+              targetX = nearestDino.x;
+              targetY = nearestDino.y;
+            } else {
+              targetX = game.player.x + 100;
+              targetY = game.player.y;
+            }
+
+            const dx = targetX - game.player.x;
+            const dy = targetY - game.player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 0) {
+              game.bullets.push({
+                x: game.player.x,
+                y: game.player.y,
+                vx: (dx / dist) * 8,
+                vy: (dy / dist) * 8,
+                radius: 4
+              });
+
+              game.player.ammo--;
+              setPlayerAmmo(game.player.ammo);
+              playSound('shoot');
+
+              // Add cooldown to prevent rapid fire
+              game.touch.shoot = false;
+            }
           }
 
           // Update camera
@@ -1102,13 +1198,100 @@
                 )}
                 <div className="text-xl font-bold">Score: {score}</div>
               </div>
-              <canvas
-                ref={canvasRef}
-                width={800}
-                height={600}
-                className="border-4 border-green-600 bg-green-900 cursor-crosshair"
-              />
-              <p className="text-gray-400 mt-2">Collect powerups and defeat dinosaurs to survive!</p>
+              <div className="relative">
+                <canvas
+                  ref={canvasRef}
+                  width={800}
+                  height={600}
+                  style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
+                  className="border-4 border-green-600 bg-green-900 cursor-crosshair"
+                />
+
+                {/* Touch Controls Overlay */}
+                <div className="absolute inset-0 pointer-events-none md:hidden">
+                  {/* Virtual Joystick Area (left side) */}
+                  <div
+                    className="absolute left-4 bottom-4 w-32 h-32 pointer-events-auto"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      const touch = e.touches[0];
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = touch.clientX - rect.left;
+                      const y = touch.clientY - rect.top;
+                      gameRef.current.touch.joystick = {
+                        active: true,
+                        startX: x,
+                        startY: y,
+                        currentX: x,
+                        currentY: y
+                      };
+                    }}
+                    onTouchMove={(e) => {
+                      e.preventDefault();
+                      if (!gameRef.current.touch.joystick.active) return;
+                      const touch = e.touches[0];
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      gameRef.current.touch.joystick.currentX = touch.clientX - rect.left;
+                      gameRef.current.touch.joystick.currentY = touch.clientY - rect.top;
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      gameRef.current.touch.joystick.active = false;
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-gray-800 bg-opacity-50 border-2 border-gray-600 flex items-center justify-center">
+                      <div className="text-2xl">🕹️</div>
+                    </div>
+                    {gameRef.current.touch.joystick.active && (
+                      <div
+                        className="absolute w-12 h-12 rounded-full bg-green-500 bg-opacity-70 transform -translate-x-1/2 -translate-y-1/2"
+                        style={{
+                          left: `${gameRef.current.touch.joystick.currentX}px`,
+                          top: `${gameRef.current.touch.joystick.currentY}px`
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Jump Button */}
+                  <div
+                    className="absolute right-28 bottom-4 w-20 h-20 pointer-events-auto"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      if (!gameRef.current.player.isJumping) {
+                        gameRef.current.player.isJumping = true;
+                        gameRef.current.player.jumpVelocity = 8;
+                        playSound('jump');
+                      }
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white font-bold shadow-lg">
+                      JUMP
+                    </div>
+                  </div>
+
+                  {/* Shoot Button */}
+                  <div
+                    className="absolute right-4 bottom-4 w-20 h-20 pointer-events-auto"
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      gameRef.current.touch.shoot = true;
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      gameRef.current.touch.shoot = false;
+                    }}
+                  >
+                    <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-2 border-red-500 flex items-center justify-center text-white font-bold shadow-lg">
+                      FIRE
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-gray-400 mt-2 text-center">
+                <span className="hidden md:inline">Use WASD/Arrows to move, Mouse to aim, Click to shoot, Spacebar to jump!</span>
+                <span className="md:hidden">Use the joystick to move, FIRE to auto-aim at dinosaurs, JUMP to escape obstacles!</span>
+              </p>
 
               {showPauseMenu && (
                 <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center">
