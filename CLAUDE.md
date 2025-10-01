@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the Game
 
-Open `src/jurassic-escape-game.html` directly in a web browser. No build process or dependencies required.
+Open `index.html` directly in a web browser. No build process or dependencies required.
 
 ## Architecture
 
