@@ -24,6 +24,40 @@
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
 
+      // Sound system
+      const soundsRef = useRef({});
+
+      const playSound = useCallback((soundName) => {
+        const audio = soundsRef.current[soundName];
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+      }, []);
+
+      useEffect(() => {
+        // Preload all sounds
+        const sounds = {
+          shoot: new Audio('../assets/shoot.wav'),
+          hit: new Audio('../assets/hit.wav'),
+          death: new Audio('../assets/death.wav'),
+          pickup_ammo: new Audio('../assets/pickup_ammo.wav'),
+          pickup_health: new Audio('../assets/pickup_health.wav'),
+          pickup_speed: new Audio('../assets/pickup_speed.wav'),
+          player_hurt: new Audio('../assets/player_hurt.wav'),
+          level_complete: new Audio('../assets/level_complete.wav'),
+          game_over: new Audio('../assets/game_over.wav'),
+          victory: new Audio('../assets/victory.wav')
+        };
+
+        // Set volume levels
+        Object.values(sounds).forEach(audio => {
+          audio.volume = 0.3;
+        });
+
+        soundsRef.current = sounds;
+      }, []);
+
       const gameRef = useRef({
         player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15 },
         bullets: [],
@@ -181,6 +215,7 @@
 
             game.player.ammo--;
             setPlayerAmmo(game.player.ammo);
+            playSound('shoot');
           }
         };
 
@@ -256,9 +291,11 @@
                   game.player.health++;
                   setPlayerHealth(game.player.health);
                 }
+                playSound('pickup_health');
               } else if (powerup.type === 'speed') {
                 game.speedBoostTimer = 300; // 5 seconds at 60fps
                 setSpeedBoostActive(true);
+                playSound('pickup_speed');
               }
             }
           });
@@ -280,6 +317,7 @@
 
               if (dist < dino.size) {
                 dino.health--;
+                playSound('hit');
                 if (dino.health <= 0) {
                   for (let j = 0; j < dino.maxHealth; j++) {
                     game.ammoPickups.push({
@@ -296,6 +334,7 @@
                   }
                   setScore(s => s + dino.points);
                   game.dinosaurs.splice(i, 1);
+                  playSound('death');
                 }
                 return false;
               }
@@ -330,6 +369,7 @@
             if (dist < game.player.radius + pickup.radius + 10) {
               game.player.ammo++;
               setPlayerAmmo(game.player.ammo);
+              playSound('pickup_ammo');
               return false;
             }
 
@@ -364,11 +404,13 @@
             if (dist < game.player.radius + dino.size) {
               game.player.health--;
               setPlayerHealth(game.player.health);
+              playSound('player_hurt');
               dino.x -= dx * 2;
               dino.y -= dy * 2;
 
               if (game.player.health <= 0) {
                 setGameState('lost');
+                playSound('game_over');
               }
             }
           });
@@ -380,8 +422,10 @@
           if (exitDist < game.player.radius + 30) {
             if (currentLevel < 3) {
               setGameState('levelComplete');
+              playSound('level_complete');
             } else {
               setGameState('won');
+              playSound('victory');
             }
           }
 
@@ -886,7 +930,7 @@
           window.removeEventListener('keydown', handleKeyDown);
           window.removeEventListener('keyup', handleKeyUp);
         };
-      }, [gameState, currentLevel]);
+      }, [gameState, currentLevel, playSound]);
 
       const startGame = () => {
         setCurrentLevel(1);
