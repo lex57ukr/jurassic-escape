@@ -145,17 +145,21 @@ Levels defined in `levelConfigs`:
 - **Collision system**: Player and aggressive dinosaurs collide with obstacles; dinosaurs don't collide with each other; herbivores don't damage player
 - **Environmental hazards**: Two types of hazards affect gameplay:
   - **Tar pits**: Circular hazards (40px radius) that slow entities to 50% speed when inside
-    - Dark brown/black visual with bubbling animation every 2 seconds
+    - Dark brown/black visual with 3 bubbles per pit, spawning every 0.5 seconds with 40-frame animation
+    - Bubbles grow from radius 2 to 6 pixels with fade-out, randomized positions within 20px spread
     - Affects both player and dinosaurs equally
     - No damage, purely movement penalty
     - Spawn with collision avoidance (obstacles, other tar pits)
   - **Electric fences**: Rectangular barriers (80x10px) that damage player and stun dinosaurs
-    - Player: 1 damage on contact (with 1s cooldown), pushed back by 30px, plays electric_shock sound, can jump over if high enough
-    - Dinosaurs: Bounced back with pushback force, stunned (sleep state) for half of tranq duration
+    - Player: 1 damage on contact (with 1s cooldown), pushed back by 50px, plays electric_shock sound, can jump over if high enough
+    - Dinosaurs: Bounced back 50px, stunned (sleep state) for half of tranq duration
     - Stun doesn't reset tranq hits or award points (pure mechanical stun)
+    - **Learned avoidance**: Dinosaurs remember fences that zapped them for 10 seconds, steering around with 30px safety buffer
+    - Memory decay: After 10 seconds, dinos forget and may hit the same fence again
     - Blue-gray base with yellow electric wires, spark animation every 0.5 seconds
+    - Electric zap visual effect with yellow aura and rotating lightning bolts (30 frames)
     - Randomly rotated for varied placement
-    - Spawn with collision avoidance (obstacles, other fences)
+    - Spawn with collision avoidance (obstacles, other fences, tar pits)
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; also bypasses electric fences; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
 - **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
