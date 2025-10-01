@@ -530,7 +530,6 @@
       WINDOW_PADDING: 20, // Horizontal padding from window edges
       VERTICAL_SPACING_DESKTOP: 200, // Space for UI above/below canvas on desktop
       VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile
-      AUDIO_UNLOCK_VOLUME: 0, // Silent volume for mobile audio unlock
     };
 
     // ============================================================================
@@ -671,29 +670,6 @@
         });
 
         soundsRef.current = sounds;
-
-        // Mobile audio unlock: play silent audio on first touch to enable sound
-        const unlockAudio = () => {
-          Object.values(sounds).forEach(audio => {
-            const clone = audio.cloneNode();
-            clone.volume = CANVAS_SIZING.AUDIO_UNLOCK_VOLUME;
-            clone.play().then(() => clone.pause()).catch(() => {});
-          });
-          // Remove listeners after first unlock
-          document.removeEventListener('touchstart', unlockAudio);
-          document.removeEventListener('touchend', unlockAudio);
-        };
-
-        // Only add unlock for touch devices
-        if ('ontouchstart' in window) {
-          document.addEventListener('touchstart', unlockAudio, { once: true });
-          document.addEventListener('touchend', unlockAudio, { once: true });
-        }
-
-        return () => {
-          document.removeEventListener('touchstart', unlockAudio);
-          document.removeEventListener('touchend', unlockAudio);
-        };
       }, []);
 
       // Detect touch device and responsive canvas sizing
