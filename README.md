@@ -67,6 +67,8 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **❤️ Health Pack**: Restores 1 heart (red cross)
 - **⚡ Speed Boost**: Temporary speed increase (lightning bolt)
 - **💥 Ammo**: Regular ammunition, dropped by defeated dinosaurs
+  - Bounces continuously with decreasing amplitude until motion stops
+  - Physics simulation with gravity, damping, and friction
 - **💉 Tranquilizer Depot**: Green crate with 5 tranquilizer darts
 
 ## ⚠️ Environmental Hazards

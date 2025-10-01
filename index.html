@@ -278,8 +278,8 @@
       PHYSICS: {
         GRAVITY: 0.5,
         AMMO_GRAVITY: 0.15,
-        AMMO_BOUNCE_DAMPING: -0.5,
-        AMMO_FRICTION: 0.7,
+        AMMO_BOUNCE_DAMPING: -0.7, // Higher value = more bouncing
+        AMMO_FRICTION: 0.85, // Higher value = less horizontal slowdown
       },
 
       // Combat
@@ -360,8 +360,7 @@
         HORIZONTAL_VELOCITY_RANGE: 2,
         INITIAL_UPWARD_VELOCITY_MIN: -2,
         INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
-        MAX_BOUNCES: 3,
-        LIFETIME_FRAMES: 400,
+        MIN_BOUNCE_VELOCITY: 0.05, // Minimum velocity before ammo disappears
       },
 
       // AI Behavior
@@ -1410,9 +1409,6 @@
                         startY: dino.y,
                         vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
                         vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE,
-                        bounces: 0,
-                        maxBounces: GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES,
-                        life: GAME_CONSTANTS.AMMO_PICKUP.LIFETIME_FRAMES,
                         radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS
                       });
                     }
@@ -1478,18 +1474,11 @@
             pickup.x += pickup.vx;
             pickup.y += pickup.vy;
             pickup.vy += GAME_CONSTANTS.PHYSICS.AMMO_GRAVITY;
-            pickup.life--;
 
             if (pickup.y >= pickup.startY && pickup.vy > 0) {
               pickup.y = pickup.startY;
               pickup.vy *= GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING;
               pickup.vx *= GAME_CONSTANTS.PHYSICS.AMMO_FRICTION;
-              pickup.bounces++;
-
-              if (pickup.bounces >= pickup.maxBounces) {
-                pickup.vx = 0;
-                pickup.vy = 0;
-              }
             }
 
             if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
@@ -1499,7 +1488,8 @@
               return false;
             }
 
-            return pickup.life > 0;
+            // Remove ammo when motion stops (velocity too low)
+            return Math.abs(pickup.vy) > GAME_CONSTANTS.AMMO_PICKUP.MIN_BOUNCE_VELOCITY || Math.abs(pickup.vx) > GAME_CONSTANTS.AMMO_PICKUP.MIN_BOUNCE_VELOCITY;
           });
 
           // Update player invincibility

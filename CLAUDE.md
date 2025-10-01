@@ -81,7 +81,7 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
   - Sleep mechanic: tranquilized dinosaurs become `isSleeping`, don't move or attack, show Z-Z-Z animation
 - **Obstacles**: Trees and bushes with circular collision
 - **Powerups**: Health (red cross) and Speed (lightning bolt)
-- **Ammo pickups**: Dropped when dinosaurs die, with physics (bouncing animation)
+- **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
 - **Tranquilizer depots**: Green crates with syringe icons, provide 5 tranq ammo each
 
 #### Collision Detection
@@ -159,6 +159,10 @@ Levels defined in `levelConfigs`:
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; also bypasses electric fences; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
 - **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
+  - Ammo pickups use physics-based bouncing animation
+  - Bounces continuously with decreasing amplitude (damping: -0.7, friction: 0.85)
+  - Disappears when velocity drops below minimum threshold (0.05)
+  - No fixed bounce count or lifetime limit
 - **Tranquilizer mechanic**: Multi-shot system based on dinosaur size
   - Raptor/Para: 1 shot, Dilo/Stego/Trike: 2 shots, T-Rex: 3 shots
   - Shows hit counter as floating text (1/2, 2/3, etc.)
