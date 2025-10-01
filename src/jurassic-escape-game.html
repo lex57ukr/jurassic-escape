@@ -55,7 +55,8 @@
           level_complete: new Audio('../assets/level_complete.wav'),
           game_over: new Audio('../assets/game_over.wav'),
           victory: new Audio('../assets/victory.wav'),
-          game_start: new Audio('../assets/game_start.wav')
+          game_start: new Audio('../assets/game_start.wav'),
+          jump: new Audio('../assets/jump.wav')
         };
 
         // Preload all audio files
@@ -67,7 +68,7 @@
       }, []);
 
       const gameRef = useRef({
-        player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15 },
+        player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0 },
         bullets: [],
         dinosaurs: [],
         ammoPickups: [],
@@ -120,7 +121,7 @@
         const game = gameRef.current;
         const config = levelConfigs[level];
 
-        game.player = { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15 };
+        game.player = { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0 };
         game.bullets = [];
         game.ammoPickups = [];
         game.powerups = [];
@@ -190,7 +191,15 @@
         let animationId;
 
         const handleKeyDown = (e) => {
-          game.keys[e.key.toLowerCase()] = true;
+          const key = e.key.toLowerCase();
+          game.keys[key] = true;
+
+          // Handle jump on spacebar press
+          if (key === ' ' && !game.player.isJumping) {
+            game.player.isJumping = true;
+            game.player.jumpVelocity = 8; // Initial jump velocity
+            playSound('jump');
+          }
         };
 
         const handleKeyUp = (e) => {
@@ -243,6 +252,19 @@
             }
           }
 
+          // Update jump physics
+          if (game.player.isJumping) {
+            game.player.jumpHeight += game.player.jumpVelocity;
+            game.player.jumpVelocity -= 0.5; // Gravity
+
+            // Land
+            if (game.player.jumpHeight <= 0) {
+              game.player.jumpHeight = 0;
+              game.player.jumpVelocity = 0;
+              game.player.isJumping = false;
+            }
+          }
+
           // Update player
           let newX = game.player.x;
           let newY = game.player.y;
@@ -260,15 +282,17 @@
           newX = Math.max(game.player.radius, Math.min(game.mapWidth - game.player.radius, newX));
           newY = Math.max(game.player.radius, Math.min(game.mapHeight - game.player.radius, newY));
 
-          // Collision with obstacles
+          // Collision with obstacles (only when not jumping high enough)
           let collided = false;
-          for (const obs of game.obstacles) {
-            const dx = newX - obs.x;
-            const dy = newY - obs.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < game.player.radius + obs.radius) {
-              collided = true;
-              break;
+          if (game.player.jumpHeight < 25) {
+            for (const obs of game.obstacles) {
+              const dx = newX - obs.x;
+              const dy = newY - obs.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < game.player.radius + obs.radius) {
+                collided = true;
+                break;
+              }
             }
           }
 
@@ -884,7 +908,15 @@
 
           // Draw player
           const playerScreenX = game.player.x - game.cameraX;
-          const playerScreenY = game.player.y - game.cameraY;
+          const playerScreenY = game.player.y - game.cameraY - game.player.jumpHeight;
+
+          // Jump shadow
+          if (game.player.isJumping) {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(playerScreenX, game.player.y - game.cameraY, game.player.radius * 0.8, game.player.radius * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
           // Speed boost glow effect
           if (game.speedBoostTimer > 0) {
@@ -963,7 +995,7 @@
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">JURASSIC ESCAPE</h1>
               <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
-              <p className="text-gray-400 mb-2">WASD or Arrow Keys to move • Mouse to aim • Click to shoot</p>
+              <p className="text-gray-400 mb-2">WASD or Arrow Keys to move • Spacebar to jump • Mouse to aim • Click to shoot</p>
               <div className="text-gray-300 mb-6 space-y-2">
                 <p className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 bg-red-500 rounded-full"></span>
