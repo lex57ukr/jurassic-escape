@@ -225,10 +225,14 @@
         SLEEP_DURATION_RAPTOR: 480, // 8 seconds at 60fps
         SLEEP_DURATION_STEGO: 360,  // 6 seconds at 60fps
         SLEEP_DURATION_TREX: 240,   // 4 seconds at 60fps
+        SLEEP_DURATION_PARA: 420,   // 7 seconds at 60fps
+        SLEEP_DURATION_TRIKE: 360,  // 6 seconds at 60fps
         SCORE_MULTIPLIER: 0.5,      // 50% of kill points
         SHOTS_NEEDED_RAPTOR: 1,     // 1 shot to tranquilize raptor
         SHOTS_NEEDED_STEGO: 2,      // 2 shots to tranquilize stego
         SHOTS_NEEDED_TREX: 3,       // 3 shots to tranquilize trex
+        SHOTS_NEEDED_PARA: 1,       // 1 shot to tranquilize parasaurolophus
+        SHOTS_NEEDED_TRIKE: 2,      // 2 shots to tranquilize triceratops
       },
 
       // Speed Boost
@@ -283,6 +287,8 @@
       AI: {
         PATROL_ANGLE_CHANGE_RATE: 0.1,
         PATROL_SPEED_MULTIPLIER: 0.5,
+        HERBIVORE_FLEE_RANGE: 150,     // Distance at which herbivores flee
+        HERBIVORE_FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
       },
 
       // Touch Controls
@@ -585,8 +591,9 @@
         1: {
           name: "The Beginning",
           dinosaurs: [
-            { type: 'raptor', count: 3, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100 },
-            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200 }
+            { type: 'raptor', count: 3, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100, aggressive: true },
+            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200, aggressive: true },
+            { type: 'para', count: 2, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false }
           ],
           obstacles: 40,
           powerups: 3
@@ -594,9 +601,11 @@
         2: {
           name: "Deeper Danger",
           dinosaurs: [
-            { type: 'raptor', count: 5, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100 },
-            { type: 'trex', count: 2, health: 4, speed: 1, size: 35, color: '#654321', points: 300 },
-            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200 }
+            { type: 'raptor', count: 5, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100, aggressive: true },
+            { type: 'trex', count: 2, health: 4, speed: 1, size: 35, color: '#654321', points: 300, aggressive: true },
+            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200, aggressive: true },
+            { type: 'para', count: 3, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false },
+            { type: 'trike', count: 2, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false }
           ],
           obstacles: 50,
           powerups: 4
@@ -604,9 +613,11 @@
         3: {
           name: "Final Escape",
           dinosaurs: [
-            { type: 'raptor', count: 6, health: 2, speed: 1.7, size: 20, color: '#8B4513', points: 100 },
-            { type: 'trex', count: 3, health: 4, speed: 1.2, size: 35, color: '#654321', points: 300 },
-            { type: 'stego', count: 3, health: 3, speed: 0.9, size: 30, color: '#556B2F', points: 200 }
+            { type: 'raptor', count: 6, health: 2, speed: 1.7, size: 20, color: '#8B4513', points: 100, aggressive: true },
+            { type: 'trex', count: 3, health: 4, speed: 1.2, size: 35, color: '#654321', points: 300, aggressive: true },
+            { type: 'stego', count: 3, health: 3, speed: 0.9, size: 30, color: '#556B2F', points: 200, aggressive: true },
+            { type: 'para', count: 4, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false },
+            { type: 'trike', count: 3, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false }
           ],
           obstacles: 60,
           powerups: 5
@@ -690,11 +701,14 @@
               health: dinoType.health,
               maxHealth: dinoType.health,
               speed: dinoType.speed * diffMod.enemySpeedMultiplier, // Apply difficulty
+              baseSpeed: dinoType.speed * diffMod.enemySpeedMultiplier,
               size: dinoType.size,
               color: dinoType.color,
               type: dinoType.type,
               points: dinoType.points,
-              aggroRange: GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE,
+              aggressive: dinoType.aggressive,
+              aggroRange: dinoType.aggressive ? GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
+              fleeRange: dinoType.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
               state: 'patrol',
               patrolAngle: Math.random() * Math.PI * 2,
               isSleeping: false,
@@ -968,6 +982,10 @@
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_STEGO;
                     } else if (dino.type === 'trex') {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TREX;
+                    } else if (dino.type === 'para') {
+                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_PARA;
+                    } else if (dino.type === 'trike') {
+                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TRIKE;
                     }
 
                     // Show hit indicator
@@ -977,13 +995,17 @@
                     if (dino.tranqHits >= shotsNeeded) {
                       dino.isSleeping = true;
 
-                      // Sleep duration based on dinosaur size
+                      // Sleep duration based on dinosaur type
                       if (dino.type === 'raptor') {
                         dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
                       } else if (dino.type === 'stego') {
                         dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_STEGO;
                       } else if (dino.type === 'trex') {
                         dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TREX;
+                      } else if (dino.type === 'para') {
+                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_PARA;
+                      } else if (dino.type === 'trike') {
+                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TRIKE;
                       }
 
                       const tranqPoints = Math.round(dino.points * GAME_CONSTANTS.TRANQUILIZER.SCORE_MULTIPLIER);
@@ -1079,16 +1101,36 @@
 
             const dist = distance(dino.x, dino.y, game.player.x, game.player.y);
 
-            if (dist < dino.aggroRange) {
-              dino.state = 'chase';
-              const { dx, dy } = normalize(game.player.x - dino.x, game.player.y - dino.y);
-              dino.vx = dx * dino.speed;
-              dino.vy = dy * dino.speed;
+            if (dino.aggressive) {
+              // Aggressive dinosaurs chase player
+              if (dist < dino.aggroRange) {
+                dino.state = 'chase';
+                const { dx, dy } = normalize(game.player.x - dino.x, game.player.y - dino.y);
+                dino.speed = dino.baseSpeed;
+                dino.vx = dx * dino.speed;
+                dino.vy = dy * dino.speed;
+              } else {
+                dino.state = 'patrol';
+                dino.speed = dino.baseSpeed;
+                dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
+                dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+                dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+              }
             } else {
-              dino.state = 'patrol';
-              dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
-              dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
-              dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+              // Herbivores flee from player
+              if (dist < dino.fleeRange) {
+                dino.state = 'flee';
+                const { dx, dy } = normalize(dino.x - game.player.x, dino.y - game.player.y); // Flee away from player
+                dino.speed = dino.baseSpeed * GAME_CONSTANTS.AI.HERBIVORE_FLEE_SPEED_MULTIPLIER;
+                dino.vx = dx * dino.speed;
+                dino.vy = dy * dino.speed;
+              } else {
+                dino.state = 'patrol';
+                dino.speed = dino.baseSpeed;
+                dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
+                dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+                dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+              }
             }
 
             // Calculate new position
@@ -1149,8 +1191,8 @@
               dino.patrolAngle = Math.random() * Math.PI * 2;
             }
 
-            // Sleeping dinosaurs don't collide with player
-            if (!dino.isSleeping && circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
+            // Only aggressive dinosaurs that aren't sleeping can damage player
+            if (dino.aggressive && !dino.isSleeping && circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
               const diffMod = DIFFICULTY_MODIFIERS[difficulty];
               const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
 
@@ -1644,6 +1686,169 @@
               ctx.beginPath();
               ctx.arc(34 * scale, 3 * scale, 3 * scale, 0, Math.PI);
               ctx.stroke();
+
+            } else if (dino.type === 'para') {
+              // Parasaurolophus - duck-billed herbivore with distinctive head crest
+              const scale = dino.size / 25;
+
+              // Tail
+              ctx.fillStyle = '#D2691E';
+              ctx.beginPath();
+              ctx.moveTo(-12 * scale, 0);
+              ctx.quadraticCurveTo(-25 * scale, 2 * scale, -35 * scale, 0);
+              ctx.lineTo(-33 * scale, 2 * scale);
+              ctx.quadraticCurveTo(-23 * scale, 4 * scale, -12 * scale, 2 * scale);
+              ctx.fill();
+
+              // Hind legs
+              ctx.fillStyle = '#CD853F';
+              ctx.fillRect(-10 * scale, 8 * scale, 5 * scale, 10 * scale);
+              ctx.fillRect(-2 * scale, 8 * scale, 5 * scale, 10 * scale);
+
+              // Front legs
+              ctx.fillRect(8 * scale, 10 * scale, 4 * scale, 8 * scale);
+              ctx.fillRect(14 * scale, 10 * scale, 4 * scale, 8 * scale);
+
+              // Body
+              ctx.fillStyle = '#DEB887';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 20 * scale, 12 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Belly
+              ctx.fillStyle = '#F4A460';
+              ctx.beginPath();
+              ctx.ellipse(0, 5 * scale, 15 * scale, 8 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Neck
+              ctx.fillStyle = '#DEB887';
+              ctx.beginPath();
+              ctx.ellipse(15 * scale, -5 * scale, 7 * scale, 6 * scale, -Math.PI * 0.2, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Head with duck bill
+              ctx.fillStyle = '#CD853F';
+              ctx.beginPath();
+              ctx.ellipse(22 * scale, -8 * scale, 8 * scale, 6 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Duck bill
+              ctx.fillStyle = '#8B6914';
+              ctx.beginPath();
+              ctx.ellipse(28 * scale, -8 * scale, 5 * scale, 4 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Distinctive head crest (swept back)
+              ctx.fillStyle = '#B8860B';
+              ctx.beginPath();
+              ctx.moveTo(20 * scale, -12 * scale);
+              ctx.quadraticCurveTo(15 * scale, -18 * scale, 10 * scale, -15 * scale);
+              ctx.lineTo(12 * scale, -13 * scale);
+              ctx.quadraticCurveTo(16 * scale, -15 * scale, 20 * scale, -10 * scale);
+              ctx.closePath();
+              ctx.fill();
+
+              // Eye
+              ctx.fillStyle = '#000';
+              ctx.beginPath();
+              ctx.arc(23 * scale, -10 * scale, 2 * scale, 0, Math.PI * 2);
+              ctx.fill();
+
+            } else if (dino.type === 'trike') {
+              // Triceratops - three-horned herbivore with frill
+              const scale = dino.size / 28;
+
+              // Tail
+              ctx.fillStyle = '#A0826D';
+              ctx.beginPath();
+              ctx.moveTo(-15 * scale, 2 * scale);
+              ctx.quadraticCurveTo(-28 * scale, 0, -35 * scale, -2 * scale);
+              ctx.lineTo(-33 * scale, 0);
+              ctx.quadraticCurveTo(-26 * scale, 2 * scale, -15 * scale, 4 * scale);
+              ctx.fill();
+
+              // Hind legs (sturdy)
+              ctx.fillStyle = '#8B7355';
+              ctx.fillRect(-12 * scale, 10 * scale, 7 * scale, 12 * scale);
+              ctx.fillRect(-2 * scale, 10 * scale, 7 * scale, 12 * scale);
+
+              // Front legs (shorter, sturdier)
+              ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
+              ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
+
+              // Body (massive)
+              ctx.fillStyle = '#D2B48C';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, 22 * scale, 14 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Belly
+              ctx.fillStyle = '#F5DEB3';
+              ctx.beginPath();
+              ctx.ellipse(0, 6 * scale, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Neck/shoulders
+              ctx.fillStyle = '#D2B48C';
+              ctx.beginPath();
+              ctx.ellipse(18 * scale, -2 * scale, 10 * scale, 8 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Frill (distinctive bony collar)
+              ctx.fillStyle = '#CD853F';
+              ctx.beginPath();
+              ctx.ellipse(22 * scale, -8 * scale, 12 * scale, 10 * scale, 0, Math.PI, Math.PI * 2);
+              ctx.fill();
+
+              // Frill outline
+              ctx.strokeStyle = '#8B6914';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.ellipse(22 * scale, -8 * scale, 12 * scale, 10 * scale, 0, Math.PI, Math.PI * 2);
+              ctx.stroke();
+
+              // Head
+              ctx.fillStyle = '#A0826D';
+              ctx.beginPath();
+              ctx.ellipse(28 * scale, -2 * scale, 10 * scale, 7 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Beak
+              ctx.fillStyle = '#8B6914';
+              ctx.beginPath();
+              ctx.ellipse(35 * scale, -1 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Nose horn (short)
+              ctx.fillStyle = '#696969';
+              ctx.beginPath();
+              ctx.moveTo(33 * scale, -3 * scale);
+              ctx.lineTo(35 * scale, -8 * scale);
+              ctx.lineTo(37 * scale, -3 * scale);
+              ctx.closePath();
+              ctx.fill();
+
+              // Two brow horns (longer)
+              ctx.beginPath();
+              ctx.moveTo(26 * scale, -6 * scale);
+              ctx.lineTo(25 * scale, -14 * scale);
+              ctx.lineTo(28 * scale, -6 * scale);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.beginPath();
+              ctx.moveTo(30 * scale, -6 * scale);
+              ctx.lineTo(29 * scale, -14 * scale);
+              ctx.lineTo(32 * scale, -6 * scale);
+              ctx.closePath();
+              ctx.fill();
+
+              // Eye
+              ctx.fillStyle = '#000';
+              ctx.beginPath();
+              ctx.arc(30 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
+              ctx.fill();
             }
 
             ctx.restore();
