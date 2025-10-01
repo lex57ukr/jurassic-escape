@@ -27,11 +27,18 @@
       const [showPauseMenu, setShowPauseMenu] = useState(false);
       const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
       const [isTouchDevice, setIsTouchDevice] = useState(false);
+      const [soundEnabled, setSoundEnabled] = useState(() => {
+        const saved = localStorage.getItem('jurassicEscapeSoundEnabled');
+        return saved !== null ? JSON.parse(saved) : true;
+      });
+      const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
       // Sound system with pooling for simultaneous playback
       const soundsRef = useRef({});
 
       const playSound = useCallback((soundName) => {
+        if (!soundEnabled) return;
+
         const soundData = soundsRef.current[soundName];
         if (!soundData) return;
 
@@ -44,7 +51,7 @@
         audio.addEventListener('ended', () => {
           audio.remove();
         });
-      }, []);
+      }, [soundEnabled]);
 
       useEffect(() => {
         // Preload all sounds as base templates
@@ -1179,12 +1186,21 @@
                   Speed Boost - Temporary speed increase
                 </p>
               </div>
-              <button
-                onClick={startGame}
-                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
-              >
-                START GAME
-              </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={startGame}
+                  className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
+                >
+                  START GAME
+                </button>
+                <button
+                  onClick={() => setShowSettingsMenu(true)}
+                  className="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-lg flex items-center justify-center gap-2"
+                >
+                  <span>⚙️</span>
+                  <span>SETTINGS</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -1219,6 +1235,16 @@
                     ⏸ PAUSE
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    setShowPauseMenu(true);
+                    setShowSettingsMenu(true);
+                  }}
+                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-xl"
+                  title="Settings"
+                >
+                  ⚙️
+                </button>
               </div>
               <div className="relative">
                 <canvas
@@ -1355,6 +1381,16 @@
                       >
                         Exit to Menu
                       </button>
+                      <button
+                        onClick={() => {
+                          setShowPauseMenu(false);
+                          setShowSettingsMenu(true);
+                        }}
+                        className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg flex items-center justify-center gap-2"
+                      >
+                        <span>⚙️</span>
+                        <span>Settings</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1400,6 +1436,46 @@
               >
                 TRY AGAIN
               </button>
+            </div>
+          )}
+
+          {/* Settings Menu Overlay */}
+          {showSettingsMenu && (
+            <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="bg-gray-800 p-8 rounded-lg text-center shadow-xl max-w-md w-full mx-4">
+                <h2 className="text-3xl font-bold text-green-400 mb-6">SETTINGS</h2>
+                <div className="flex flex-col gap-4">
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{soundEnabled ? '🔊' : '🔇'}</span>
+                        <span className="text-white font-semibold text-lg">Sound</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newValue = !soundEnabled;
+                          setSoundEnabled(newValue);
+                          localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
+                          if (newValue) playSound('game_start');
+                        }}
+                        className={`px-6 py-2 font-bold rounded-lg transition-colors ${
+                          soundEnabled
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                        }`}
+                      >
+                        {soundEnabled ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSettingsMenu(false)}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -25,7 +25,7 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 The main `JurassicEscape` component manages:
 
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
-- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `canvasSize`
+- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
   - Camera position, map dimensions, input tracking
@@ -89,8 +89,10 @@ Levels defined in `levelConfigs` (lines 45-75):
 - Audio pooling via `cloneNode()` for simultaneous playback (prevents freezing and enables mixing)
 - 13 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause
 - `unpause` mapped to `game_start` for reuse
-- All sounds are .wav files in `../assets/` folder
+- All sounds are .wav files in `./assets/` folder
 - Volume set to 0.3, with cleanup via 'ended' event listener
+- **Sound control**: `soundEnabled` state controls whether audio plays; checked at start of `playSound` function
+- Settings persisted in localStorage as `jurassicEscapeSoundEnabled` (boolean)
 
 ### Rendering
 
@@ -102,9 +104,10 @@ Levels defined in `levelConfigs` (lines 45-75):
 - Health bars drawn above dinosaurs
 - Jump shadow drawn below player when airborne
 - Speed boost glow effect (cyan aura) around player
-- UI overlay in React (hearts, 💥 ammo count, score, speed boost indicator)
+- UI overlay in React (hearts, 💥 ammo count, score, speed boost indicator, settings gear button)
 - Touch controls overlay (virtual joystick, JUMP button, FIRE button) positioned absolutely over canvas
 - Pause menu overlay with semi-transparent backdrop when ESC pressed
+- Settings menu overlay accessible from main menu, pause menu, and gameplay HUD (gear button)
 
 ## Key Implementation Details
 
@@ -125,6 +128,12 @@ Levels defined in `levelConfigs` (lines 45-75):
   - Auto-aim on mobile: FIRE button targets nearest dinosaur, falls back to shooting right
   - Touch shoot has cooldown to prevent rapid fire (sets `game.touch.shoot = false` after firing)
 - **Pause system**: Game loop continues but returns early when `showPauseMenu` is true; ESC key toggles pause
+- **Settings system**:
+  - Modal overlay with sound toggle (🔊/🔇 icon, ON/OFF button)
+  - Accessible from: main menu (below START GAME), pause menu (4th option), gameplay HUD (⚙️ gear button)
+  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`)
+  - When sound is enabled, plays test sound (`game_start`) for immediate feedback
+  - Clicking settings from gameplay also triggers pause menu state
 - **Sound on menu actions**:
   - Continue/Restart: plays `unpause` (mapped to `game_start`)
   - Exit to Menu: plays `victory`
