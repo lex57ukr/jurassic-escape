@@ -112,6 +112,62 @@
       return nearest;
     };
 
+    // ============================================================================
+    // COLLISION RESPONSE FUNCTIONS
+    // ============================================================================
+
+    /**
+     * Push an entity away from a point
+     */
+    const pushEntityAway = (entity, fromX, fromY, force) => {
+      const { dx, dy } = normalize(entity.x - fromX, entity.y - fromY);
+      entity.x += dx * force;
+      entity.y += dy * force;
+    };
+
+    /**
+     * Check if entity has active invincibility
+     */
+    const isInvincible = (entity) => {
+      return entity.invincibilityTimer > 0;
+    };
+
+    /**
+     * Grant temporary invincibility frames to entity
+     */
+    const grantInvincibility = (entity, frames) => {
+      entity.invincibilityTimer = frames;
+    };
+
+    /**
+     * Update entity's invincibility timer
+     */
+    const updateInvincibility = (entity) => {
+      if (entity.invincibilityTimer > 0) {
+        entity.invincibilityTimer--;
+      }
+    };
+
+    /**
+     * Handle collision damage between two entities
+     * Returns true if damage was applied
+     */
+    const handleCollisionDamage = (attacker, victim, damage, pushbackForce, invincibilityFrames, soundCallback) => {
+      if (isInvincible(victim)) {
+        return false;
+      }
+
+      victim.health -= damage;
+      grantInvincibility(victim, invincibilityFrames);
+      pushEntityAway(victim, attacker.x, attacker.y, pushbackForce);
+
+      if (soundCallback) {
+        soundCallback('player_hurt');
+      }
+
+      return true;
+    };
+
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
       const [gameState, setGameState] = useState('menu');
@@ -207,7 +263,7 @@
       }, []);
 
       const gameRef = useRef({
-        player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0 },
+        player: { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0, invincibilityTimer: 0 },
         bullets: [],
         dinosaurs: [],
         ammoPickups: [],
@@ -265,7 +321,7 @@
         const game = gameRef.current;
         const config = levelConfigs[level];
 
-        game.player = { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0 };
+        game.player = { x: 100, y: 100, health: 5, maxHealth: 5, ammo: 10, speed: 2.5, baseSpeed: 2.5, radius: 15, isJumping: false, jumpVelocity: 0, jumpHeight: 0, invincibilityTimer: 0 };
         game.bullets = [];
         game.ammoPickups = [];
         game.powerups = [];
@@ -566,6 +622,9 @@
             return pickup.life > 0;
           });
 
+          // Update player invincibility
+          updateInvincibility(game.player);
+
           // Update dinosaurs
           game.dinosaurs.forEach(dino => {
             const dist = distance(dino.x, dino.y, game.player.x, game.player.y);
@@ -641,17 +700,25 @@
             }
 
             if (circleCollision(game.player.x, game.player.y, game.player.radius, dino.x, dino.y, dino.size)) {
-              game.player.health--;
-              setPlayerHealth(game.player.health);
-              playSound('player_hurt');
-              // Push dinosaur back
-              const { dx, dy } = normalize(game.player.x - dino.x, game.player.y - dino.y);
-              dino.x -= dx * 2;
-              dino.y -= dy * 2;
+              const damageTaken = handleCollisionDamage(
+                dino,           // attacker
+                game.player,    // victim
+                1,              // damage
+                20,             // push back force
+                60,             // invincibility frames (~1 second at 60fps)
+                playSound       // sound callback
+              );
 
-              if (game.player.health <= 0) {
-                setGameState('lost');
-                playSound('game_over');
+              if (damageTaken) {
+                setPlayerHealth(game.player.health);
+
+                // Clamp player to bounds after pushback
+                clampToBounds(game.player, game.player.radius, game.mapWidth, game.mapHeight);
+
+                if (game.player.health <= 0) {
+                  setGameState('lost');
+                  playSound('game_over');
+                }
               }
             }
           });
@@ -1139,6 +1206,11 @@
           ctx.save();
           ctx.translate(playerScreenX, playerScreenY);
 
+          // Apply invincibility flashing effect
+          if (isInvincible(game.player) && Math.floor(game.player.invincibilityTimer / 5) % 2 === 0) {
+            ctx.globalAlpha = 0.5;
+          }
+
           // Body (khaki shirt)
           ctx.fillStyle = '#C3B091';
           ctx.beginPath();
@@ -1195,6 +1267,11 @@
           ctx.arc(8, -2, 2.5, 0, Math.PI * 2);
           ctx.arc(8, 2, 2.5, 0, Math.PI * 2);
           ctx.fill();
+
+          // Reset alpha if it was modified
+          if (isInvincible(game.player)) {
+            ctx.globalAlpha = 1.0;
+          }
 
           ctx.restore();
 
