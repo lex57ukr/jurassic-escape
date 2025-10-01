@@ -10,7 +10,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 ## 🚀 How to Play
 
-1. Open `src/jurassic-escape-game.html` directly in any modern web browser
+1. Open [src/jurassic-escape-game.html](src/jurassic-escape-game.html) directly in any modern web browser
 2. No installation, build process, or dependencies required!
 
 ### Controls
