@@ -24,19 +24,26 @@
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
 
-      // Sound system
+      // Sound system with pooling for simultaneous playback
       const soundsRef = useRef({});
 
       const playSound = useCallback((soundName) => {
-        const audio = soundsRef.current[soundName];
-        if (audio) {
-          audio.currentTime = 0;
-          audio.play().catch(e => console.log('Audio play failed:', e));
-        }
+        const soundData = soundsRef.current[soundName];
+        if (!soundData) return;
+
+        // Clone the audio element for simultaneous playback
+        const audio = soundData.cloneNode();
+        audio.volume = 0.3;
+        audio.play().catch(e => console.log('Audio play failed:', e));
+
+        // Clean up after playing
+        audio.addEventListener('ended', () => {
+          audio.remove();
+        });
       }, []);
 
       useEffect(() => {
-        // Preload all sounds
+        // Preload all sounds as base templates
         const sounds = {
           shoot: new Audio('../assets/shoot.wav'),
           hit: new Audio('../assets/hit.wav'),
@@ -50,9 +57,9 @@
           victory: new Audio('../assets/victory.wav')
         };
 
-        // Set volume levels
+        // Preload all audio files
         Object.values(sounds).forEach(audio => {
-          audio.volume = 0.3;
+          audio.load();
         });
 
         soundsRef.current = sounds;
