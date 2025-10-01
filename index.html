@@ -58,6 +58,34 @@
     };
 
     /**
+     * Check if circle collides with rotated rectangle (for electric fences)
+     */
+    const circleRectCollision = (circleX, circleY, radius, rectX, rectY, rectWidth, rectHeight, rotation) => {
+      // Translate circle to rect's local space
+      const dx = circleX - rectX;
+      const dy = circleY - rectY;
+
+      // Rotate circle position back by -rotation
+      const cos = Math.cos(-rotation);
+      const sin = Math.sin(-rotation);
+      const localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+
+      // Find closest point on rect to circle
+      const halfWidth = rectWidth / 2;
+      const halfHeight = rectHeight / 2;
+      const closestX = Math.max(-halfWidth, Math.min(halfWidth, localX));
+      const closestY = Math.max(-halfHeight, Math.min(halfHeight, localY));
+
+      // Check distance from circle to closest point
+      const distX = localX - closestX;
+      const distY = localY - closestY;
+      const distSquared = distX * distX + distY * distY;
+
+      return distSquared < radius * radius;
+    };
+
+    /**
      * Check if entity collides with any obstacle
      */
     const checkObstacleCollision = (x, y, radius, obstacles, jumpHeight = 0) => {
@@ -141,6 +169,21 @@
       });
 
       return nearest;
+    };
+
+    /**
+     * Get sleep duration for a dinosaur type
+     */
+    const getSleepDuration = (dinoType) => {
+      switch (dinoType) {
+        case 'raptor': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
+        case 'stego': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_STEGO;
+        case 'trex': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TREX;
+        case 'para': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_PARA;
+        case 'trike': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TRIKE;
+        case 'dilo': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_DILO;
+        default: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
+      }
     };
 
     /**
@@ -325,6 +368,38 @@
         LIFETIME_FRAMES: 60, // 1 second at 60fps
         RISE_SPEED: 1,
         FADE_START_FRAME: 30,
+      },
+
+      // Environmental Hazards
+      HAZARDS: {
+        // Tar Pits
+        TAR_PIT_RADIUS: 40,
+        TAR_PIT_SLOW_MULTIPLIER: 0.5, // Reduces speed to 50%
+        TAR_PIT_MIN_SPACING: 200, // Minimum distance between tar pits
+        TAR_PIT_OBSTACLE_CLEARANCE: 50, // Clearance from obstacles
+        TAR_PIT_SPAWN_MAX_ATTEMPTS: 100,
+        TAR_PIT_BUBBLE_FREQUENCY: 120, // Frames between bubble animations (2 seconds)
+        TAR_PIT_BUBBLE_DURATION: 20, // Duration of bubble animation in frames
+        TAR_PIT_BUBBLE_BASE_RADIUS: 3, // Starting bubble radius
+        TAR_PIT_BUBBLE_GROWTH: 2, // Bubble radius growth
+        TAR_PIT_BUBBLE_OFFSET_X: 10, // Bubble X offset from center
+        TAR_PIT_BUBBLE_OFFSET_Y: -5, // Bubble Y offset from center
+        TAR_PIT_RIM_WIDTH: 4, // Width of tar pit rim stroke
+
+        // Electric Fences
+        FENCE_WIDTH: 80,
+        FENCE_HEIGHT: 10,
+        FENCE_DAMAGE: 1,
+        FENCE_DAMAGE_COOLDOWN: 60, // Frames between damage ticks (1 second)
+        FENCE_STUN_DURATION_MULTIPLIER: 0.5, // Dinosaurs stunned for half of tranq sleep duration
+        FENCE_PUSHBACK_FORCE: 30, // Bounce back force for dinosaurs and player
+        FENCE_MIN_SPACING: 150, // Minimum distance between fences
+        FENCE_OBSTACLE_CLEARANCE: 60, // Clearance from obstacles
+        FENCE_SPAWN_MAX_ATTEMPTS: 100,
+        FENCE_SPARK_FREQUENCY: 30, // Frames between spark animations (0.5 seconds)
+        FENCE_SPARK_DURATION: 10, // Duration of spark animation in frames
+        FENCE_SPARK_RADIUS: 3, // Radius of spark particles
+        FENCE_WIRE_WIDTH: 2, // Width of electric wires
       },
     };
 
@@ -514,7 +589,8 @@
           pause: new Audio('./assets/pause.wav'),
           tranq_shoot: new Audio('./assets/tranq_shoot.wav'),
           tranq_hit: new Audio('./assets/tranq_hit.wav'),
-          pickup_tranq: new Audio('./assets/pickup_tranq.wav')
+          pickup_tranq: new Audio('./assets/pickup_tranq.wav'),
+          electric_shock: new Audio('./assets/electric_shock.wav')
         };
 
         // Map unpause to game_start
@@ -614,7 +690,9 @@
             { type: 'para', count: 2, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false }
           ],
           obstacles: 40,
-          powerups: 3
+          powerups: 3,
+          tarPits: 3,
+          electricFences: 2
         },
         2: {
           name: "Deeper Danger",
@@ -627,7 +705,9 @@
             { type: 'trike', count: 2, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false, territorial: false }
           ],
           obstacles: 50,
-          powerups: 4
+          powerups: 4,
+          tarPits: 5,
+          electricFences: 4
         },
         3: {
           name: "Final Escape",
@@ -640,7 +720,9 @@
             { type: 'trike', count: 3, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false, territorial: false }
           ],
           obstacles: 60,
-          powerups: 5
+          powerups: 5,
+          tarPits: 7,
+          electricFences: 6
         }
       };
 
@@ -679,6 +761,8 @@
         game.dinosaurs = [];
         game.territories = [];
         game.obstacles = [];
+        game.tarPits = [];
+        game.electricFences = [];
         game.keys = {};
         game.speedBoostTimer = 0;
 
@@ -828,6 +912,120 @@
             active: true
           });
         }
+
+        // Create tar pits
+        for (let i = 0; i < config.tarPits; i++) {
+          let tarX, tarY;
+          let attempts = 0;
+          const maxAttempts = GAME_CONSTANTS.HAZARDS.TAR_PIT_SPAWN_MAX_ATTEMPTS;
+
+          while (attempts < maxAttempts) {
+            tarX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            tarY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+
+            let overlapping = false;
+
+            // Check against obstacles
+            for (const obstacle of game.obstacles) {
+              const dist = distance(tarX, tarY, obstacle.x, obstacle.y);
+              if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS + obstacle.radius + GAME_CONSTANTS.HAZARDS.TAR_PIT_OBSTACLE_CLEARANCE) {
+                overlapping = true;
+                break;
+              }
+            }
+
+            // Check against other tar pits
+            if (!overlapping) {
+              for (const existingTar of game.tarPits) {
+                const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
+                if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_MIN_SPACING) {
+                  overlapping = true;
+                  break;
+                }
+              }
+            }
+
+            // Check against electric fences
+            if (!overlapping) {
+              for (const fence of game.electricFences) {
+                const dist = distance(tarX, tarY, fence.x, fence.y);
+                if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS + GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2 + GAME_CONSTANTS.HAZARDS.TAR_PIT_OBSTACLE_CLEARANCE) {
+                  overlapping = true;
+                  break;
+                }
+              }
+            }
+
+            if (!overlapping) break;
+            attempts++;
+          }
+
+          game.tarPits.push({
+            x: tarX,
+            y: tarY,
+            radius: GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS,
+            bubbleTimer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY
+          });
+        }
+
+        // Create electric fences
+        for (let i = 0; i < config.electricFences; i++) {
+          let fenceX, fenceY, fenceRotation;
+          let attempts = 0;
+          const maxAttempts = GAME_CONSTANTS.HAZARDS.FENCE_SPAWN_MAX_ATTEMPTS;
+
+          while (attempts < maxAttempts) {
+            fenceX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            fenceY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            fenceRotation = Math.random() * Math.PI * 2; // Random rotation
+
+            let overlapping = false;
+
+            // Check against obstacles
+            for (const obstacle of game.obstacles) {
+              const dist = distance(fenceX, fenceY, obstacle.x, obstacle.y);
+              if (dist < GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2 + obstacle.radius + GAME_CONSTANTS.HAZARDS.FENCE_OBSTACLE_CLEARANCE) {
+                overlapping = true;
+                break;
+              }
+            }
+
+            // Check against other fences
+            if (!overlapping) {
+              for (const existingFence of game.electricFences) {
+                const dist = distance(fenceX, fenceY, existingFence.x, existingFence.y);
+                if (dist < GAME_CONSTANTS.HAZARDS.FENCE_MIN_SPACING) {
+                  overlapping = true;
+                  break;
+                }
+              }
+            }
+
+            // Check against tar pits
+            if (!overlapping) {
+              for (const tarPit of game.tarPits) {
+                const dist = distance(fenceX, fenceY, tarPit.x, tarPit.y);
+                if (dist < GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2 + tarPit.radius + GAME_CONSTANTS.HAZARDS.FENCE_OBSTACLE_CLEARANCE) {
+                  overlapping = true;
+                  break;
+                }
+              }
+            }
+
+            if (!overlapping) break;
+            attempts++;
+          }
+
+          game.electricFences.push({
+            x: fenceX,
+            y: fenceY,
+            width: GAME_CONSTANTS.HAZARDS.FENCE_WIDTH,
+            height: GAME_CONSTANTS.HAZARDS.FENCE_HEIGHT,
+            rotation: fenceRotation,
+            sparkTimer: Math.random() * GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY,
+            playerDamageCooldown: 0
+          });
+        }
       }, [difficulty]);
 
       useEffect(() => {
@@ -908,15 +1106,74 @@
             return;
           }
 
-          // Update speed boost timer
+          // Check if player is currently in tar pit
+          game.player.inTarPit = false;
+          for (const tarPit of game.tarPits) {
+            if (circleCollision(game.player.x, game.player.y, game.player.radius, tarPit.x, tarPit.y, tarPit.radius)) {
+              game.player.inTarPit = true;
+              break;
+            }
+          }
+
+          // Check electric fence collision with player (can jump over if high enough)
+          if (game.player.jumpHeight < GAME_CONSTANTS.PLAYER.JUMP_CLEAR_HEIGHT) {
+            for (const fence of game.electricFences) {
+              if (circleRectCollision(game.player.x, game.player.y, game.player.radius, fence.x, fence.y, fence.width, fence.height, fence.rotation)) {
+                // Damage player with cooldown
+                if (fence.playerDamageCooldown <= 0 && game.player.invincibilityTimer <= 0) {
+                  const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+                  const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
+
+                  game.player.health -= GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE;
+                  setPlayerHealth(game.player.health);
+                  game.player.invincibilityTimer = invincibilityFrames;
+                  fence.playerDamageCooldown = GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE_COOLDOWN;
+                  playSound('electric_shock');
+
+                  // Push player back from fence
+                  const dx = game.player.x - fence.x;
+                  const dy = game.player.y - fence.y;
+                  const pushDist = distance(0, 0, dx, dy);
+                  if (pushDist > 0) {
+                    game.player.x += (dx / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+                    game.player.y += (dy / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+                  }
+
+                  // Check if player died
+                  if (game.player.health <= 0) {
+                    setGameState('lost');
+                    playSound('game_over');
+                  }
+                }
+                break;
+              }
+            }
+          }
+
+          // Update fence cooldowns
+          game.electricFences.forEach(fence => {
+            if (fence.playerDamageCooldown > 0) {
+              fence.playerDamageCooldown--;
+            }
+          });
+
+          // Update speed boost timer and calculate effective speed
+          let speedMultiplier = 1;
+
           if (game.speedBoostTimer > 0) {
             game.speedBoostTimer--;
-            game.player.speed = game.player.baseSpeed * GAME_CONSTANTS.SPEED_BOOST.SPEED_MULTIPLIER;
+            speedMultiplier *= GAME_CONSTANTS.SPEED_BOOST.SPEED_MULTIPLIER;
             if (game.speedBoostTimer === 0) {
-              game.player.speed = game.player.baseSpeed;
               setSpeedBoostActive(false);
             }
           }
+
+          // Apply tar pit slow effect
+          if (game.player.inTarPit) {
+            speedMultiplier *= GAME_CONSTANTS.HAZARDS.TAR_PIT_SLOW_MULTIPLIER;
+          }
+
+          game.player.speed = game.player.baseSpeed * speedMultiplier;
 
           // Update jump physics
           if (game.player.isJumping) {
@@ -1082,21 +1339,7 @@
                     // Put to sleep if enough hits
                     if (dino.tranqHits >= shotsNeeded) {
                       dino.isSleeping = true;
-
-                      // Sleep duration based on dinosaur type
-                      if (dino.type === 'raptor') {
-                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
-                      } else if (dino.type === 'stego') {
-                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_STEGO;
-                      } else if (dino.type === 'trex') {
-                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TREX;
-                      } else if (dino.type === 'para') {
-                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_PARA;
-                      } else if (dino.type === 'trike') {
-                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TRIKE;
-                      } else if (dino.type === 'dilo') {
-                        dino.sleepTimer = GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_DILO;
-                      }
+                      dino.sleepTimer = getSleepDuration(dino.type);
 
                       const tranqPoints = Math.round(dino.points * GAME_CONSTANTS.TRANQUILIZER.SCORE_MULTIPLIER);
                       setScore(s => s + tranqPoints);
@@ -1320,9 +1563,26 @@
               }
             }
 
+            // Check if dinosaur is in tar pit and apply slow effect
+            let dinoInTarPit = false;
+            for (const tarPit of game.tarPits) {
+              if (circleCollision(dino.x, dino.y, dino.size, tarPit.x, tarPit.y, tarPit.radius)) {
+                dinoInTarPit = true;
+                break;
+              }
+            }
+
+            // Apply tar pit slow effect to velocity
+            let effectiveVx = dino.vx;
+            let effectiveVy = dino.vy;
+            if (dinoInTarPit) {
+              effectiveVx *= GAME_CONSTANTS.HAZARDS.TAR_PIT_SLOW_MULTIPLIER;
+              effectiveVy *= GAME_CONSTANTS.HAZARDS.TAR_PIT_SLOW_MULTIPLIER;
+            }
+
             // Calculate new position
-            let newDinoX = dino.x + dino.vx;
-            let newDinoY = dino.y + dino.vy;
+            let newDinoX = dino.x + effectiveVx;
+            let newDinoY = dino.y + effectiveVy;
 
             // Check collision with obstacles
             let dinoCollided = false;
@@ -1368,6 +1628,29 @@
             if (!dinoCollided) {
               dino.x = newDinoX;
               dino.y = newDinoY;
+            }
+
+            // Check electric fence collision with dinosaurs
+            for (const fence of game.electricFences) {
+              if (circleRectCollision(dino.x, dino.y, dino.size, fence.x, fence.y, fence.width, fence.height, fence.rotation)) {
+                // Bounce dinosaur back
+                const dx = dino.x - fence.x;
+                const dy = dino.y - fence.y;
+                const pushDist = distance(0, 0, dx, dy);
+                if (pushDist > 0) {
+                  dino.x += (dx / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+                  dino.y += (dy / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+                }
+
+                // Stun dinosaur (use sleep mechanism with half duration)
+                if (!dino.isSleeping) {
+                  const baseSleepDuration = getSleepDuration(dino.type);
+                  dino.isSleeping = true;
+                  dino.sleepTimer = Math.round(baseSleepDuration * GAME_CONSTANTS.HAZARDS.FENCE_STUN_DURATION_MULTIPLIER);
+                  // Don't reset tranq hits or affect scoring - this is stun, not tranq
+                }
+                break;
+              }
             }
 
             // Update facing direction only when velocity has significant horizontal component
@@ -1447,6 +1730,84 @@
           ctx.font = '14px Arial';
           ctx.textAlign = 'center';
           ctx.fillText('EXIT', exitScreenX + game.exit.width / 2, exitScreenY + game.exit.height / 2 + 5);
+
+          // Draw tar pits
+          game.tarPits.forEach(tarPit => {
+            const screenX = tarPit.x - game.cameraX;
+            const screenY = tarPit.y - game.cameraY;
+
+            // Dark tar pit
+            ctx.fillStyle = '#1a0a00';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, tarPit.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Lighter brown rim
+            ctx.strokeStyle = '#3d2817';
+            ctx.lineWidth = GAME_CONSTANTS.HAZARDS.TAR_PIT_RIM_WIDTH;
+            ctx.stroke();
+
+            // Update bubble animation
+            tarPit.bubbleTimer++;
+            if (tarPit.bubbleTimer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
+              tarPit.bubbleTimer = 0;
+            }
+
+            // Draw bubbles at intervals
+            if (tarPit.bubbleTimer < GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION) {
+              const bubbleProgress = tarPit.bubbleTimer / GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION;
+              const bubbleRadius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_BASE_RADIUS + bubbleProgress * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_GROWTH;
+              const bubbleAlpha = 1 - bubbleProgress;
+
+              ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
+              ctx.beginPath();
+              ctx.arc(screenX + GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_OFFSET_X, screenY + GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_OFFSET_Y, bubbleRadius, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          // Draw electric fences
+          game.electricFences.forEach(fence => {
+            const screenX = fence.x - game.cameraX;
+            const screenY = fence.y - game.cameraY;
+
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(fence.rotation);
+
+            // Fence base (dark gray/black)
+            ctx.fillStyle = '#2a2a2a';
+            ctx.fillRect(-fence.width / 2, -fence.height / 2, fence.width, fence.height);
+
+            // Electric wires (yellow)
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = GAME_CONSTANTS.HAZARDS.FENCE_WIRE_WIDTH;
+            ctx.beginPath();
+            ctx.moveTo(-fence.width / 2, -fence.height / 4);
+            ctx.lineTo(fence.width / 2, -fence.height / 4);
+            ctx.moveTo(-fence.width / 2, fence.height / 4);
+            ctx.lineTo(fence.width / 2, fence.height / 4);
+            ctx.stroke();
+
+            // Update spark animation
+            fence.sparkTimer++;
+            if (fence.sparkTimer >= GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY) {
+              fence.sparkTimer = 0;
+            }
+
+            // Draw sparks at intervals
+            if (fence.sparkTimer < GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION) {
+              const sparkProgress = fence.sparkTimer / GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION;
+              const sparkAlpha = 1 - sparkProgress;
+
+              ctx.fillStyle = `rgba(255, 255, 100, ${sparkAlpha})`;
+              ctx.beginPath();
+              ctx.arc(Math.random() * fence.width - fence.width / 2, 0, GAME_CONSTANTS.HAZARDS.FENCE_SPARK_RADIUS, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            ctx.restore();
+          });
 
           // Draw obstacles
           game.obstacles.forEach(obs => {

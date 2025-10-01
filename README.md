@@ -69,9 +69,22 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **💥 Ammo**: Regular ammunition, dropped by defeated dinosaurs
 - **💉 Tranquilizer Depot**: Green crate with 5 tranquilizer darts
 
+## ⚠️ Environmental Hazards
+
+- **Tar Pits**: Dark, bubbling pools that slow down movement to 50% speed
+  - Affects both player and dinosaurs
+  - No damage, but makes it harder to escape from predators
+  - Can be identified by dark brown/black coloring with bubbling animation
+- **Electric Fences**: High-voltage barriers that shock on contact
+  - Player: Takes 1 damage (can jump over to avoid)
+  - Dinosaurs: Knocked back and stunned temporarily
+  - Yellow electric wires with sparking effects
+  - Strategically placed throughout levels
+
 ## 🎯 Features
 
-- **Three challenging levels** with increasing difficulty
+- **Three challenging levels** with increasing difficulty and hazards
+- **Environmental hazards**: Tar pits that slow movement and electric fences that damage/stun
 - **Dual weapon system**: Regular gun and tranquilizer dart
   - **Tranquilizer**: Non-lethal option that puts dinosaurs to sleep
   - Multi-shot mechanic: larger dinosaurs need more shots
@@ -118,6 +131,7 @@ Place the following `.wav` files in the `./assets/` folder for full audio experi
 - `game_start.wav` - Game starts / unpause
 - `jump.wav` - Player jumps
 - `pause.wav` - Pause menu opened
+- `electric_shock.wav` - Player touches electric fence
 
 ## 🎨 Technical Details
 

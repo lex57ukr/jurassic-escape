@@ -97,17 +97,18 @@ All collision uses circle-vs-circle distance checks:
 
 #### Level Progression
 
-Levels defined in `levelConfigs` (lines 45-75):
+Levels defined in `levelConfigs`:
 
-- Each level specifies dinosaur types/counts, obstacle count, powerup count
+- Each level specifies dinosaur types/counts, obstacle count, powerup count, hazard counts (tar pits, electric fences)
 - Win condition: Reach exit zone (golden EXIT rectangle at map coordinates 1800, 1400)
 - Player stats reset between levels, score persists
+- Hazard counts increase with difficulty: Level 1 (3 tar, 2 fence), Level 2 (5 tar, 4 fence), Level 3 (7 tar, 6 fence)
 
 #### Sound System
 
 - Uses `soundsRef` with `useCallback` for audio management
 - Audio pooling via `cloneNode()` for simultaneous playback (prevents freezing and enables mixing)
-- 16 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause, tranq_shoot, tranq_hit, pickup_tranq
+- 17 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause, tranq_shoot, tranq_hit, pickup_tranq, electric_shock
 - `unpause` mapped to `game_start` for reuse
 - All sounds are .wav files in `./assets/` folder
 - **Volume control**: `volume` state (0.0-1.0, default 0.3) controls audio volume; applied to all sounds in `playSound` function
@@ -126,7 +127,7 @@ Levels defined in `levelConfigs` (lines 45-75):
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
-- Layered drawing order: background → exit → obstacles → powerups → tranq depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
+- Layered drawing order: background → exit → tar pits → electric fences → obstacles → powerups → tranq depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
 - Health bars drawn above dinosaurs
 - Sleeping Z-Z-Z animation drawn above sleeping dinosaurs (3 "Z"s of increasing size with bobbing animation)
 - Floating text system: score popups (+N), tranq hit counters (1/2, 2/3), ammo pickups with fade-out over 1 second
@@ -142,7 +143,20 @@ Levels defined in `levelConfigs` (lines 45-75):
 ## Key Implementation Details
 
 - **Collision system**: Player and aggressive dinosaurs collide with obstacles; dinosaurs don't collide with each other; herbivores don't damage player
-- **Jump mechanic**: Helps escape stuck spawn positions between bushes; visual feedback with shadow
+- **Environmental hazards**: Two types of hazards affect gameplay:
+  - **Tar pits**: Circular hazards (40px radius) that slow entities to 50% speed when inside
+    - Dark brown/black visual with bubbling animation every 2 seconds
+    - Affects both player and dinosaurs equally
+    - No damage, purely movement penalty
+    - Spawn with collision avoidance (obstacles, other tar pits)
+  - **Electric fences**: Rectangular barriers (80x10px) that damage player and stun dinosaurs
+    - Player: 1 damage on contact (with 1s cooldown), pushed back by 30px, plays electric_shock sound, can jump over if high enough
+    - Dinosaurs: Bounced back with pushback force, stunned (sleep state) for half of tranq duration
+    - Stun doesn't reset tranq hits or award points (pure mechanical stun)
+    - Blue-gray base with yellow electric wires, spark animation every 0.5 seconds
+    - Randomly rotated for varied placement
+    - Spawn with collision avoidance (obstacles, other fences)
+- **Jump mechanic**: Helps escape stuck spawn positions between bushes; also bypasses electric fences; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
 - **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
 - **Tranquilizer mechanic**: Multi-shot system based on dinosaur size
