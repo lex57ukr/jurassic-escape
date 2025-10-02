@@ -127,23 +127,34 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 Place the following `.wav` files in the `./assets/` folder for full audio experience:
 
-- `shoot.wav` - Firing regular gun
-- `tranq_shoot.wav` - Firing tranquilizer
-- `hit.wav` - Bullet hits dinosaur
-- `tranq_hit.wav` - Tranquilizer hits dinosaur
+**Combat Sounds:**
+
 - `death.wav` - Dinosaur defeated
-- `pickup_ammo.wav` - Collecting ammunition
-- `pickup_tranq.wav` - Collecting tranquilizer depot
+- `hit.wav` - Regular bullet hits dinosaur
+- `shoot.wav` - Firing regular gun
+- `tranq_hit.wav` - Tranquilizer dart hits dinosaur
+- `tranq_shoot.wav` - Firing tranquilizer dart
+
+**Pickup Sounds:**
+
+- `pickup_ammo.wav` - Collecting regular ammunition
 - `pickup_health.wav` - Collecting health pack
 - `pickup_speed.wav` - Collecting speed boost
-- `player_hurt.wav` - Player takes damage
-- `level_complete.wav` - Level completed
-- `game_over.wav` - Player dies
-- `victory.wav` - Game completed / exit to menu
-- `game_start.wav` - Game starts / unpause
-- `jump.wav` - Player jumps
-- `pause.wav` - Pause menu opened
+- `pickup_tranq.wav` - Collecting tranquilizer depot
+
+**Player Sounds:**
+
 - `electric_shock.wav` - Player or dinosaur touches electric fence
+- `jump.wav` - Player jumps
+- `player_hurt.wav` - Player takes damage
+
+**Game State Sounds:**
+
+- `game_over.wav` - Player dies
+- `game_start.wav` - Game starts / unpause
+- `level_complete.wav` - Level completed
+- `pause.wav` - Pause menu opened
+- `victory.wav` - Game completed / exit to menu
 
 ## 🎨 Technical Details
 
