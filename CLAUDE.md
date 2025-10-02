@@ -55,9 +55,10 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
   - Desktop: Click to shoot (uses mouse position or auto-aim based on setting)
   - Mobile: FIRE button with auto-aim
 - **Auto-aim**: Optional feature (enabled via Settings) that automatically targets nearest dinosaur
-  - Enabled by default on Easy difficulty
+  - Mandatory on mobile devices (always enabled, setting is read-only)
+  - Enabled by default on Easy difficulty for desktop
   - Helpful for trackpad users who struggle with precise aiming
-  - Shows "🎯 AUTO-AIM" badge in HUD when active (desktop only)
+  - Shows "🎯 AUTO-AIM" badge in HUD when active (both desktop and mobile)
   - Fallback to click position if no dinosaurs present
 - Touch controls automatically hidden on desktop (using Tailwind `md:hidden`)
 - ESC to pause (shows pause menu with Continue/Restart/Exit options)
@@ -212,10 +213,13 @@ Levels defined in `levelConfigs`:
   - Viewport size selector (📐 icon, Small/Medium/Large buttons with active state)
   - Difficulty selector (⚔️ icon, Easy/Normal/Hard buttons with active state and stat preview)
   - Auto-aim toggle (🎯 icon, ON/OFF button, helpful for trackpad users)
+    - Read-only on mobile (always ON, button disabled with visual feedback)
+    - Helper text changes to "Always enabled on mobile" on touch devices
   - Accessible from: main menu (below START GAME), pause menu (4th option), gameplay HUD (⚙️ gear button)
   - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeVolume`, `jurassicEscapeViewportScale`, `jurassicEscapeDifficulty`, `jurassicEscapeAutoAim`)
   - When sound is enabled, plays test sound (`game_start`) for immediate feedback
-  - When difficulty is set to Easy, auto-aim is automatically enabled (but can be manually toggled)
+  - When difficulty is set to Easy, auto-aim is automatically enabled (but can be manually toggled on desktop)
+  - When touch device is detected, auto-aim is forced ON and persisted to localStorage
   - Clicking settings from gameplay also triggers pause menu state
   - Viewport scale and difficulty changes require restarting level to take effect
 - **Sound on menu actions**:

@@ -110,7 +110,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
   - Volume control (0-100% slider)
   - Viewport size (Small: 800x600, Medium: 1000x750, Large: 1200x900)
   - Difficulty (Easy/Normal/Hard) - affects player health, ammo, enemy speed, and invincibility duration
-  - Auto-aim toggle (🎯) - helpful for trackpad users, enabled by default on Easy difficulty
+  - Auto-aim toggle (🎯) - helpful for trackpad users, enabled by default on Easy difficulty, always ON for mobile (read-only)
 - **Jump mechanic** to escape tight spots and stuck positions
 - **Pause menu** with options to continue, restart, or exit
 - **Speed boost powerup** with visual glow effect
@@ -119,7 +119,8 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
   - Always enabled on mobile/touch devices for easier targeting
   - Optional on desktop (toggle in Settings) - helpful for trackpad users
   - Automatically targets nearest dinosaur when enabled
-  - Shows 🎯 AUTO-AIM badge in HUD when active (desktop only)
+  - Shows 🎯 AUTO-AIM badge in HUD when active (both desktop and mobile)
+  - Mobile setting is read-only (button disabled, shows "Always enabled on mobile")
 - **Invincibility frames** after taking damage for fair gameplay
 
 ## 🔊 Sound Files

@@ -685,6 +685,12 @@
         const hasTouchSupport = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         setIsTouchDevice(hasTouchSupport);
 
+        // Force auto-aim ON for touch devices
+        if (hasTouchSupport) {
+          setAutoAim(true);
+          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
+        }
+
         const updateCanvasSize = () => {
           const baseScale = VIEWPORT_SCALES[viewportScale];
           // Adjust spacing based on device type
@@ -2969,7 +2975,7 @@
                     <span className="text-sm font-bold">SPEED BOOST</span>
                   </div>
                 )}
-                {autoAim && !isTouchDevice && (
+                {(autoAim || isTouchDevice) && (
                   <div className="flex items-center gap-2 bg-purple-600 px-3 py-1 rounded-full">
                     <span>🎯</span>
                     <span className="text-sm font-bold">AUTO-AIM</span>
@@ -3337,12 +3343,17 @@
                       </div>
                       <button
                         onClick={() => {
-                          const newValue = !autoAim;
-                          setAutoAim(newValue);
-                          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
+                          if (!isTouchDevice) {
+                            const newValue = !autoAim;
+                            setAutoAim(newValue);
+                            localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
+                          }
                         }}
+                        disabled={isTouchDevice}
                         className={`px-6 py-2 font-bold rounded-lg transition-colors ${
-                          autoAim
+                          isTouchDevice
+                            ? 'bg-green-600 text-white opacity-60 cursor-not-allowed'
+                            : autoAim
                             ? 'bg-green-600 hover:bg-green-700 text-white'
                             : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
                         }`}
@@ -3351,7 +3362,7 @@
                       </button>
                     </div>
                     <div className="text-xs text-gray-400 text-center mt-2">
-                      Helpful for trackpad users
+                      {isTouchDevice ? 'Always enabled on mobile' : 'Helpful for trackpad users'}
                     </div>
                   </div>
                   <button
