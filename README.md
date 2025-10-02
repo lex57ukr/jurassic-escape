@@ -198,6 +198,41 @@ This is a personal project created for educational and entertainment purposes.
 - Player may occasionally spawn between obstacles at level start (use jump to escape)
 - Audio files must be available in the `./assets/` folder
 
+## 🎤 Developer Demo Notes
+
+This project was also presented as a short demo at our developer onsite.  
+Here’s the talk outline I used (~5 minutes):
+
+### 1. How I Picked the Idea
+
+- Wanted something nostalgic — hadn’t built a game in decades.  
+- Our day job is solving real-world problems → this was a playful *escape*.  
+- Chose a 2D game because I knew the challenges & scope from past experience.  
+- Key: scope something I could **finish** in 5–6 hours.  
+
+### 2. Process & Tools
+
+- HTML + JS → nothing beats simplicity for fast iteration.  
+- Source control: every commit = a feature; easy to track or rewind.  
+- AI tools:  
+  - Rough prototype in Claude (sandbox wasn’t fun).  
+  - Shifted to VS Code + Claude Code + ChatGPT for serious iteration.  
+  - Lesson: know your tools — use chat for planning, IDE for execution.  
+- Workflow mantra: **plan → execute → review → refactor → repeat**.  
+
+### 3. Demo (the game!)
+
+- Quick playthrough: movement, weapons, hazards, escape zone.  
+- Emphasize: all in one HTML file, hosted on GitHub Pages.  
+
+### 4. What I Learned / Would Do Differently
+
+- AI accelerates, but structure + planning make it efficient.  
+- Fast iteration is fun, but not sustainable without **automation**.  
+  - (Our backend has ~30k tests; that’s how we move fast and stay sane.)  
+  - Same principles apply to frontend — testing frameworks + automation matter.  
+- Big takeaway: AI + scope discipline = fast results; automation makes it repeatable.  
+
 ---
 
 **Enjoy your escape from the Jurassic period!** 🦕🦖
