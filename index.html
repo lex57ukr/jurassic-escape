@@ -1206,8 +1206,8 @@
         window.addEventListener('keyup', handleKeyUp);
 
         const gameLoop = () => {
-          // Pause if pause menu is showing
-          if (showPauseMenu) {
+          // Pause if pause menu or settings menu is showing
+          if (showPauseMenu || showSettingsMenu) {
             animationId = requestAnimationFrame(gameLoop);
             return;
           }
@@ -3367,7 +3367,12 @@
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowSettingsMenu(false)}
+                    onClick={() => {
+                      setShowSettingsMenu(false);
+                      if (gameState === 'playing') {
+                        setShowPauseMenu(true);
+                      }
+                    }}
                     className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
                   >
                     Close
