@@ -463,6 +463,11 @@
         FENCE_MEMORY_DURATION: 600, // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
         FENCE_AVOIDANCE_BUFFER: 30, // Safety margin dinosaurs maintain from remembered fences (MUST be < FENCE_PUSHBACK_FORCE)
       },
+
+      // Audio
+      AUDIO: {
+        DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
+      },
     };
 
     // ============================================================================
@@ -593,9 +598,9 @@
       const canvasRef = useRef(null);
       const [gameState, setGameState] = useState('menu');
       const [score, setScore] = useState(0);
-      const [playerHealth, setPlayerHealth] = useState(5);
-      const [playerAmmo, setPlayerAmmo] = useState(10);
-      const [playerTranqAmmo, setPlayerTranqAmmo] = useState(15);
+      const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.PLAYER.MAX_HEALTH);
+      const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.PLAYER.START_AMMO);
+      const [playerTranqAmmo, setPlayerTranqAmmo] = useState(GAME_CONSTANTS.TRANQUILIZER.START_AMMO);
       const [currentWeapon, setCurrentWeapon] = useState('regular');
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
@@ -612,7 +617,7 @@
       });
       const [volume, setVolume] = useState(() => {
         const saved = localStorage.getItem('jurassicEscapeVolume');
-        return saved !== null ? parseFloat(saved) : 0.3;
+        return saved !== null ? parseFloat(saved) : GAME_CONSTANTS.AUDIO.DEFAULT_VOLUME;
       });
       const [difficulty, setDifficulty] = useState(() => {
         const saved = localStorage.getItem('jurassicEscapeDifficulty');
