@@ -347,6 +347,7 @@
         EXIT_WIDTH: 60,
         EXIT_HEIGHT: 60,
         EXIT_COLLISION_RADIUS: 30,
+        MAX_LEVEL: 3, // Total number of levels in the game
       },
 
       // Spawning
@@ -1875,7 +1876,7 @@
           const exitCenterX = game.exit.x + game.exit.width / 2;
           const exitCenterY = game.exit.y + game.exit.height / 2;
           if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
-            if (currentLevel < 3) {
+            if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
               setGameState('levelComplete');
               playSound('level_complete');
             } else {
