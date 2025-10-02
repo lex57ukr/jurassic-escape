@@ -163,7 +163,7 @@ Place the following `.wav` files in the `./assets/` folder for full audio experi
 - **Styling**: Tailwind CSS (via CDN)
 - **Architecture**: Single-file application with embedded JavaScript
 - **Game Loop**: requestAnimationFrame-based
-- **File Size**: ~40KB single HTML file
+- **File Size**: ~142KB single HTML file
 
 ## 🏗️ Architecture
 
