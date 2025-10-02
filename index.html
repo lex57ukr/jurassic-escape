@@ -617,6 +617,13 @@
         const saved = localStorage.getItem('jurassicEscapeDifficulty');
         return saved || 'normal';
       });
+      const [autoAim, setAutoAim] = useState(() => {
+        const saved = localStorage.getItem('jurassicEscapeAutoAim');
+        if (saved !== null) return JSON.parse(saved);
+        // Default to enabled on Easy, disabled otherwise
+        const currentDifficulty = localStorage.getItem('jurassicEscapeDifficulty') || 'normal';
+        return currentDifficulty === 'easy';
+      });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
       // Sound system with pooling for simultaneous playback
@@ -1153,8 +1160,21 @@
 
         const handleClick = (e) => {
           const rect = canvas.getBoundingClientRect();
-          const targetX = e.clientX - rect.left + game.cameraX;
-          const targetY = e.clientY - rect.top + game.cameraY;
+          let targetX = e.clientX - rect.left + game.cameraX;
+          let targetY = e.clientY - rect.top + game.cameraY;
+
+          // Use auto-aim if enabled
+          if (autoAim) {
+            const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
+            if (nearestDino) {
+              targetX = nearestDino.x;
+              targetY = nearestDino.y;
+            } else {
+              // Fallback to click position if no dinosaurs
+              targetX = e.clientX - rect.left + game.cameraX;
+              targetY = e.clientY - rect.top + game.cameraY;
+            }
+          }
 
           if (game.player.currentWeapon === 'regular') {
             if (game.player.ammo > 0) {
@@ -2881,13 +2901,19 @@
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">JURASSIC ESCAPE</h1>
               <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
-              <p className="text-gray-400 mb-2">
+              <div className="text-gray-400 mb-2 space-y-1">
                 {isTouchDevice ? (
-                  <span>Use joystick to move • JUMP to clear obstacles • FIRE to shoot • Q to switch weapon</span>
+                  <>
+                    <p>Use joystick to move • JUMP to clear obstacles</p>
+                    <p>FIRE to shoot • Q to switch weapon</p>
+                  </>
                 ) : (
-                  <span>WASD or Arrow Keys to move • Spacebar to jump • Q to switch weapon • Mouse to aim • Click to shoot</span>
+                  <>
+                    <p>WASD/Arrows to move • Spacebar to jump • Q to switch weapon</p>
+                    <p>Mouse to aim (or enable auto-aim 🎯) • Click to shoot</p>
+                  </>
                 )}
-              </p>
+              </div>
               <div className="text-gray-300 mb-6 space-y-2">
                 <p className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 bg-red-500 rounded-full"></span>
@@ -2941,6 +2967,12 @@
                   <div className="flex items-center gap-2 bg-cyan-500 px-3 py-1 rounded-full">
                     <span>⚡</span>
                     <span className="text-sm font-bold">SPEED BOOST</span>
+                  </div>
+                )}
+                {autoAim && !isTouchDevice && (
+                  <div className="flex items-center gap-2 bg-purple-600 px-3 py-1 rounded-full">
+                    <span>🎯</span>
+                    <span className="text-sm font-bold">AUTO-AIM</span>
                   </div>
                 )}
                 <div className="text-xl font-bold">Score: {score}</div>
@@ -3078,6 +3110,8 @@
               <p className="text-gray-400 mt-2 text-center">
                 {isTouchDevice ? (
                   <span>Joystick to move • Tap 💥/💉 to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
+                ) : autoAim ? (
+                  <span>WASD/Arrows to move • Q to switch weapon • Click to auto-aim 🎯 • Spacebar to jump!</span>
                 ) : (
                   <span>WASD/Arrows to move • Q to switch weapon • Mouse to aim • Click to shoot • Spacebar to jump!</span>
                 )}
@@ -3272,6 +3306,11 @@
                             onClick={() => {
                               setDifficulty(key);
                               localStorage.setItem('jurassicEscapeDifficulty', key);
+                              // Enable auto-aim on Easy difficulty
+                              if (key === 'easy') {
+                                setAutoAim(true);
+                                localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
+                              }
                             }}
                             className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
                               difficulty === key
@@ -3288,6 +3327,31 @@
                         {difficulty === 'normal' && '5 ❤️  10 💥  15 💉  Normal enemies  60f invincibility'}
                         {difficulty === 'hard' && '3 ❤️  5 💥  10 💉  Faster enemies  45f invincibility'}
                       </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-700 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎯</span>
+                        <span className="text-white font-semibold text-lg">Auto-Aim</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newValue = !autoAim;
+                          setAutoAim(newValue);
+                          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
+                        }}
+                        className={`px-6 py-2 font-bold rounded-lg transition-colors ${
+                          autoAim
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                        }`}
+                      >
+                        {autoAim ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+                    <div className="text-xs text-gray-400 text-center mt-2">
+                      Helpful for trackpad users
                     </div>
                   </div>
                   <button

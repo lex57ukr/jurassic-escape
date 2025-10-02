@@ -27,7 +27,7 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 The main `JurassicEscape` component manages:
 
 - **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
-- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `canvasSize`, `isTouchDevice`
+- **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `autoAim`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
   - Camera position, map dimensions, input tracking
@@ -48,8 +48,17 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
 - **Desktop**: WASD/Arrow keys for player movement
 - **Mobile**: Virtual joystick (touch and drag) with variable speed based on joystick displacement
 - Spacebar (desktop) or JUMP button (mobile) to jump (clears obstacles when jump height >= 25)
-- Mouse position tracked for aiming (desktop)
-- Click to shoot (desktop) or FIRE button with auto-aim (mobile)
+- **Aiming**:
+  - Desktop: Mouse position tracked for manual aiming, or auto-aim toggle for trackpad users
+  - Mobile: Auto-aim always enabled (targets nearest dinosaur)
+- **Shooting**:
+  - Desktop: Click to shoot (uses mouse position or auto-aim based on setting)
+  - Mobile: FIRE button with auto-aim
+- **Auto-aim**: Optional feature (enabled via Settings) that automatically targets nearest dinosaur
+  - Enabled by default on Easy difficulty
+  - Helpful for trackpad users who struggle with precise aiming
+  - Shows "🎯 AUTO-AIM" badge in HUD when active (desktop only)
+  - Fallback to click position if no dinosaurs present
 - Touch controls automatically hidden on desktop (using Tailwind `md:hidden`)
 - ESC to pause (shows pause menu with Continue/Restart/Exit options)
 - Camera follows player with map boundary constraints
@@ -113,7 +122,7 @@ Levels defined in `levelConfigs`:
 - All sounds are .wav files in `./assets/` folder
 - **Volume control**: `volume` state (0.0-1.0, default 0.3) controls audio volume; applied to all sounds in `playSound` function
 - **Sound control**: `soundEnabled` state controls whether audio plays; checked at start of `playSound` function
-- Settings persisted in localStorage as `jurassicEscapeSoundEnabled` (boolean) and `jurassicEscapeVolume` (number)
+- Settings persisted in localStorage as `jurassicEscapeSoundEnabled` (boolean), `jurassicEscapeVolume` (number), `jurassicEscapeAutoAim` (boolean), `jurassicEscapeViewportScale` (string), and `jurassicEscapeDifficulty` (string)
 
 ### Rendering
 
@@ -202,9 +211,11 @@ Levels defined in `levelConfigs`:
   - Volume slider (🔊 icon, 0-100% range with visual fill and percentage display)
   - Viewport size selector (📐 icon, Small/Medium/Large buttons with active state)
   - Difficulty selector (⚔️ icon, Easy/Normal/Hard buttons with active state and stat preview)
+  - Auto-aim toggle (🎯 icon, ON/OFF button, helpful for trackpad users)
   - Accessible from: main menu (below START GAME), pause menu (4th option), gameplay HUD (⚙️ gear button)
-  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeVolume`, `jurassicEscapeViewportScale`, `jurassicEscapeDifficulty`)
+  - Settings persist via localStorage (`jurassicEscapeSoundEnabled`, `jurassicEscapeVolume`, `jurassicEscapeViewportScale`, `jurassicEscapeDifficulty`, `jurassicEscapeAutoAim`)
   - When sound is enabled, plays test sound (`game_start`) for immediate feedback
+  - When difficulty is set to Easy, auto-aim is automatically enabled (but can be manually toggled)
   - Clicking settings from gameplay also triggers pause menu state
   - Viewport scale and difficulty changes require restarting level to take effect
 - **Sound on menu actions**:
