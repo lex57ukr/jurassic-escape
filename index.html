@@ -74,7 +74,9 @@
       // Weapon Types
       WEAPON_TYPES: {
         REGULAR: 'regular',
+        REGULAR_ICON: '💥',
         TRANQUILIZER: 'tranquilizer',
+        TRANQUILIZER_ICON: '💉',
       },
 
       // Dinosaur Types
@@ -182,6 +184,7 @@
         SPIT_PROJECTILE_RADIUS: 6,     // Radius of spit projectiles
         SPIT_DAMAGE: 1,                // Damage from spit
         FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
+        TERRITORY_MARKER_ICON: '💀',   // Icon for territory center marker
       },
 
       // Touch Controls
@@ -1452,7 +1455,7 @@
       ctx.font = '24px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('💀', screenX, screenY);
+      ctx.fillText(GAME_CONSTANTS.AI.TERRITORY_MARKER_ICON, screenX, screenY);
 
       // Draw territory circle outline (faint)
       ctx.strokeStyle = 'rgba(139, 0, 0, 0.2)';
@@ -3130,7 +3133,7 @@
                 </p>
                 <p className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 bg-green-600 rounded"></span>
-                  Tranquilizer Depot - Refills 💉 ammo
+                  Tranquilizer Depot - Refills {GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON} ammo
                 </p>
               </div>
               <div className="flex flex-col gap-3">
@@ -3161,11 +3164,11 @@
                   ))}
                 </div>
                 <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
-                  <span>💥</span>
+                  <span>{GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}</span>
                   <span className="text-xl font-bold">{playerAmmo}</span>
                 </div>
                 <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
-                  <span>💉</span>
+                  <span>{GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}</span>
                   <span className="text-xl font-bold">{playerTranqAmmo}</span>
                 </div>
                 {speedBoostActive && (
@@ -3270,7 +3273,7 @@
                     }}
                   >
                     <div className={`w-full h-full rounded-full ${gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
-                      {gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? '💥' : '💉'}
+                      {gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON : GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}
                     </div>
                   </div>
 
@@ -3314,7 +3317,7 @@
               </div>
               <p className="text-gray-400 mt-2 text-center">
                 {isTouchDevice ? (
-                  <span>Joystick to move • Tap 💥/💉 to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
+                  <span>Joystick to move • Tap {GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}/{GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON} to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
                 ) : autoAim ? (
                   <span>WASD/Arrows to move • Q to switch weapon • Click to auto-aim 🎯 • Spacebar to jump!</span>
                 ) : (
@@ -3528,9 +3531,9 @@
                         ))}
                       </div>
                       <div className="text-sm text-gray-300 text-center mt-1">
-                        {difficulty === 'easy' && '7 ❤️  15 💥  22 💉  Slower enemies  90f invincibility'}
-                        {difficulty === 'normal' && '5 ❤️  10 💥  15 💉  Normal enemies  60f invincibility'}
-                        {difficulty === 'hard' && '3 ❤️  5 💥  10 💉  Faster enemies  45f invincibility'}
+                        {difficulty === 'easy' && `7 ❤️  15 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  22 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Slower enemies  90f invincibility`}
+                        {difficulty === 'normal' && `5 ❤️  10 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  15 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Normal enemies  60f invincibility`}
+                        {difficulty === 'hard' && `3 ❤️  5 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  10 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Faster enemies  45f invincibility`}
                       </div>
                     </div>
                   </div>
