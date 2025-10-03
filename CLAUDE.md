@@ -22,11 +22,42 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 - **Game constants** defined in `GAME_CONSTANTS` object - all magic numbers extracted into documented constants (player stats, physics values, combat parameters, spawning rules, AI behavior, etc.)
 - **Difficulty modifiers** in `DIFFICULTY_MODIFIERS` object - multipliers that adjust gameplay balance (player health/ammo, enemy speed, invincibility duration)
 
+### Constants Architecture
+
+The codebase follows a **constants-first approach** for type safety and maintainability:
+
+**Core Constants:**
+
+- `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
+- `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
+- `WEAPON_TYPES`: Weapon identifiers with icons (REGULAR/💥, TRANQUILIZER/💉)
+- `OBSTACLE_TYPES`: Environment types (TREE, BUSH)
+- `POWERUP_TYPES`: Collectible types (HEALTH, SPEED)
+- `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
+
+**Utility Functions:**
+
+- `randomCentered(range)`: Generates random values centered around zero (±range/2) using RANDOM_CENTER constant
+- `randomizeBubbleOffset()`: Returns randomized {offsetX, offsetY} for tar pit bubble positioning using `randomCentered()`
+
+**Entity Factory Functions:**
+
+- `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, etc.
+- Encapsulate entity creation logic and use constants throughout
+
+**Benefits:**
+
+- **Type safety**: String literal typos caught at usage sites
+- **Single source of truth**: Constants defined once, used everywhere
+- **Better IDE support**: Autocomplete for all game types
+- **Easier refactoring**: Change constant value in one place
+- **Self-documenting code**: `GAME_CONSTANTS.AI.STATES.TERRITORY_RETURN` is clearer than `'return'`
+
 ### Game State Management
 
 The main `JurassicEscape` component manages:
 
-- **Game states**: `menu`, `playing`, `levelComplete`, `won`, `lost`
+- **Game states**: Defined in `GAME_CONSTANTS.GAME_STATES` - `MENU`, `PLAYING`, `LEVEL_COMPLETE`, `WON`, `LOST`
 - **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `autoAim`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
@@ -73,8 +104,9 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
   - Weapon switching: Q key (desktop) or touch button (mobile) to toggle between regular gun and tranquilizer
 - **Dinosaurs** (6 types): Raptor, T-Rex, Stegosaurus, Dilophosaurus (aggressive), Parasaurolophus, Triceratops (herbivores)
   - Each has unique stats: health, speed, size, points, aggressive flag, territorial flag
-  - **Aggressive dinosaurs** (Raptor, T-Rex, Stego): AI states `patrol` or `chase` (aggro within range), damage player on contact
-  - **Territorial dinosaurs** (Dilophosaurus): AI states `patrol`, `chase`, or `return`
+  - **AI states** defined in `GAME_CONSTANTS.AI.STATES`: `PATROL`, `CHASE`, `FLEE`, `TERRITORY_RETURN`
+  - **Aggressive dinosaurs** (Raptor, T-Rex, Stego): AI states PATROL or CHASE (aggro within range), damage player on contact
+  - **Territorial dinosaurs** (Dilophosaurus): AI states PATROL, CHASE, or TERRITORY_RETURN
     - Territory system: 200 pixel radius zone, marked by skull emoji and dashed red circle
     - Aggressive only when player enters territory (within 250px aggro range)
     - Spit attack: 180px range, 2 second cooldown, yellow-green projectiles dealing 1 damage
@@ -82,15 +114,15 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-
     - Territory spawning avoids obstacles and other territories (440px minimum spacing)
     - Territory marker removed when dinosaur dies
     - Hysteresis on state transitions prevents rapid flipping at boundaries
-  - **Herbivores** (Parasaurolophus, Triceratops): AI states `patrol` or `flee` (flee within range), no damage to player
+  - **Herbivores** (Parasaurolophus, Triceratops): AI states PATROL or FLEE (flee within range), no damage to player
     - Flee range: 150 pixels, flee speed: 1.5x base speed
     - Lower point values (50/75) vs predators (100-300)
   - Obstacle avoidance: when blocked, try steering left/right; if both blocked, reverse
   - Hand-drawn canvas art with facing direction (horizontal flip for left movement)
     - Facing direction stored in `facingLeft` property, only updates when horizontal velocity exceeds 0.3
   - Sleep mechanic: tranquilized dinosaurs become `isSleeping`, don't move or attack, show Z-Z-Z animation
-- **Obstacles**: Trees and bushes with circular collision
-- **Powerups**: Health (red cross) and Speed (lightning bolt)
+- **Obstacles**: Types defined in `GAME_CONSTANTS.OBSTACLE_TYPES` - `TREE` and `BUSH` with circular collision
+- **Powerups**: Types defined in `GAME_CONSTANTS.POWERUP_TYPES` - `HEALTH` (red cross) and `SPEED` (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
 - **Tranquilizer depots**: Green crates with syringe icons, provide 5 tranq ammo each
 
@@ -229,4 +261,9 @@ Levels defined in `levelConfigs`:
 - **When adding or updating features**: Consider how the feature works on both desktop and mobile
 - Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
-- Avoid magic numbers - prefer constants
+- **Code organization principles**:
+  - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
+  - Avoid string literals for types - use type constants (GAME_STATES, AI.STATES, WEAPON_TYPES, etc.)
+  - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`)
+  - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, etc.)
+  - Keep constants at the top of the file before utility functions and components
