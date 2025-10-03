@@ -170,6 +170,104 @@
     };
 
     /**
+     * Create an obstacle object
+     */
+    const createObstacle = (mapWidth, mapHeight) => {
+      return {
+        x: Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
+        y: Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
+        radius: GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS),
+        type: Math.random() > 0.5 ? 'tree' : 'bush'
+      };
+    };
+
+    /**
+     * Create a powerup object
+     */
+    const createPowerup = (mapWidth, mapHeight) => {
+      const type = Math.random() > 0.5 ? 'health' : 'speed';
+      return {
+        x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        type,
+        radius: GAME_CONSTANTS.SPAWN.POWERUP_RADIUS,
+        active: true
+      };
+    };
+
+    /**
+     * Create a tranquilizer depot object
+     */
+    const createTranqDepot = (mapWidth, mapHeight) => {
+      return {
+        x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
+        ammo: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_AMMO,
+        active: true
+      };
+    };
+
+    /**
+     * Create an ammo pickup object with physics
+     */
+    const createAmmoPickup = (x, y, startY) => {
+      return {
+        x,
+        y,
+        startY,
+        radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS,
+        vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
+        vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE
+      };
+    };
+
+    /**
+     * Create a spit projectile object
+     */
+    const createSpitProjectile = (fromX, fromY, toX, toY) => {
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      return {
+        x: fromX,
+        y: fromY,
+        vx: Math.cos(angle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
+        vy: Math.sin(angle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
+        radius: GAME_CONSTANTS.AI.SPIT_PROJECTILE_RADIUS
+      };
+    };
+
+    /**
+     * Create a tar pit object with bubbles
+     */
+    const createTarPit = (x, y) => {
+      return {
+        x,
+        y,
+        radius: GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS,
+        bubbles: Array.from({ length: GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_COUNT }, () => ({
+          timer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY,
+          offsetX: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD,
+          offsetY: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD
+        }))
+      };
+    };
+
+    /**
+     * Create an electric fence object
+     */
+    const createElectricFence = (x, y, rotation) => {
+      return {
+        x,
+        y,
+        width: GAME_CONSTANTS.HAZARDS.FENCE_WIDTH,
+        height: GAME_CONSTANTS.HAZARDS.FENCE_HEIGHT,
+        rotation,
+        sparkTimer: Math.random() * GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY,
+        playerDamageCooldown: 0
+      };
+    };
+
+    /**
      * Find nearest dinosaur to a position
      */
     const findNearestDinosaur = (x, y, dinosaurs) => {
@@ -1831,12 +1929,7 @@
 
         // Create obstacles
         for (let i = 0; i < config.obstacles; i++) {
-          game.obstacles.push({
-            x: Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
-            y: Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
-            radius: GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS),
-            type: Math.random() > 0.5 ? 'tree' : 'bush'
-          });
+          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight));
         }
 
         // Create dinosaurs
@@ -1950,26 +2043,13 @@
 
         // Create powerups
         for (let i = 0; i < config.powerups; i++) {
-          const type = Math.random() > 0.5 ? 'health' : 'speed';
-          game.powerups.push({
-            x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-            y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-            type: type,
-            radius: GAME_CONSTANTS.SPAWN.POWERUP_RADIUS,
-            active: true
-          });
+          game.powerups.push(createPowerup(game.mapWidth, game.mapHeight));
         }
 
         // Create tranquilizer depots
         const depotCount = GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_COUNT_BASE + level;
         for (let i = 0; i < depotCount; i++) {
-          game.tranqDepots.push({
-            x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-            y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-            radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
-            ammo: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_AMMO,
-            active: true
-          });
+          game.tranqDepots.push(createTranqDepot(game.mapWidth, game.mapHeight));
         }
 
         // Create tar pits
@@ -2019,16 +2099,7 @@
             attempts++;
           }
 
-          game.tarPits.push({
-            x: tarX,
-            y: tarY,
-            radius: GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS,
-            bubbles: Array.from({ length: GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_COUNT }, (_, i) => ({
-              timer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY,
-              offsetX: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD,
-              offsetY: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD
-            }))
-          });
+          game.tarPits.push(createTarPit(tarX, tarY));
         }
 
         // Create electric fences
@@ -2079,15 +2150,7 @@
             attempts++;
           }
 
-          game.electricFences.push({
-            x: fenceX,
-            y: fenceY,
-            width: GAME_CONSTANTS.HAZARDS.FENCE_WIDTH,
-            height: GAME_CONSTANTS.HAZARDS.FENCE_HEIGHT,
-            rotation: fenceRotation,
-            sparkTimer: Math.random() * GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY,
-            playerDamageCooldown: 0
-          });
+          game.electricFences.push(createElectricFence(fenceX, fenceY, fenceRotation));
         }
       }, [difficulty]);
 
@@ -2421,14 +2484,7 @@
                   playSound('hit');
                   if (dino.health <= 0) {
                     for (let j = 0; j < dino.maxHealth; j++) {
-                      game.ammoPickups.push({
-                        x: dino.x,
-                        y: dino.y,
-                        startY: dino.y,
-                        vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
-                        vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE,
-                        radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS
-                      });
+                      game.ammoPickups.push(createAmmoPickup(dino.x, dino.y, dino.y));
                     }
                     setScore(s => s + dino.points);
                     game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
@@ -2570,14 +2626,7 @@
 
                 // Spit attack when in range and off cooldown
                 if (dist < GAME_CONSTANTS.AI.SPIT_ATTACK_RANGE && dino.spitCooldown <= 0) {
-                  const spitAngle = Math.atan2(game.player.y - dino.y, game.player.x - dino.x);
-                  game.spit.push({
-                    x: dino.x,
-                    y: dino.y,
-                    vx: Math.cos(spitAngle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
-                    vy: Math.sin(spitAngle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
-                    radius: GAME_CONSTANTS.AI.SPIT_PROJECTILE_RADIUS
-                  });
+                  game.spit.push(createSpitProjectile(dino.x, dino.y, game.player.x, game.player.y));
                   dino.spitCooldown = GAME_CONSTANTS.AI.SPIT_ATTACK_COOLDOWN;
                 }
               } else if (distFromTerritory > dino.territoryRadius * returnThreshold) {
