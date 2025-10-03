@@ -65,13 +65,78 @@ The main `JurassicEscape` component manages:
   - Camera position, map dimensions, input tracking
   - Touch controls state (joystick, shoot, jump)
 
+### React Performance Patterns
+
+The codebase follows React performance best practices to minimize re-renders and optimize the game loop:
+
+**Component Extraction with React.memo:**
+
+- `GameHUD` - Displays player stats, score, and control buttons (health, ammo, level, speed boost indicator)
+- `TouchControls` - Virtual joystick and mobile buttons (weapon switch, jump, fire)
+- `PauseMenu` - Pause overlay with Continue/Restart/Exit/Settings buttons
+- `SettingsMenu` - Settings overlay with sound, volume, viewport, difficulty, and auto-aim controls
+
+All UI components wrapped with `React.memo` to prevent unnecessary re-renders when parent state changes. Components only re-render when their props actually change.
+
+**Handler Memoization with useCallback:**
+
+All event handlers wrapped in `useCallback` to create stable function references:
+
+- **Pause menu handlers**: `handleContinue`, `handleRestartLevel`, `handleExitToMenu`, `handleOpenSettingsFromPause`
+- **Settings menu handlers**: `handleSoundToggle`, `handleVolumeChange`, `handleViewportScaleChange`, `handleDifficultyChange`, `handleAutoAimToggle`
+- **Game event handlers**: `handleKeyDown`, `handleKeyUp`, `handleMouseMove`, `handleClick` (desktop controls)
+- **Touch control handlers**: `handleJoystickStart`, `handleJoystickMove`, `handleJoystickEnd`, `handleWeaponSwitch`, `handleJumpStart`, `handleShootStart`, `handleShootEnd`
+- **Game flow handlers**: `startGame`, `nextLevel`, `handlePauseClick`, `handleSettingsClick`
+
+**State Batching Pattern:**
+
+The game loop uses a `stateAccumulator` object to batch all React state updates into a single render cycle per frame:
+
+```javascript
+const stateAccumulator = {};
+// Update functions populate stateAccumulator
+updatePlayerSpeed(game, stateAccumulator);
+updateHazards(game, difficulty, playSound, stateAccumulator);
+updatePlayerMovement(game, canvas, stateAccumulator);
+// ... more updates
+
+// Batch apply all state updates at once (single re-render)
+if (stateAccumulator.gameState !== undefined) setGameState(stateAccumulator.gameState);
+if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulator.playerHealth);
+if (stateAccumulator.playerAmmo !== undefined) setPlayerAmmo(stateAccumulator.playerAmmo);
+// ... etc
+```
+
+This prevents multiple re-renders per frame, which would cause performance issues at 60 FPS.
+
+**Helper Function Extraction:**
+
+Game loop logic extracted into focused helper functions to reduce complexity:
+
+- `updatePlayerSpeed` - Speed modifiers (tar pits, speed boost)
+- `updatePlayerMovement` - Input handling, physics, camera tracking
+- `updateHazards` - Electric fence collision and damage
+- `updateCollectibles` - Powerup, ammo, tranq depot collection
+- `updateBullets` - Bullet movement and dinosaur collision
+- `updateSpitProjectiles` - Spit attack logic
+- `updateDinosaurAI` - Consolidated AI for all dinosaur types
+- `updateDinosaurs` - AI execution, movement, sleep state
+
+**Benefits:**
+
+- Reduced re-renders from 100s per second to only when state actually changes
+- Stable event handler references prevent component prop changes
+- Single-file architecture maintained while following React best practices
+- Main component remains readable despite game complexity
+
 ### Game Loop Pattern
 
-Uses `useEffect` with `requestAnimationFrame` for the main game loop (lines 141-889):
+Uses `useEffect` with `requestAnimationFrame` for the main game loop:
 
-1. **Update phase**: Physics, collision detection, AI
-2. **Render phase**: Canvas drawing with camera offset
-3. Loop continues until component unmounts or game state changes
+1. **Update phase**: Physics, collision detection, AI (via helper functions)
+2. **State batching**: Accumulate all state changes, apply once per frame
+3. **Render phase**: Canvas drawing with camera offset
+4. Loop continues until component unmounts or game state changes
 
 ### Core Systems
 
