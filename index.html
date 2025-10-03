@@ -3495,6 +3495,11 @@
         };
       }, [gameState, currentLevel, playSound, showPauseMenu, showSettingsMenu, difficulty, handleKeyDown, handleKeyUp, handleMouseMove, handleClick]);
 
+      // ============================================================================
+      // EVENT HANDLERS (Memoized for performance)
+      // ============================================================================
+
+      // Game Flow Handlers
       const startGame = useCallback(() => {
         setCurrentLevel(1);
         setScore(0);
@@ -3510,145 +3515,7 @@
         setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
       }, [currentLevel, initGame]);
 
-      // Touch control handlers (memoized)
-      const handleJoystickStart = useCallback((e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-        gameRef.current.touch.joystick = {
-          active: true,
-          startX: x,
-          startY: y,
-          currentX: x,
-          currentY: y
-        };
-      }, []);
-
-      const handleJoystickMove = useCallback((e) => {
-        e.preventDefault();
-        if (!gameRef.current.touch.joystick.active) return;
-        const touch = e.touches[0];
-        const rect = e.currentTarget.getBoundingClientRect();
-        gameRef.current.touch.joystick.currentX = touch.clientX - rect.left;
-        gameRef.current.touch.joystick.currentY = touch.clientY - rect.top;
-      }, []);
-
-      const handleJoystickEnd = useCallback((e) => {
-        e.preventDefault();
-        gameRef.current.touch.joystick.active = false;
-      }, []);
-
-      const handleWeaponSwitch = useCallback((e) => {
-        e.preventDefault();
-        gameRef.current.touch.switchWeapon = true;
-      }, []);
-
-      const handleJumpStart = useCallback((e) => {
-        e.preventDefault();
-        if (!gameRef.current.player.isJumping) {
-          gameRef.current.player.isJumping = true;
-          gameRef.current.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
-          playSound(SOUNDS.JUMP);
-        }
-      }, [playSound]);
-
-      const handleShootStart = useCallback((e) => {
-        e.preventDefault();
-        gameRef.current.touch.shoot = true;
-      }, []);
-
-      const handleShootEnd = useCallback((e) => {
-        e.preventDefault();
-        gameRef.current.touch.shoot = false;
-      }, []);
-
-      // Settings menu handlers (memoized)
-      const handleOpenSettings = useCallback(() => {
-        setShowSettingsMenu(true);
-      }, []);
-
-      const handleCloseSettings = useCallback(() => {
-        setShowSettingsMenu(false);
-        if (gameState === GAME_CONSTANTS.GAME_STATES.PLAYING) {
-          setShowPauseMenu(true);
-        }
-      }, [gameState]);
-
-      // Pause handlers (memoized)
-      const handlePauseClick = useCallback(() => {
-        setShowPauseMenu(true);
-        playSound(SOUNDS.PAUSE);
-      }, [playSound]);
-
-      const handleSettingsClick = useCallback(() => {
-        setShowPauseMenu(true);
-        setShowSettingsMenu(true);
-      }, []);
-
-      // Pause menu action handlers (memoized)
-      const handleContinue = useCallback(() => {
-        setShowPauseMenu(false);
-        playSound(SOUNDS.UNPAUSE);
-      }, [playSound]);
-
-      const handleRestartLevel = useCallback(() => {
-        setShowPauseMenu(false);
-        playSound(SOUNDS.UNPAUSE);
-        initGame(currentLevel);
-        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
-      }, [playSound, initGame, currentLevel]);
-
-      const handleExitToMenu = useCallback(() => {
-        setShowPauseMenu(false);
-        playSound(SOUNDS.VICTORY);
-        setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
-      }, [playSound]);
-
-      const handleOpenSettingsFromPause = useCallback(() => {
-        setShowPauseMenu(false);
-        setShowSettingsMenu(true);
-      }, []);
-
-      // Settings menu handlers (memoized)
-      const handleSoundToggle = useCallback(() => {
-        const newValue = !soundEnabled;
-        setSoundEnabled(newValue);
-        localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
-        if (newValue) playSound(SOUNDS.GAME_START);
-      }, [soundEnabled, playSound]);
-
-      const handleVolumeChange = useCallback((e) => {
-        const newVolume = parseInt(e.target.value) / 100;
-        setVolume(newVolume);
-        localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
-      }, []);
-
-      const handleViewportScaleChange = useCallback((key) => {
-        setViewportScale(key);
-        localStorage.setItem('jurassicEscapeViewportScale', key);
-      }, []);
-
-      const handleDifficultyChange = useCallback((key) => {
-        setDifficulty(key);
-        localStorage.setItem('jurassicEscapeDifficulty', key);
-        // Enable auto-aim on Easy difficulty
-        if (key === 'easy') {
-          setAutoAim(true);
-          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
-        }
-      }, []);
-
-      const handleAutoAimToggle = useCallback(() => {
-        if (!isTouchDevice) {
-          const newValue = !autoAim;
-          setAutoAim(newValue);
-          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
-        }
-      }, [isTouchDevice, autoAim]);
-
-      // Game event handlers (memoized)
+      // Desktop Input Handlers
       const handleKeyDown = useCallback((e) => {
         const game = gameRef.current;
         const key = e.key.toLowerCase();
@@ -3725,7 +3592,142 @@
         }
       }, [autoAim, playSound]);
 
-      const game = gameRef.current;
+      // Mobile Touch Handlers
+      const handleJoystickStart = useCallback((e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        gameRef.current.touch.joystick = {
+          active: true,
+          startX: x,
+          startY: y,
+          currentX: x,
+          currentY: y
+        };
+      }, []);
+
+      const handleJoystickMove = useCallback((e) => {
+        e.preventDefault();
+        if (!gameRef.current.touch.joystick.active) return;
+        const touch = e.touches[0];
+        const rect = e.currentTarget.getBoundingClientRect();
+        gameRef.current.touch.joystick.currentX = touch.clientX - rect.left;
+        gameRef.current.touch.joystick.currentY = touch.clientY - rect.top;
+      }, []);
+
+      const handleJoystickEnd = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.joystick.active = false;
+      }, []);
+
+      const handleWeaponSwitch = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.switchWeapon = true;
+      }, []);
+
+      const handleJumpStart = useCallback((e) => {
+        e.preventDefault();
+        if (!gameRef.current.player.isJumping) {
+          gameRef.current.player.isJumping = true;
+          gameRef.current.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
+          playSound(SOUNDS.JUMP);
+        }
+      }, [playSound]);
+
+      const handleShootStart = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.shoot = true;
+      }, []);
+
+      const handleShootEnd = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.shoot = false;
+      }, []);
+
+      // UI Interaction Handlers
+      const handlePauseClick = useCallback(() => {
+        setShowPauseMenu(true);
+        playSound(SOUNDS.PAUSE);
+      }, [playSound]);
+
+      const handleSettingsClick = useCallback(() => {
+        setShowPauseMenu(true);
+        setShowSettingsMenu(true);
+      }, []);
+
+      const handleOpenSettings = useCallback(() => {
+        setShowSettingsMenu(true);
+      }, []);
+
+      const handleCloseSettings = useCallback(() => {
+        setShowSettingsMenu(false);
+        if (gameState === GAME_CONSTANTS.GAME_STATES.PLAYING) {
+          setShowPauseMenu(true);
+        }
+      }, [gameState]);
+
+      // Pause Menu Handlers
+      const handleContinue = useCallback(() => {
+        setShowPauseMenu(false);
+        playSound(SOUNDS.UNPAUSE);
+      }, [playSound]);
+
+      const handleRestartLevel = useCallback(() => {
+        setShowPauseMenu(false);
+        playSound(SOUNDS.UNPAUSE);
+        initGame(currentLevel);
+        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
+      }, [playSound, initGame, currentLevel]);
+
+      const handleExitToMenu = useCallback(() => {
+        setShowPauseMenu(false);
+        playSound(SOUNDS.VICTORY);
+        setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
+      }, [playSound]);
+
+      const handleOpenSettingsFromPause = useCallback(() => {
+        setShowPauseMenu(false);
+        setShowSettingsMenu(true);
+      }, []);
+
+      // Settings Menu Handlers
+      const handleSoundToggle = useCallback(() => {
+        const newValue = !soundEnabled;
+        setSoundEnabled(newValue);
+        localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
+        if (newValue) playSound(SOUNDS.GAME_START);
+      }, [soundEnabled, playSound]);
+
+      const handleVolumeChange = useCallback((e) => {
+        const newVolume = parseInt(e.target.value) / 100;
+        setVolume(newVolume);
+        localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
+      }, []);
+
+      const handleViewportScaleChange = useCallback((key) => {
+        setViewportScale(key);
+        localStorage.setItem('jurassicEscapeViewportScale', key);
+      }, []);
+
+      const handleDifficultyChange = useCallback((key) => {
+        setDifficulty(key);
+        localStorage.setItem('jurassicEscapeDifficulty', key);
+        // Enable auto-aim on Easy difficulty
+        if (key === 'easy') {
+          setAutoAim(true);
+          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
+        }
+      }, []);
+
+      const handleAutoAimToggle = useCallback(() => {
+        if (!isTouchDevice) {
+          const newValue = !autoAim;
+          setAutoAim(newValue);
+          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
+        }
+      }, [isTouchDevice, autoAim]);
 
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
