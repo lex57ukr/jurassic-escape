@@ -536,6 +536,15 @@
     };
 
     /**
+     * Check if game state is terminal (game loop should stop)
+     */
+    const isTerminalState = (state) => {
+      return state === GAME_CONSTANTS.GAME_STATES.LOST ||
+             state === GAME_CONSTANTS.GAME_STATES.WON ||
+             state === GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE;
+    };
+
+    /**
      * Clamp entity position to map boundaries
      */
     const clampToBounds = (entity, size, mapWidth, mapHeight) => {
@@ -3162,9 +3171,7 @@
           if (stateAccumulator.score !== undefined) setScore(s => s + stateAccumulator.score);
 
           // Stop game loop if game over
-          if (stateAccumulator.gameState === GAME_CONSTANTS.GAME_STATES.LOST ||
-              stateAccumulator.gameState === GAME_CONSTANTS.GAME_STATES.WON ||
-              stateAccumulator.gameState === GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE) {
+          if (stateAccumulator.gameState !== undefined && isTerminalState(stateAccumulator.gameState)) {
             return;
           }
 
@@ -3448,6 +3455,17 @@
         }
       }, [gameState]);
 
+      // Pause handlers (memoized)
+      const handlePauseClick = useCallback(() => {
+        setShowPauseMenu(true);
+        playSound(SOUNDS.PAUSE);
+      }, [playSound]);
+
+      const handleSettingsClick = useCallback(() => {
+        setShowPauseMenu(true);
+        setShowSettingsMenu(true);
+      }, []);
+
       const game = gameRef.current;
 
       return (
@@ -3514,14 +3532,8 @@
                 speedBoostActive={speedBoostActive}
                 autoAim={autoAim}
                 isTouchDevice={isTouchDevice}
-                onPauseClick={() => {
-                  setShowPauseMenu(true);
-                  playSound(SOUNDS.PAUSE);
-                }}
-                onSettingsClick={() => {
-                  setShowPauseMenu(true);
-                  setShowSettingsMenu(true);
-                }}
+                onPauseClick={handlePauseClick}
+                onSettingsClick={handleSettingsClick}
               />
               <div className="relative">
                 <canvas
