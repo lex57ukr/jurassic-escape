@@ -2346,13 +2346,13 @@
 
           // Check collision
           if (circleRectCollision(newDinoX, newDinoY, dino.size, fence.x, fence.y, fence.width, fence.height, fence.rotation)) {
-            // Bounce back
+            // Bounce back - apply position directly
             const dx = newDinoX - fence.x;
             const dy = newDinoY - fence.y;
             const pushDist = distance(0, 0, dx, dy);
             if (pushDist > 0) {
-              newDinoX = dino.x + (dx / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
-              newDinoY = dino.y + (dy / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+              dino.x = dino.x + (dx / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+              dino.y = dino.y + (dy / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
             }
 
             // Stun dinosaur
@@ -2424,6 +2424,146 @@
 
       return false; // Not game over
     };
+
+    // ============================================================================
+    // REACT SUB-COMPONENTS (Memoized for performance)
+    // ============================================================================
+
+    const GameHUD = React.memo(({
+      health,
+      maxHealth,
+      ammo,
+      tranqAmmo,
+      currentWeapon,
+      score,
+      currentLevel,
+      speedBoostActive,
+      autoAim,
+      isTouchDevice,
+      onPauseClick,
+      onSettingsClick
+    }) => {
+      return (
+        <div className="flex gap-4 md:gap-8 mb-4 text-white items-center flex-wrap justify-center">
+          <div className="text-xl font-bold">Level {currentLevel}</div>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: maxHealth }).map((_, i) => (
+              <span key={i}>{i < health ? '❤️' : '🖤'}</span>
+            ))}
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
+            <span>{GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}</span>
+            <span className="text-xl font-bold">{ammo}</span>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
+            <span>{GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}</span>
+            <span className="text-xl font-bold">{tranqAmmo}</span>
+          </div>
+          {speedBoostActive && (
+            <div className="flex items-center gap-2 bg-cyan-500 px-3 py-1 rounded-full">
+              <span>⚡</span>
+              <span className="text-sm font-bold">SPEED BOOST</span>
+            </div>
+          )}
+          {(autoAim || isTouchDevice) && (
+            <div className="flex items-center gap-2 bg-purple-600 px-3 py-1 rounded-full">
+              <span>🎯</span>
+              <span className="text-sm font-bold">AUTO-AIM</span>
+            </div>
+          )}
+          <div className="text-xl font-bold">Score: {score}</div>
+          {isTouchDevice && (
+            <button
+              onClick={onPauseClick}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
+            >
+              ⏸ PAUSE
+            </button>
+          )}
+          <button
+            onClick={onSettingsClick}
+            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-xl"
+            title="Settings"
+          >
+            ⚙️
+          </button>
+        </div>
+      );
+    });
+
+    const TouchControls = React.memo(({
+      joystickActive,
+      joystickX,
+      joystickY,
+      currentWeapon,
+      onJoystickStart,
+      onJoystickMove,
+      onJoystickEnd,
+      onWeaponSwitch,
+      onJumpStart,
+      onShootStart,
+      onShootEnd
+    }) => {
+      return (
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Virtual Joystick Area (left side) */}
+          <div
+            className="absolute left-4 bottom-4 w-32 h-32 pointer-events-auto"
+            style={{ touchAction: 'none' }}
+            onTouchStart={onJoystickStart}
+            onTouchMove={onJoystickMove}
+            onTouchEnd={onJoystickEnd}
+          >
+            <div className="w-full h-full rounded-full bg-gray-800 bg-opacity-50 border-2 border-gray-600 flex items-center justify-center">
+              <div className="text-2xl">🕹️</div>
+            </div>
+            {joystickActive && (
+              <div
+                className="absolute w-12 h-12 rounded-full bg-green-500 bg-opacity-70 transform -translate-x-1/2 -translate-y-1/2"
+                style={{
+                  left: `${joystickX}px`,
+                  top: `${joystickY}px`
+                }}
+              />
+            )}
+          </div>
+
+          {/* Weapon Switch Button */}
+          <div
+            className="absolute right-4 top-4 w-16 h-16 pointer-events-auto"
+            style={{ touchAction: 'none' }}
+            onTouchStart={onWeaponSwitch}
+          >
+            <div className={`w-full h-full rounded-full ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
+              {currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON : GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}
+            </div>
+          </div>
+
+          {/* Jump Button */}
+          <div
+            className="absolute right-28 bottom-4 w-20 h-20 pointer-events-auto"
+            style={{ touchAction: 'none' }}
+            onTouchStart={onJumpStart}
+          >
+            <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white font-bold shadow-lg">
+              JUMP
+            </div>
+          </div>
+
+          {/* Shoot Button */}
+          <div
+            className="absolute right-4 bottom-4 w-20 h-20 pointer-events-auto"
+            style={{ touchAction: 'none' }}
+            onTouchStart={onShootStart}
+            onTouchEnd={onShootEnd}
+          >
+            <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-2 border-red-500 flex items-center justify-center text-white font-bold shadow-lg">
+              FIRE
+            </div>
+          </div>
+        </div>
+      );
+    });
 
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
@@ -2967,9 +3107,7 @@
           updatePlayerSpeed(game, stateAccumulator);
 
           // Update hazards
-          if (updateHazards(game, difficulty, playSound, stateAccumulator)) {
-            return; // Game over
-          }
+          updateHazards(game, difficulty, playSound, stateAccumulator);
 
           // Update player movement
           updatePlayerMovement(game, canvas, stateAccumulator);
@@ -3009,14 +3147,10 @@
           updateBullets(game, playSound, stateAccumulator);
 
           // Update spit projectiles
-          if (!updateSpitProjectiles(game, difficulty, playSound, stateAccumulator)) {
-            return; // Game over
-          }
+          updateSpitProjectiles(game, difficulty, playSound, stateAccumulator);
 
           // Update dinosaurs (includes AI, movement, collisions)
-          if (updateDinosaurs(game, difficulty, playSound, stateAccumulator)) {
-            return; // Game over
-          }
+          updateDinosaurs(game, difficulty, playSound, stateAccumulator);
 
           // Batch apply all state updates (reduces re-renders)
           if (stateAccumulator.gameState !== undefined) setGameState(stateAccumulator.gameState);
@@ -3026,6 +3160,13 @@
           if (stateAccumulator.currentWeapon !== undefined) setCurrentWeapon(stateAccumulator.currentWeapon);
           if (stateAccumulator.speedBoostActive !== undefined) setSpeedBoostActive(stateAccumulator.speedBoostActive);
           if (stateAccumulator.score !== undefined) setScore(s => s + stateAccumulator.score);
+
+          // Stop game loop if game over
+          if (stateAccumulator.gameState === GAME_CONSTANTS.GAME_STATES.LOST ||
+              stateAccumulator.gameState === GAME_CONSTANTS.GAME_STATES.WON ||
+              stateAccumulator.gameState === GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE) {
+            return;
+          }
 
           // Check win condition
           const exitCenterX = game.exit.x + game.exit.width / 2;
@@ -3226,20 +3367,86 @@
         };
       }, [gameState, currentLevel, playSound, showPauseMenu]);
 
-      const startGame = () => {
+      const startGame = useCallback(() => {
         setCurrentLevel(1);
         setScore(0);
         initGame(1);
         setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
         playSound(SOUNDS.GAME_START);
-      };
+      }, [initGame, playSound]);
 
-      const nextLevel = () => {
+      const nextLevel = useCallback(() => {
         const next = currentLevel + 1;
         setCurrentLevel(next);
         initGame(next);
         setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
-      };
+      }, [currentLevel, initGame]);
+
+      // Touch control handlers (memoized)
+      const handleJoystickStart = useCallback((e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        gameRef.current.touch.joystick = {
+          active: true,
+          startX: x,
+          startY: y,
+          currentX: x,
+          currentY: y
+        };
+      }, []);
+
+      const handleJoystickMove = useCallback((e) => {
+        e.preventDefault();
+        if (!gameRef.current.touch.joystick.active) return;
+        const touch = e.touches[0];
+        const rect = e.currentTarget.getBoundingClientRect();
+        gameRef.current.touch.joystick.currentX = touch.clientX - rect.left;
+        gameRef.current.touch.joystick.currentY = touch.clientY - rect.top;
+      }, []);
+
+      const handleJoystickEnd = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.joystick.active = false;
+      }, []);
+
+      const handleWeaponSwitch = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.switchWeapon = true;
+      }, []);
+
+      const handleJumpStart = useCallback((e) => {
+        e.preventDefault();
+        if (!gameRef.current.player.isJumping) {
+          gameRef.current.player.isJumping = true;
+          gameRef.current.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
+          playSound(SOUNDS.JUMP);
+        }
+      }, [playSound]);
+
+      const handleShootStart = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.shoot = true;
+      }, []);
+
+      const handleShootEnd = useCallback((e) => {
+        e.preventDefault();
+        gameRef.current.touch.shoot = false;
+      }, []);
+
+      // Settings menu handlers (memoized)
+      const handleOpenSettings = useCallback(() => {
+        setShowSettingsMenu(true);
+      }, []);
+
+      const handleCloseSettings = useCallback(() => {
+        setShowSettingsMenu(false);
+        if (gameState === GAME_CONSTANTS.GAME_STATES.PLAYING) {
+          setShowPauseMenu(true);
+        }
+      }, [gameState]);
 
       const game = gameRef.current;
 
@@ -3284,7 +3491,7 @@
                   START GAME
                 </button>
                 <button
-                  onClick={() => setShowSettingsMenu(true)}
+                  onClick={handleOpenSettings}
                   className="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-lg flex items-center justify-center gap-2"
                 >
                   <span>⚙️</span>
@@ -3296,56 +3503,26 @@
 
           {gameState === GAME_CONSTANTS.GAME_STATES.PLAYING && (
             <div className="flex flex-col items-center">
-              <div className="flex gap-4 md:gap-8 mb-4 text-white items-center flex-wrap justify-center">
-                <div className="text-xl font-bold">Level {currentLevel}</div>
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <span key={i}>{i < playerHealth ? '❤️' : '🖤'}</span>
-                  ))}
-                </div>
-                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
-                  <span>{GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}</span>
-                  <span className="text-xl font-bold">{playerAmmo}</span>
-                </div>
-                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
-                  <span>{GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}</span>
-                  <span className="text-xl font-bold">{playerTranqAmmo}</span>
-                </div>
-                {speedBoostActive && (
-                  <div className="flex items-center gap-2 bg-cyan-500 px-3 py-1 rounded-full">
-                    <span>⚡</span>
-                    <span className="text-sm font-bold">SPEED BOOST</span>
-                  </div>
-                )}
-                {(autoAim || isTouchDevice) && (
-                  <div className="flex items-center gap-2 bg-purple-600 px-3 py-1 rounded-full">
-                    <span>🎯</span>
-                    <span className="text-sm font-bold">AUTO-AIM</span>
-                  </div>
-                )}
-                <div className="text-xl font-bold">Score: {score}</div>
-                {isTouchDevice && (
-                  <button
-                    onClick={() => {
-                      setShowPauseMenu(true);
-                      playSound(SOUNDS.PAUSE);
-                    }}
-                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
-                  >
-                    ⏸ PAUSE
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setShowPauseMenu(true);
-                    setShowSettingsMenu(true);
-                  }}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-xl"
-                  title="Settings"
-                >
-                  ⚙️
-                </button>
-              </div>
+              <GameHUD
+                health={playerHealth}
+                maxHealth={5}
+                ammo={playerAmmo}
+                tranqAmmo={playerTranqAmmo}
+                currentWeapon={currentWeapon}
+                score={score}
+                currentLevel={currentLevel}
+                speedBoostActive={speedBoostActive}
+                autoAim={autoAim}
+                isTouchDevice={isTouchDevice}
+                onPauseClick={() => {
+                  setShowPauseMenu(true);
+                  playSound(SOUNDS.PAUSE);
+                }}
+                onSettingsClick={() => {
+                  setShowPauseMenu(true);
+                  setShowSettingsMenu(true);
+                }}
+              />
               <div className="relative">
                 <canvas
                   ref={canvasRef}
@@ -3357,102 +3534,19 @@
 
                 {/* Touch Controls Overlay */}
                 {isTouchDevice && (
-                <div className="absolute inset-0 pointer-events-none">
-                  {/* Virtual Joystick Area (left side) */}
-                  <div
-                    className="absolute left-4 bottom-4 w-32 h-32 pointer-events-auto"
-                    style={{ touchAction: 'none' }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      const touch = e.touches[0];
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = touch.clientX - rect.left;
-                      const y = touch.clientY - rect.top;
-                      gameRef.current.touch.joystick = {
-                        active: true,
-                        startX: x,
-                        startY: y,
-                        currentX: x,
-                        currentY: y
-                      };
-                    }}
-                    onTouchMove={(e) => {
-                      e.preventDefault();
-                      if (!gameRef.current.touch.joystick.active) return;
-                      const touch = e.touches[0];
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      gameRef.current.touch.joystick.currentX = touch.clientX - rect.left;
-                      gameRef.current.touch.joystick.currentY = touch.clientY - rect.top;
-                    }}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      gameRef.current.touch.joystick.active = false;
-                    }}
-                  >
-                    <div className="w-full h-full rounded-full bg-gray-800 bg-opacity-50 border-2 border-gray-600 flex items-center justify-center">
-                      <div className="text-2xl">🕹️</div>
-                    </div>
-                    {gameRef.current.touch.joystick.active && (
-                      <div
-                        className="absolute w-12 h-12 rounded-full bg-green-500 bg-opacity-70 transform -translate-x-1/2 -translate-y-1/2"
-                        style={{
-                          left: `${gameRef.current.touch.joystick.currentX}px`,
-                          top: `${gameRef.current.touch.joystick.currentY}px`
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Weapon Switch Button */}
-                  <div
-                    className="absolute right-4 top-4 w-16 h-16 pointer-events-auto"
-                    style={{ touchAction: 'none' }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      gameRef.current.touch.switchWeapon = true;
-                    }}
-                  >
-                    <div className={`w-full h-full rounded-full ${gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
-                      {gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON : GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}
-                    </div>
-                  </div>
-
-                  {/* Jump Button */}
-                  <div
-                    className="absolute right-28 bottom-4 w-20 h-20 pointer-events-auto"
-                    style={{ touchAction: 'none' }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      if (!gameRef.current.player.isJumping) {
-                        gameRef.current.player.isJumping = true;
-                        gameRef.current.player.jumpVelocity = 8;
-                        playSound(SOUNDS.JUMP);
-                      }
-                    }}
-                  >
-                    <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white font-bold shadow-lg">
-                      JUMP
-                    </div>
-                  </div>
-
-                  {/* Shoot Button */}
-                  <div
-                    className="absolute right-4 bottom-4 w-20 h-20 pointer-events-auto"
-                    style={{ touchAction: 'none' }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      gameRef.current.touch.shoot = true;
-                    }}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      gameRef.current.touch.shoot = false;
-                    }}
-                  >
-                    <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-2 border-red-500 flex items-center justify-center text-white font-bold shadow-lg">
-                      FIRE
-                    </div>
-                  </div>
-                </div>
+                  <TouchControls
+                    joystickActive={gameRef.current.touch.joystick.active}
+                    joystickX={gameRef.current.touch.joystick.currentX}
+                    joystickY={gameRef.current.touch.joystick.currentY}
+                    currentWeapon={gameRef.current.player.currentWeapon}
+                    onJoystickStart={handleJoystickStart}
+                    onJoystickMove={handleJoystickMove}
+                    onJoystickEnd={handleJoystickEnd}
+                    onWeaponSwitch={handleWeaponSwitch}
+                    onJumpStart={handleJumpStart}
+                    onShootStart={handleShootStart}
+                    onShootEnd={handleShootEnd}
+                  />
                 )}
               </div>
               <p className="text-gray-400 mt-2 text-center">
@@ -3708,12 +3802,7 @@
                     </div>
                   </div>
                   <button
-                    onClick={() => {
-                      setShowSettingsMenu(false);
-                      if (gameState === GAME_CONSTANTS.GAME_STATES.PLAYING) {
-                        setShowPauseMenu(true);
-                      }
-                    }}
+                    onClick={handleCloseSettings}
                     className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
                   >
                     Close
