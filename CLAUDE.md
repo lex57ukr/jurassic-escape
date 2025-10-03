@@ -34,6 +34,7 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `OBSTACLE_TYPES`: Environment types (TREE, BUSH)
 - `POWERUP_TYPES`: Collectible types (HEALTH, SPEED)
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
+- `SOUNDS`: Unified audio configuration with `id` and `path` for each sound (SHOOT, HIT, DEATH, etc.)
 
 **Utility Functions:**
 
@@ -150,8 +151,13 @@ Levels defined in `levelConfigs`:
 
 - Uses `soundsRef` with `useCallback` for audio management
 - Audio pooling via `cloneNode()` for simultaneous playback (prevents freezing and enables mixing)
-- 17 sound effects: shoot, hit, death, pickup_ammo, pickup_health, pickup_speed, player_hurt, level_complete, game_over, victory, game_start, jump, pause, tranq_shoot, tranq_hit, pickup_tranq, electric_shock
-- `unpause` mapped to `game_start` for reuse
+- **Unified SOUNDS constant**: Each sound defined with `id` (runtime lookup key) and `path` (audio file location)
+  - Prevents implicit coupling between sound names and file paths
+  - Single source of truth - can't add sound without path or vice versa
+  - Usage: `playSound(SOUNDS.SHOOT)` - function automatically extracts `.id` property
+  - Example: `SOUNDS.SHOOT = { id: 'shoot', path: './assets/shoot.wav' }`
+- 18 sound effects: SHOOT, HIT, DEATH, PICKUP_AMMO, PICKUP_HEALTH, PICKUP_SPEED, PLAYER_HURT, LEVEL_COMPLETE, GAME_OVER, VICTORY, GAME_START, JUMP, PAUSE, TRANQ_SHOOT, TRANQ_HIT, PICKUP_TRANQ, ELECTRIC_SHOCK, UNPAUSE
+- `UNPAUSE` is an alias that points to `game_start.wav` for reuse
 - All sounds are .wav files in `./assets/` folder
 - **Volume control**: `volume` state (0.0-1.0, default 0.3) controls audio volume; applied to all sounds in `playSound` function
 - **Sound control**: `soundEnabled` state controls whether audio plays; checked at start of `playSound` function

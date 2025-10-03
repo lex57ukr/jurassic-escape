@@ -404,6 +404,36 @@
     };
 
     // ============================================================================
+    // AUDIO CONFIGURATION
+    // ============================================================================
+
+    /**
+     * Unified sound configuration combining IDs and file paths
+     * Each sound has an 'id' (used for runtime lookup) and 'path' (audio file location)
+     * This prevents implicit coupling and ensures sounds can't be added without paths
+     */
+    const SOUNDS = {
+      SHOOT: { id: 'shoot', path: './assets/shoot.wav' },
+      HIT: { id: 'hit', path: './assets/hit.wav' },
+      DEATH: { id: 'death', path: './assets/death.wav' },
+      PICKUP_AMMO: { id: 'pickup_ammo', path: './assets/pickup_ammo.wav' },
+      PICKUP_HEALTH: { id: 'pickup_health', path: './assets/pickup_health.wav' },
+      PICKUP_SPEED: { id: 'pickup_speed', path: './assets/pickup_speed.wav' },
+      PLAYER_HURT: { id: 'player_hurt', path: './assets/player_hurt.wav' },
+      LEVEL_COMPLETE: { id: 'level_complete', path: './assets/level_complete.wav' },
+      GAME_OVER: { id: 'game_over', path: './assets/game_over.wav' },
+      VICTORY: { id: 'victory', path: './assets/victory.wav' },
+      GAME_START: { id: 'game_start', path: './assets/game_start.wav' },
+      JUMP: { id: 'jump', path: './assets/jump.wav' },
+      PAUSE: { id: 'pause', path: './assets/pause.wav' },
+      TRANQ_SHOOT: { id: 'tranq_shoot', path: './assets/tranq_shoot.wav' },
+      TRANQ_HIT: { id: 'tranq_hit', path: './assets/tranq_hit.wav' },
+      PICKUP_TRANQ: { id: 'pickup_tranq', path: './assets/pickup_tranq.wav' },
+      ELECTRIC_SHOCK: { id: 'electric_shock', path: './assets/electric_shock.wav' },
+      UNPAUSE: { id: 'unpause', path: './assets/game_start.wav' }, // Alias to game_start
+    };
+
+    // ============================================================================
     // UTILITY FUNCTIONS
     // ============================================================================
 
@@ -1803,10 +1833,12 @@
       // Sound system with pooling for simultaneous playback
       const soundsRef = useRef({});
 
-      const playSound = useCallback((soundName) => {
+      const playSound = useCallback((sound) => {
         if (!soundEnabled) return;
 
-        const soundData = soundsRef.current[soundName];
+        // Extract id from sound object (e.g., SOUNDS.SHOOT has .id property)
+        const soundId = sound?.id || sound;
+        const soundData = soundsRef.current[soundId];
         if (!soundData) return;
 
         // Clone the audio element for simultaneous playback
@@ -1821,29 +1853,11 @@
       }, [soundEnabled, volume]);
 
       useEffect(() => {
-        // Preload all sounds as base templates
-        const sounds = {
-          shoot: new Audio('./assets/shoot.wav'),
-          hit: new Audio('./assets/hit.wav'),
-          death: new Audio('./assets/death.wav'),
-          pickup_ammo: new Audio('./assets/pickup_ammo.wav'),
-          pickup_health: new Audio('./assets/pickup_health.wav'),
-          pickup_speed: new Audio('./assets/pickup_speed.wav'),
-          player_hurt: new Audio('./assets/player_hurt.wav'),
-          level_complete: new Audio('./assets/level_complete.wav'),
-          game_over: new Audio('./assets/game_over.wav'),
-          victory: new Audio('./assets/victory.wav'),
-          game_start: new Audio('./assets/game_start.wav'),
-          jump: new Audio('./assets/jump.wav'),
-          pause: new Audio('./assets/pause.wav'),
-          tranq_shoot: new Audio('./assets/tranq_shoot.wav'),
-          tranq_hit: new Audio('./assets/tranq_hit.wav'),
-          pickup_tranq: new Audio('./assets/pickup_tranq.wav'),
-          electric_shock: new Audio('./assets/electric_shock.wav')
-        };
-
-        // Map unpause to game_start
-        sounds.unpause = sounds.game_start;
+        // Preload all sounds as base templates using unified SOUNDS constant
+        const sounds = {};
+        Object.entries(SOUNDS).forEach(([key, config]) => {
+          sounds[config.id] = new Audio(config.path);
+        });
 
         // Preload all audio files
         Object.values(sounds).forEach(audio => {
@@ -1851,6 +1865,14 @@
         });
 
         soundsRef.current = sounds;
+
+        // Cleanup function to prevent memory leaks
+        return () => {
+          Object.values(sounds).forEach(audio => {
+            audio.pause();
+            audio.src = '';
+          });
+        };
       }, []);
 
       // Detect touch device and responsive canvas sizing
@@ -2230,7 +2252,7 @@
           // Handle ESC to pause
           if (key === 'escape') {
             setShowPauseMenu(true);
-            playSound('pause');
+            playSound(SOUNDS.PAUSE);
             return;
           }
 
@@ -2238,7 +2260,7 @@
           if (key === ' ' && !game.player.isJumping) {
             game.player.isJumping = true;
             game.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
-            playSound('jump');
+            playSound(SOUNDS.JUMP);
           }
 
           // Handle weapon switching with Q key
@@ -2281,14 +2303,14 @@
               game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
               game.player.ammo--;
               setPlayerAmmo(game.player.ammo);
-              playSound('shoot');
+              playSound(SOUNDS.SHOOT);
             }
           } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER) {
             if (game.player.tranqAmmo > 0) {
               game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
               game.player.tranqAmmo--;
               setPlayerTranqAmmo(game.player.tranqAmmo);
-              playSound('tranq_shoot');
+              playSound(SOUNDS.TRANQ_SHOOT);
             }
           }
         };
@@ -2328,7 +2350,7 @@
                   game.player.invincibilityTimer = invincibilityFrames;
                   game.player.zapTimer = GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
                   fence.playerDamageCooldown = GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE_COOLDOWN;
-                  playSound('electric_shock');
+                  playSound(SOUNDS.ELECTRIC_SHOCK);
 
                   // Push player back from fence
                   const dx = game.player.x - fence.x;
@@ -2342,7 +2364,7 @@
                   // Check if player died
                   if (game.player.health <= 0) {
                     setGameState(GAME_CONSTANTS.GAME_STATES.LOST);
-                    playSound('game_over');
+                    playSound(SOUNDS.GAME_OVER);
                   }
                 }
                 break;
@@ -2454,13 +2476,13 @@
               game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
               game.player.ammo--;
               setPlayerAmmo(game.player.ammo);
-              playSound('shoot');
+              playSound(SOUNDS.SHOOT);
               game.touch.shoot = false;
             } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER && game.player.tranqAmmo > 0) {
               game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
               game.player.tranqAmmo--;
               setPlayerTranqAmmo(game.player.tranqAmmo);
-              playSound('tranq_shoot');
+              playSound(SOUNDS.TRANQ_SHOOT);
               game.touch.shoot = false;
             }
           }
@@ -2481,11 +2503,11 @@
                   game.player.health++;
                   setPlayerHealth(game.player.health);
                 }
-                playSound('pickup_health');
+                playSound(SOUNDS.PICKUP_HEALTH);
               } else if (powerup.type === GAME_CONSTANTS.POWERUP_TYPES.SPEED) {
                 game.speedBoostTimer = GAME_CONSTANTS.SPEED_BOOST.DURATION_FRAMES;
                 setSpeedBoostActive(true);
-                playSound('pickup_speed');
+                playSound(SOUNDS.PICKUP_SPEED);
               }
             }
           });
@@ -2498,7 +2520,7 @@
               depot.active = false;
               game.player.tranqAmmo += depot.ammo;
               setPlayerTranqAmmo(game.player.tranqAmmo);
-              playSound('pickup_tranq');
+              playSound(SOUNDS.PICKUP_TRANQ);
               game.floatingTexts.push(createFloatingText(depot.x, depot.y, `+${depot.ammo}`, '#00FF00'));
             }
           });
@@ -2520,7 +2542,7 @@
                   // Tranquilizer dart - track hits and put to sleep when threshold reached
                   if (!dino.isSleeping) {
                     dino.tranqHits++;
-                    playSound('tranq_hit');
+                    playSound(SOUNDS.TRANQ_HIT);
 
                     // Determine shots needed based on dinosaur type
                     const shotsNeeded = getTranqShotsNeeded(dino.type);
@@ -2541,7 +2563,7 @@
                 } else {
                   // Regular bullet damages dinosaur
                   dino.health--;
-                  playSound('hit');
+                  playSound(SOUNDS.HIT);
                   if (dino.health <= 0) {
                     for (let j = 0; j < dino.maxHealth; j++) {
                       game.ammoPickups.push(createAmmoPickup(dino.x, dino.y, dino.y));
@@ -2561,7 +2583,7 @@
                     }
 
                     game.dinosaurs.splice(i, 1);
-                    playSound('death');
+                    playSound(SOUNDS.DEATH);
                   }
                 }
                 return false;
@@ -2590,11 +2612,11 @@
                 game.player.health -= GAME_CONSTANTS.AI.SPIT_DAMAGE;
                 grantInvincibility(game.player, invincibilityFrames);
                 setPlayerHealth(game.player.health);
-                playSound('player_hurt');
+                playSound(SOUNDS.PLAYER_HURT);
 
                 if (game.player.health <= 0) {
                   setGameState(GAME_CONSTANTS.GAME_STATES.LOST);
-                  playSound('game_over');
+                  playSound(SOUNDS.GAME_OVER);
                 }
               }
               return false;
@@ -2618,7 +2640,7 @@
             if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
               game.player.ammo++;
               setPlayerAmmo(game.player.ammo);
-              playSound('pickup_ammo');
+              playSound(SOUNDS.PICKUP_AMMO);
               return false;
             }
 
@@ -2888,7 +2910,7 @@
                   // Play sound only if player is close enough to hear it
                   const distToPlayer = distance(dino.x, dino.y, game.player.x, game.player.y);
                   if (distToPlayer < GAME_CONSTANTS.HAZARDS.ZAP_SOUND_MAX_DISTANCE) {
-                    playSound('electric_shock');
+                    playSound(SOUNDS.ELECTRIC_SHOCK);
                   }
 
                   // Don't reset tranq hits or affect scoring - this is stun, not tranq
@@ -2932,7 +2954,7 @@
 
                 if (game.player.health <= 0) {
                   setGameState(GAME_CONSTANTS.GAME_STATES.LOST);
-                  playSound('game_over');
+                  playSound(SOUNDS.GAME_OVER);
                 }
               }
             }
@@ -2944,10 +2966,10 @@
           if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
             if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
               setGameState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE);
-              playSound('level_complete');
+              playSound(SOUNDS.LEVEL_COMPLETE);
             } else {
               setGameState(GAME_CONSTANTS.GAME_STATES.WON);
-              playSound('victory');
+              playSound(SOUNDS.VICTORY);
             }
           }
 
@@ -3142,7 +3164,7 @@
         setScore(0);
         initGame(1);
         setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
-        playSound('game_start');
+        playSound(SOUNDS.GAME_START);
       };
 
       const nextLevel = () => {
@@ -3239,7 +3261,7 @@
                   <button
                     onClick={() => {
                       setShowPauseMenu(true);
-                      playSound('pause');
+                      playSound(SOUNDS.PAUSE);
                     }}
                     className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
                   >
@@ -3337,7 +3359,7 @@
                       if (!gameRef.current.player.isJumping) {
                         gameRef.current.player.isJumping = true;
                         gameRef.current.player.jumpVelocity = 8;
-                        playSound('jump');
+                        playSound(SOUNDS.JUMP);
                       }
                     }}
                   >
@@ -3384,7 +3406,7 @@
                       <button
                         onClick={() => {
                           setShowPauseMenu(false);
-                          playSound('unpause');
+                          playSound(SOUNDS.UNPAUSE);
                         }}
                         className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
                       >
@@ -3393,7 +3415,7 @@
                       <button
                         onClick={() => {
                           setShowPauseMenu(false);
-                          playSound('unpause');
+                          playSound(SOUNDS.UNPAUSE);
                           initGame(currentLevel);
                           setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
                         }}
@@ -3404,7 +3426,7 @@
                       <button
                         onClick={() => {
                           setShowPauseMenu(false);
-                          playSound('victory');
+                          playSound(SOUNDS.VICTORY);
                           setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
                         }}
                         className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
@@ -3486,7 +3508,7 @@
                           const newValue = !soundEnabled;
                           setSoundEnabled(newValue);
                           localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
-                          if (newValue) playSound('game_start');
+                          if (newValue) playSound(SOUNDS.GAME_START);
                         }}
                         className={`px-6 py-2 font-bold rounded-lg transition-colors ${
                           soundEnabled
