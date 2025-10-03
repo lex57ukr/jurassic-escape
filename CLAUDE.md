@@ -49,6 +49,8 @@ The codebase follows a **constants-first approach** for type safety and maintain
 **Entity Factory Functions:**
 
 - `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, etc.
+- `createTranqDepot(mapWidth, mapHeight)`: Creates tranquilizer depot with random position
+- `createAmmoDepot(x, y, amount)`: Creates regular ammo depot with fixed position and amount
 - `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with guard count tracking
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)`: Creates guard dinosaur positioned around exit
 - Encapsulate entity creation logic and use constants throughout
@@ -68,7 +70,7 @@ The main `JurassicEscape` component manages:
 - **Game states**: Defined in `GAME_CONSTANTS.GAME_STATES` - `MENU`, `PLAYING`, `LEVEL_COMPLETE`, `WON`, `LOST`
 - **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `autoAim`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
-  - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups
+  - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups, tranqDepots, ammoDepots
   - Camera position, map dimensions, input tracking
   - Touch controls state (joystick, shoot, jump)
 
@@ -126,7 +128,7 @@ Game loop logic extracted into focused helper functions to reduce complexity:
 - `updatePlayerSpeed` - Speed modifiers (tar pits, speed boost)
 - `updatePlayerMovement` - Input handling, physics, camera tracking
 - `updateHazards` - Electric fence collision and damage
-- `updateCollectibles` - Powerup, ammo, tranq depot collection
+- `updateCollectibles` - Powerup, ammo pickup, tranq depot, and ammo depot collection
 - `updateBullets` - Bullet movement and dinosaur collision
 - `updateSpitProjectiles` - Spit attack logic
 - `updateDinosaurAI` - Consolidated AI for all dinosaur types
@@ -200,7 +202,13 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
 - **Obstacles**: Types defined in `GAME_CONSTANTS.OBSTACLE_TYPES` - `TREE` and `BUSH` with circular collision
 - **Powerups**: Types defined in `GAME_CONSTANTS.POWERUP_TYPES` - `HEALTH` (red cross) and `SPEED` (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
-- **Tranquilizer depots**: Green crates with syringe icons, provide 5 tranq ammo each
+- **Tranquilizer depots**: Green crates with syringe icons (💉), provide 5 tranq ammo each, randomly placed
+- **Regular ammo depots**: Blue crates with bullet icons (💥), provide minimal regular ammo to prevent softlocks
+  - 2 depots per level at fixed positions: one near spawn (250, 150), one in far corner
+  - Level 1: 3 ammo per depot (strongest guard: Raptor=2 health +1)
+  - Level 2: 4 ammo per depot (strongest guard: Dilo=3 health +1)
+  - Level 3: 5 ammo per depot (strongest guard: T-Rex=4 health +1)
+  - Total ammo from depots alone is insufficient; players must collect dropped ammo
 
 #### Collision Detection
 
@@ -211,7 +219,7 @@ All collision uses circle-vs-circle distance checks:
 - Player vs aggressive dinosaurs (damage, only when not sleeping)
 - Bullets vs dinosaurs (regular bullets: damage/kill, tranquilizer: track hits and put to sleep)
 - Spit projectiles vs player (1 damage, triggers invincibility)
-- Player vs powerups/ammo/tranq depots (collection)
+- Player vs powerups/ammo pickups/tranq depots/ammo depots (collection)
 
 #### Level Progression
 
@@ -269,7 +277,7 @@ Levels defined in `LEVEL_CONFIGS`:
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
-- Layered drawing order: background → exit → tar pits → electric fences → obstacles → powerups → tranq depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
+- Layered drawing order: background → exit → tar pits → electric fences → obstacles → powerups → tranq depots → ammo depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
 - Health bars drawn above dinosaurs
 - Sleeping Z-Z-Z animation drawn above sleeping dinosaurs (3 "Z"s of increasing size with bobbing animation)
 - Floating text system: score popups (+N), tranq hit counters (1/2, 2/3), ammo pickups with fade-out over 1 second
