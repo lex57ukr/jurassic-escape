@@ -37,6 +37,9 @@
     // ============================================================================
 
     const GAME_CONSTANTS = {
+      // Random Number Generation
+      RANDOM_CENTER: 0.5, // Center point for creating bidirectional random ranges (-0.5 to +0.5)
+
       // Player
       PLAYER: {
         START_X: 100,
@@ -337,6 +340,24 @@
     };
 
     /**
+     * Generate a random value centered around zero
+     * @param {number} range - The total range (result will be ±range/2)
+     * @returns {number} Random value between -range/2 and +range/2
+     */
+    const randomCentered = (range) => {
+      return (Math.random() - GAME_CONSTANTS.RANDOM_CENTER) * range;
+    };
+
+    /**
+     * Randomize bubble offset position within spread area
+     * @returns {Object} Object with offsetX and offsetY properties
+     */
+    const randomizeBubbleOffset = () => ({
+      offsetX: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD),
+      offsetY: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD)
+    });
+
+    /**
      * Normalize a vector (dx, dy) and return unit vector with magnitude
      */
     const normalize = (dx, dy) => {
@@ -508,7 +529,7 @@
         y,
         startY,
         radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS,
-        vx: (Math.random() - 0.5) * GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE,
+        vx: randomCentered(GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE),
         vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE
       };
     };
@@ -537,8 +558,7 @@
         radius: GAME_CONSTANTS.HAZARDS.TAR_PIT_RADIUS,
         bubbles: Array.from({ length: GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_COUNT }, () => ({
           timer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY,
-          offsetX: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD,
-          offsetY: (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD
+          ...randomizeBubbleOffset()
         }))
       };
     };
@@ -1262,8 +1282,7 @@
         if (bubble.timer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
           bubble.timer = 0;
           // Randomize position for next cycle
-          bubble.offsetX = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
-          bubble.offsetY = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
+          Object.assign(bubble, randomizeBubbleOffset());
         }
 
         // Draw bubble during active phase
@@ -1593,8 +1612,8 @@
 
       // Try random positions near the initial spawn point
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const randomX = x + (Math.random() - 0.5) * GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE;
-        const randomY = y + (Math.random() - 0.5) * GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE;
+        const randomX = x + randomCentered(GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
+        const randomY = y + randomCentered(GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
 
         // Clamp to map bounds
         const clampedX = clamp(randomX, radius, game.mapWidth - radius);
@@ -2651,7 +2670,7 @@
                 // Patrol within territory
                 dino.state = 'patrol';
                 dino.speed = dino.baseSpeed;
-                dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
+                dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
                 dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
                 dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
               }
@@ -2671,7 +2690,7 @@
               } else {
                 dino.state = 'patrol';
                 dino.speed = dino.baseSpeed;
-                dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
+                dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
                 dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
                 dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
               }
@@ -2686,7 +2705,7 @@
               } else {
                 dino.state = 'patrol';
                 dino.speed = dino.baseSpeed;
-                dino.patrolAngle += (Math.random() - 0.5) * GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE;
+                dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
                 dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
                 dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
               }
