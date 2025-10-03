@@ -2574,6 +2574,48 @@
       );
     });
 
+    const PauseMenu = React.memo(({
+      onContinue,
+      onRestart,
+      onExitToMenu,
+      onOpenSettings
+    }) => {
+      return (
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center">
+          <div className="bg-gray-800 p-8 rounded-lg text-center shadow-xl">
+            <h2 className="text-3xl font-bold text-green-400 mb-6">PAUSED</h2>
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={onContinue}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
+              >
+                Continue
+              </button>
+              <button
+                onClick={onRestart}
+                className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
+              >
+                Restart Level
+              </button>
+              <button
+                onClick={onExitToMenu}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
+              >
+                Exit to Menu
+              </button>
+              <button
+                onClick={onOpenSettings}
+                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg flex items-center justify-center gap-2"
+              >
+                <span>⚙️</span>
+                <span>Settings</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    });
+
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
       const [gameState, setGameState] = useState(GAME_CONSTANTS.GAME_STATES.MENU);
@@ -3633,38 +3675,12 @@
               </p>
 
               {showPauseMenu && (
-                <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center">
-                  <div className="bg-gray-800 p-8 rounded-lg text-center shadow-xl">
-                    <h2 className="text-3xl font-bold text-green-400 mb-6">PAUSED</h2>
-                    <div className="flex flex-col gap-4">
-                      <button
-                        onClick={handleContinue}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
-                      >
-                        Continue
-                      </button>
-                      <button
-                        onClick={handleRestartLevel}
-                        className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
-                      >
-                        Restart Level
-                      </button>
-                      <button
-                        onClick={handleExitToMenu}
-                        className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
-                      >
-                        Exit to Menu
-                      </button>
-                      <button
-                        onClick={handleOpenSettingsFromPause}
-                        className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg flex items-center justify-center gap-2"
-                      >
-                        <span>⚙️</span>
-                        <span>Settings</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <PauseMenu
+                  onContinue={handleContinue}
+                  onRestart={handleRestartLevel}
+                  onExitToMenu={handleExitToMenu}
+                  onOpenSettings={handleOpenSettingsFromPause}
+                />
               )}
             </div>
           )}
