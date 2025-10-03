@@ -136,6 +136,18 @@
         MAX_LEVEL: 3, // Total number of levels in the game
       },
 
+      // Obstacle Types
+      OBSTACLE_TYPES: {
+        TREE: 'tree',
+        BUSH: 'bush',
+      },
+
+      // Powerup Types
+      POWERUP_TYPES: {
+        HEALTH: 'health',
+        SPEED: 'speed',
+      },
+
       // Spawning
       SPAWN: {
         OBSTACLE_MIN_RADIUS: 15,
@@ -489,7 +501,7 @@
         x: Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
         y: Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
         radius: GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS),
-        type: Math.random() > 0.5 ? 'tree' : 'bush'
+        type: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLE_TYPES.TREE : GAME_CONSTANTS.OBSTACLE_TYPES.BUSH
       };
     };
 
@@ -497,7 +509,7 @@
      * Create a powerup object
      */
     const createPowerup = (mapWidth, mapHeight) => {
-      const type = Math.random() > 0.5 ? 'health' : 'speed';
+      const type = Math.random() > 0.5 ? GAME_CONSTANTS.POWERUP_TYPES.HEALTH : GAME_CONSTANTS.POWERUP_TYPES.SPEED;
       return {
         x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
@@ -1359,7 +1371,7 @@
       const screenX = obstacle.x - cameraX;
       const screenY = obstacle.y - cameraY;
 
-      if (obstacle.type === 'tree') {
+      if (obstacle.type === GAME_CONSTANTS.OBSTACLE_TYPES.TREE) {
         ctx.fillStyle = '#654321';
         ctx.fillRect(screenX - 5, screenY - 5, 10, 15);
         ctx.fillStyle = '#228B22';
@@ -1387,7 +1399,7 @@
       const screenX = powerup.x - cameraX;
       const screenY = powerup.y - cameraY;
 
-      if (powerup.type === 'health') {
+      if (powerup.type === GAME_CONSTANTS.POWERUP_TYPES.HEALTH) {
         ctx.fillStyle = '#ff1744';
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
@@ -1405,7 +1417,7 @@
         ctx.moveTo(screenX, screenY - 5);
         ctx.lineTo(screenX, screenY + 5);
         ctx.stroke();
-      } else if (powerup.type === 'speed') {
+      } else if (powerup.type === GAME_CONSTANTS.POWERUP_TYPES.SPEED) {
         ctx.fillStyle = '#00e5ff';
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
@@ -2444,13 +2456,13 @@
             if (circleCollision(game.player.x, game.player.y, game.player.radius, powerup.x, powerup.y, powerup.radius)) {
               powerup.active = false;
 
-              if (powerup.type === 'health') {
+              if (powerup.type === GAME_CONSTANTS.POWERUP_TYPES.HEALTH) {
                 if (game.player.health < game.player.maxHealth) {
                   game.player.health++;
                   setPlayerHealth(game.player.health);
                 }
                 playSound('pickup_health');
-              } else if (powerup.type === 'speed') {
+              } else if (powerup.type === GAME_CONSTANTS.POWERUP_TYPES.SPEED) {
                 game.speedBoostTimer = GAME_CONSTANTS.SPEED_BOOST.DURATION_FRAMES;
                 setSpeedBoostActive(true);
                 playSound('pickup_speed');
