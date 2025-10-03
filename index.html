@@ -33,6 +33,288 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ============================================================================
+    // GAME CONSTANTS
+    // ============================================================================
+
+    const GAME_CONSTANTS = {
+      // Player
+      PLAYER: {
+        START_X: 100,
+        START_Y: 100,
+        MAX_HEALTH: 5,
+        START_AMMO: 10,
+        BASE_SPEED: 2.5,
+        RADIUS: 15,
+        JUMP_VELOCITY: 8,
+        JUMP_CLEAR_HEIGHT: 25, // Height needed to clear obstacles
+      },
+
+      // Physics
+      PHYSICS: {
+        GRAVITY: 0.5,
+        AMMO_GRAVITY: 0.15,
+        AMMO_BOUNCE_DAMPING: -0.7, // Higher value = more bouncing
+        AMMO_FRICTION: 0.85, // Higher value = less horizontal slowdown
+      },
+
+      // Combat
+      COMBAT: {
+        DINOSAUR_DAMAGE: 1,
+        PUSHBACK_FORCE: 20,
+        INVINCIBILITY_FRAMES: 60, // ~1 second at 60fps
+        DINOSAUR_AGGRO_RANGE: 200,
+      },
+
+      // Bullet
+      BULLET: {
+        SPEED: 8,
+        RADIUS: 4,
+      },
+
+      // Dinosaur Types
+      DINOSAUR_TYPES: {
+        VELOCIRAPTOR: 'raptor',
+        VELOCIRAPTOR_BASE_SIZE: 20,
+        TYRANNOSAURUS_REX: 'trex',
+        TYRANNOSAURUS_REX_BASE_SIZE: 35,
+        STEGOSAURUS: 'stego',
+        STEGOSAURUS_BASE_SIZE: 30,
+        PARASAUROLOPHUS: 'para',
+        PARASAUROLOPHUS_BASE_SIZE: 25,
+        TRICERATOPS: 'trike',
+        TRICERATOPS_BASE_SIZE: 28,
+        DILOPHOSAURUS: 'dilo',
+        DILOPHOSAURUS_BASE_SIZE: 24,
+      },
+
+      // Tranquilizer
+      TRANQUILIZER: {
+        SPEED: 6,
+        RADIUS: 5,
+        START_AMMO: 15,
+        SLEEP_DURATION_RAPTOR: 480, // 8 seconds at 60fps
+        SLEEP_DURATION_STEGO: 360,  // 6 seconds at 60fps
+        SLEEP_DURATION_TREX: 240,   // 4 seconds at 60fps
+        SLEEP_DURATION_PARA: 420,   // 7 seconds at 60fps
+        SLEEP_DURATION_TRIKE: 360,  // 6 seconds at 60fps
+        SLEEP_DURATION_DILO: 360,   // 6 seconds at 60fps
+        SCORE_MULTIPLIER: 0.5,      // 50% of kill points
+        SHOTS_NEEDED_RAPTOR: 1,     // 1 shot to tranquilize raptor
+        SHOTS_NEEDED_STEGO: 2,      // 2 shots to tranquilize stego
+        SHOTS_NEEDED_TREX: 3,       // 3 shots to tranquilize trex
+        SHOTS_NEEDED_PARA: 1,       // 1 shot to tranquilize parasaurolophus
+        SHOTS_NEEDED_TRIKE: 2,      // 2 shots to tranquilize triceratops
+        SHOTS_NEEDED_DILO: 2,       // 2 shots to tranquilize dilophosaurus
+      },
+
+      // Speed Boost
+      SPEED_BOOST: {
+        DURATION_FRAMES: 300, // 5 seconds at 60fps
+        SPEED_MULTIPLIER: 1.8,
+      },
+
+      // Map
+      MAP: {
+        WIDTH: 2400,
+        HEIGHT: 1800,
+        EXIT_X: 1800,
+        EXIT_Y: 1400,
+        EXIT_WIDTH: 60,
+        EXIT_HEIGHT: 60,
+        EXIT_COLLISION_RADIUS: 30,
+        MAX_LEVEL: 3, // Total number of levels in the game
+      },
+
+      // Spawning
+      SPAWN: {
+        OBSTACLE_MIN_RADIUS: 15,
+        OBSTACLE_MAX_RADIUS: 35, // 15 + 20
+        OBSTACLE_PADDING: 100,
+        OBSTACLE_MIN_MARGIN: 50,
+        DINOSAUR_GRID_START_X: 300,
+        DINOSAUR_GRID_START_Y: 200,
+        DINOSAUR_GRID_SPACING_X: 250,
+        DINOSAUR_GRID_SPACING_Y: 300,
+        DINOSAUR_GRID_RANDOM_OFFSET: 100,
+        DINOSAUR_SPAWN_MAX_ATTEMPTS: 50,
+        DINOSAUR_SPAWN_SEARCH_RANGE: 400, // ±200 pixels
+        POWERUP_SAFE_ZONE_MARGIN: 400,
+        POWERUP_SAFE_ZONE_PADDING: 800,
+        POWERUP_RADIUS: 12,
+        TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
+        TRANQ_DEPOT_RADIUS: 15,
+        TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
+      },
+
+      // Ammo Pickup
+      AMMO_PICKUP: {
+        RADIUS: 8,
+        COLLECTION_BONUS_RADIUS: 10,
+        HORIZONTAL_VELOCITY_RANGE: 2,
+        INITIAL_UPWARD_VELOCITY_MIN: -2,
+        INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
+        MIN_BOUNCE_VELOCITY: 0.05, // Minimum velocity before ammo disappears
+      },
+
+      // AI Behavior
+      AI: {
+        PATROL_ANGLE_CHANGE_RATE: 0.1,
+        PATROL_SPEED_MULTIPLIER: 0.5,
+        HERBIVORE_FLEE_RANGE: 150,     // Distance at which herbivores flee
+        HERBIVORE_FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
+        TERRITORY_RADIUS: 200,         // Radius of territorial zone
+        TERRITORY_AGGRO_RANGE: 250,    // Chase range within territory
+        TERRITORY_MARGIN: 30,          // Buffer zone to prevent state flipping at boundaries
+        TERRITORY_RETURN_THRESHOLD_ACTIVE: 0.8, // Return threshold when not already returning
+        TERRITORY_RETURN_THRESHOLD_RETURNING: 0.5, // Return threshold when already returning (closer to center)
+        TERRITORY_SPACING_MULTIPLIER: 2.2, // Minimum spacing between territories (as multiple of radius)
+        TERRITORY_OBSTACLE_CLEARANCE: 20, // Extra clearance from obstacles for territory center
+        TERRITORY_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid territory position
+        SPIT_ATTACK_RANGE: 180,        // Range for spit attack
+        SPIT_ATTACK_COOLDOWN: 120,     // Frames between spit attacks (2 seconds)
+        SPIT_PROJECTILE_SPEED: 4,      // Speed of spit projectiles
+        SPIT_PROJECTILE_RADIUS: 6,     // Radius of spit projectiles
+        SPIT_DAMAGE: 1,                // Damage from spit
+        FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
+      },
+
+      // Touch Controls
+      TOUCH: {
+        JOYSTICK_DEAD_ZONE: 10,
+        JOYSTICK_MAX_RANGE: 40,
+        AUTO_AIM_FALLBACK_DISTANCE: 100,
+      },
+
+      // Rendering
+      RENDER: {
+        GRASS_PATCHES: 50,
+        GRASS_PATCH_SIZE: 20,
+      },
+
+      // Floating Text
+      FLOATING_TEXT: {
+        LIFETIME_FRAMES: 60, // 1 second at 60fps
+        RISE_SPEED: 1,
+        FADE_START_FRAME: 30,
+      },
+
+      // Environmental Hazards
+      HAZARDS: {
+        // Tar Pits
+        TAR_PIT_RADIUS: 40,
+        TAR_PIT_SLOW_MULTIPLIER: 0.5, // Reduces speed to 50%
+        TAR_PIT_MIN_SPACING: 200, // Minimum distance between tar pits
+        TAR_PIT_OBSTACLE_CLEARANCE: 50, // Clearance from obstacles
+        TAR_PIT_SPAWN_MAX_ATTEMPTS: 100,
+        TAR_PIT_BUBBLE_FREQUENCY: 30, // Frames between bubble spawns (0.5 seconds)
+        TAR_PIT_BUBBLE_DURATION: 40, // Duration of bubble animation in frames
+        TAR_PIT_BUBBLE_BASE_RADIUS: 2, // Starting bubble radius
+        TAR_PIT_BUBBLE_GROWTH: 4, // Bubble radius growth
+        TAR_PIT_BUBBLE_COUNT: 3, // Number of bubbles per pit
+        TAR_PIT_BUBBLE_SPREAD: 20, // Random spread radius for bubble positions
+        TAR_PIT_RIM_WIDTH: 4, // Width of tar pit rim stroke
+
+        // Electric Fences
+        FENCE_WIDTH: 80,
+        FENCE_HEIGHT: 10,
+        FENCE_DAMAGE: 1,
+        FENCE_DAMAGE_COOLDOWN: 60, // Frames between damage ticks (1 second)
+        FENCE_STUN_DURATION_MULTIPLIER: 0.5, // Dinosaurs stunned for half of tranq sleep duration
+        FENCE_PUSHBACK_FORCE: 50, // Bounce back force (MUST be > FENCE_AVOIDANCE_BUFFER to prevent stuck dinos)
+        FENCE_MIN_SPACING: 150, // Minimum distance between fences
+        FENCE_OBSTACLE_CLEARANCE: 60, // Clearance from obstacles
+        FENCE_SPAWN_MAX_ATTEMPTS: 100,
+        FENCE_SPARK_FREQUENCY: 30, // Frames between spark animations (0.5 seconds)
+        FENCE_SPARK_DURATION: 10, // Duration of spark animation in frames
+        FENCE_SPARK_RADIUS: 3, // Radius of spark particles
+        FENCE_WIRE_WIDTH: 2, // Width of electric wires
+        ZAP_EFFECT_DURATION: 30, // Duration of zap animation on dinosaurs (0.5 seconds)
+        ZAP_AURA_ALPHA: 0.3, // Opacity of yellow zap aura
+        ZAP_AURA_RADIUS: 5, // Extra radius for zap aura
+        ZAP_BOLT_LENGTH: 10, // Length of lightning bolts
+        ZAP_BOLT_COUNT: 4, // Number of lightning bolts
+        ZAP_BOLT_WIDTH: 2, // Width of lightning bolts
+        ZAP_BOLT_ROTATION_SPEED: 50, // Milliseconds divisor for bolt rotation speed
+        ZAP_SOUND_MAX_DISTANCE: 400, // Maximum distance from player to hear zap sound
+        FENCE_MEMORY_DURATION: 600, // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
+        FENCE_AVOIDANCE_BUFFER: 30, // Safety margin dinosaurs maintain from remembered fences (MUST be < FENCE_PUSHBACK_FORCE)
+      },
+
+      // Audio
+      AUDIO: {
+        DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
+      },
+    };
+
+    // ============================================================================
+    // DIFFICULTY CONFIGURATION
+    // ============================================================================
+
+    const DIFFICULTY_MODIFIERS = {
+      easy: {
+        label: 'Easy',
+        playerHealthMultiplier: 1.4,      // 7 hearts (5 * 1.4)
+        playerAmmoMultiplier: 1.5,        // 15 ammo (10 * 1.5)
+        playerTranqAmmoMultiplier: 1.5,   // 22 tranq (15 * 1.5)
+        enemySpeedMultiplier: 0.8,        // 20% slower
+        invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
+      },
+      normal: {
+        label: 'Normal',
+        playerHealthMultiplier: 1.0,      // 5 hearts
+        playerAmmoMultiplier: 1.0,        // 10 ammo
+        playerTranqAmmoMultiplier: 1.0,   // 15 tranq
+        enemySpeedMultiplier: 1.0,        // Normal speed
+        invincibilityMultiplier: 1.0,     // 60 frames
+      },
+      hard: {
+        label: 'Hard',
+        playerHealthMultiplier: 0.6,      // 3 hearts (5 * 0.6)
+        playerAmmoMultiplier: 0.5,        // 5 ammo (10 * 0.5)
+        playerTranqAmmoMultiplier: 0.7,   // 10 tranq (15 * 0.7)
+        enemySpeedMultiplier: 1.3,        // 30% faster
+        invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
+      },
+    };
+
+    /**
+     * Apply difficulty modifiers to base game constants
+     */
+    const getAdjustedConstants = (difficulty) => {
+      const modifier = DIFFICULTY_MODIFIERS[difficulty];
+      return {
+        ...GAME_CONSTANTS,
+        PLAYER: {
+          ...GAME_CONSTANTS.PLAYER,
+          MAX_HEALTH: Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * modifier.playerHealthMultiplier),
+          START_AMMO: Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * modifier.playerAmmoMultiplier),
+        },
+        COMBAT: {
+          ...GAME_CONSTANTS.COMBAT,
+          INVINCIBILITY_FRAMES: Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * modifier.invincibilityMultiplier),
+        },
+        _difficultyModifier: modifier, // Store for enemy speed adjustments
+      };
+    };
+
+    // ============================================================================
+    // VIEWPORT SCALE CONFIGURATION
+    // ============================================================================
+
+    const VIEWPORT_SCALES = {
+      small: { width: 800, height: 600, label: 'Small' },
+      medium: { width: 1000, height: 750, label: 'Medium' },
+      large: { width: 1200, height: 900, label: 'Large' }
+    };
+
+    // Canvas sizing constants
+    const CANVAS_SIZING = {
+      WINDOW_PADDING: 20, // Horizontal padding from window edges
+      VERTICAL_SPACING_DESKTOP: 200, // Space for UI above/below canvas on desktop
+      VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile
+    };
+
+    // ============================================================================
     // UTILITY FUNCTIONS
     // ============================================================================
 
@@ -1317,288 +1599,6 @@
 
       // Fallback: return original position (dinosaur will have to navigate out)
       return { x, y };
-    };
-
-    // ============================================================================
-    // GAME CONSTANTS
-    // ============================================================================
-
-    const GAME_CONSTANTS = {
-      // Player
-      PLAYER: {
-        START_X: 100,
-        START_Y: 100,
-        MAX_HEALTH: 5,
-        START_AMMO: 10,
-        BASE_SPEED: 2.5,
-        RADIUS: 15,
-        JUMP_VELOCITY: 8,
-        JUMP_CLEAR_HEIGHT: 25, // Height needed to clear obstacles
-      },
-
-      // Physics
-      PHYSICS: {
-        GRAVITY: 0.5,
-        AMMO_GRAVITY: 0.15,
-        AMMO_BOUNCE_DAMPING: -0.7, // Higher value = more bouncing
-        AMMO_FRICTION: 0.85, // Higher value = less horizontal slowdown
-      },
-
-      // Combat
-      COMBAT: {
-        DINOSAUR_DAMAGE: 1,
-        PUSHBACK_FORCE: 20,
-        INVINCIBILITY_FRAMES: 60, // ~1 second at 60fps
-        DINOSAUR_AGGRO_RANGE: 200,
-      },
-
-      // Bullet
-      BULLET: {
-        SPEED: 8,
-        RADIUS: 4,
-      },
-
-      // Dinosaur Types
-      DINOSAUR_TYPES: {
-        VELOCIRAPTOR: 'raptor',
-        VELOCIRAPTOR_BASE_SIZE: 20,
-        TYRANNOSAURUS_REX: 'trex',
-        TYRANNOSAURUS_REX_BASE_SIZE: 35,
-        STEGOSAURUS: 'stego',
-        STEGOSAURUS_BASE_SIZE: 30,
-        PARASAUROLOPHUS: 'para',
-        PARASAUROLOPHUS_BASE_SIZE: 25,
-        TRICERATOPS: 'trike',
-        TRICERATOPS_BASE_SIZE: 28,
-        DILOPHOSAURUS: 'dilo',
-        DILOPHOSAURUS_BASE_SIZE: 24,
-      },
-
-      // Tranquilizer
-      TRANQUILIZER: {
-        SPEED: 6,
-        RADIUS: 5,
-        START_AMMO: 15,
-        SLEEP_DURATION_RAPTOR: 480, // 8 seconds at 60fps
-        SLEEP_DURATION_STEGO: 360,  // 6 seconds at 60fps
-        SLEEP_DURATION_TREX: 240,   // 4 seconds at 60fps
-        SLEEP_DURATION_PARA: 420,   // 7 seconds at 60fps
-        SLEEP_DURATION_TRIKE: 360,  // 6 seconds at 60fps
-        SLEEP_DURATION_DILO: 360,   // 6 seconds at 60fps
-        SCORE_MULTIPLIER: 0.5,      // 50% of kill points
-        SHOTS_NEEDED_RAPTOR: 1,     // 1 shot to tranquilize raptor
-        SHOTS_NEEDED_STEGO: 2,      // 2 shots to tranquilize stego
-        SHOTS_NEEDED_TREX: 3,       // 3 shots to tranquilize trex
-        SHOTS_NEEDED_PARA: 1,       // 1 shot to tranquilize parasaurolophus
-        SHOTS_NEEDED_TRIKE: 2,      // 2 shots to tranquilize triceratops
-        SHOTS_NEEDED_DILO: 2,       // 2 shots to tranquilize dilophosaurus
-      },
-
-      // Speed Boost
-      SPEED_BOOST: {
-        DURATION_FRAMES: 300, // 5 seconds at 60fps
-        SPEED_MULTIPLIER: 1.8,
-      },
-
-      // Map
-      MAP: {
-        WIDTH: 2400,
-        HEIGHT: 1800,
-        EXIT_X: 1800,
-        EXIT_Y: 1400,
-        EXIT_WIDTH: 60,
-        EXIT_HEIGHT: 60,
-        EXIT_COLLISION_RADIUS: 30,
-        MAX_LEVEL: 3, // Total number of levels in the game
-      },
-
-      // Spawning
-      SPAWN: {
-        OBSTACLE_MIN_RADIUS: 15,
-        OBSTACLE_MAX_RADIUS: 35, // 15 + 20
-        OBSTACLE_PADDING: 100,
-        OBSTACLE_MIN_MARGIN: 50,
-        DINOSAUR_GRID_START_X: 300,
-        DINOSAUR_GRID_START_Y: 200,
-        DINOSAUR_GRID_SPACING_X: 250,
-        DINOSAUR_GRID_SPACING_Y: 300,
-        DINOSAUR_GRID_RANDOM_OFFSET: 100,
-        DINOSAUR_SPAWN_MAX_ATTEMPTS: 50,
-        DINOSAUR_SPAWN_SEARCH_RANGE: 400, // ±200 pixels
-        POWERUP_SAFE_ZONE_MARGIN: 400,
-        POWERUP_SAFE_ZONE_PADDING: 800,
-        POWERUP_RADIUS: 12,
-        TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
-        TRANQ_DEPOT_RADIUS: 15,
-        TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
-      },
-
-      // Ammo Pickup
-      AMMO_PICKUP: {
-        RADIUS: 8,
-        COLLECTION_BONUS_RADIUS: 10,
-        HORIZONTAL_VELOCITY_RANGE: 2,
-        INITIAL_UPWARD_VELOCITY_MIN: -2,
-        INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
-        MIN_BOUNCE_VELOCITY: 0.05, // Minimum velocity before ammo disappears
-      },
-
-      // AI Behavior
-      AI: {
-        PATROL_ANGLE_CHANGE_RATE: 0.1,
-        PATROL_SPEED_MULTIPLIER: 0.5,
-        HERBIVORE_FLEE_RANGE: 150,     // Distance at which herbivores flee
-        HERBIVORE_FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
-        TERRITORY_RADIUS: 200,         // Radius of territorial zone
-        TERRITORY_AGGRO_RANGE: 250,    // Chase range within territory
-        TERRITORY_MARGIN: 30,          // Buffer zone to prevent state flipping at boundaries
-        TERRITORY_RETURN_THRESHOLD_ACTIVE: 0.8, // Return threshold when not already returning
-        TERRITORY_RETURN_THRESHOLD_RETURNING: 0.5, // Return threshold when already returning (closer to center)
-        TERRITORY_SPACING_MULTIPLIER: 2.2, // Minimum spacing between territories (as multiple of radius)
-        TERRITORY_OBSTACLE_CLEARANCE: 20, // Extra clearance from obstacles for territory center
-        TERRITORY_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid territory position
-        SPIT_ATTACK_RANGE: 180,        // Range for spit attack
-        SPIT_ATTACK_COOLDOWN: 120,     // Frames between spit attacks (2 seconds)
-        SPIT_PROJECTILE_SPEED: 4,      // Speed of spit projectiles
-        SPIT_PROJECTILE_RADIUS: 6,     // Radius of spit projectiles
-        SPIT_DAMAGE: 1,                // Damage from spit
-        FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
-      },
-
-      // Touch Controls
-      TOUCH: {
-        JOYSTICK_DEAD_ZONE: 10,
-        JOYSTICK_MAX_RANGE: 40,
-        AUTO_AIM_FALLBACK_DISTANCE: 100,
-      },
-
-      // Rendering
-      RENDER: {
-        GRASS_PATCHES: 50,
-        GRASS_PATCH_SIZE: 20,
-      },
-
-      // Floating Text
-      FLOATING_TEXT: {
-        LIFETIME_FRAMES: 60, // 1 second at 60fps
-        RISE_SPEED: 1,
-        FADE_START_FRAME: 30,
-      },
-
-      // Environmental Hazards
-      HAZARDS: {
-        // Tar Pits
-        TAR_PIT_RADIUS: 40,
-        TAR_PIT_SLOW_MULTIPLIER: 0.5, // Reduces speed to 50%
-        TAR_PIT_MIN_SPACING: 200, // Minimum distance between tar pits
-        TAR_PIT_OBSTACLE_CLEARANCE: 50, // Clearance from obstacles
-        TAR_PIT_SPAWN_MAX_ATTEMPTS: 100,
-        TAR_PIT_BUBBLE_FREQUENCY: 30, // Frames between bubble spawns (0.5 seconds)
-        TAR_PIT_BUBBLE_DURATION: 40, // Duration of bubble animation in frames
-        TAR_PIT_BUBBLE_BASE_RADIUS: 2, // Starting bubble radius
-        TAR_PIT_BUBBLE_GROWTH: 4, // Bubble radius growth
-        TAR_PIT_BUBBLE_COUNT: 3, // Number of bubbles per pit
-        TAR_PIT_BUBBLE_SPREAD: 20, // Random spread radius for bubble positions
-        TAR_PIT_RIM_WIDTH: 4, // Width of tar pit rim stroke
-
-        // Electric Fences
-        FENCE_WIDTH: 80,
-        FENCE_HEIGHT: 10,
-        FENCE_DAMAGE: 1,
-        FENCE_DAMAGE_COOLDOWN: 60, // Frames between damage ticks (1 second)
-        FENCE_STUN_DURATION_MULTIPLIER: 0.5, // Dinosaurs stunned for half of tranq sleep duration
-        FENCE_PUSHBACK_FORCE: 50, // Bounce back force (MUST be > FENCE_AVOIDANCE_BUFFER to prevent stuck dinos)
-        FENCE_MIN_SPACING: 150, // Minimum distance between fences
-        FENCE_OBSTACLE_CLEARANCE: 60, // Clearance from obstacles
-        FENCE_SPAWN_MAX_ATTEMPTS: 100,
-        FENCE_SPARK_FREQUENCY: 30, // Frames between spark animations (0.5 seconds)
-        FENCE_SPARK_DURATION: 10, // Duration of spark animation in frames
-        FENCE_SPARK_RADIUS: 3, // Radius of spark particles
-        FENCE_WIRE_WIDTH: 2, // Width of electric wires
-        ZAP_EFFECT_DURATION: 30, // Duration of zap animation on dinosaurs (0.5 seconds)
-        ZAP_AURA_ALPHA: 0.3, // Opacity of yellow zap aura
-        ZAP_AURA_RADIUS: 5, // Extra radius for zap aura
-        ZAP_BOLT_LENGTH: 10, // Length of lightning bolts
-        ZAP_BOLT_COUNT: 4, // Number of lightning bolts
-        ZAP_BOLT_WIDTH: 2, // Width of lightning bolts
-        ZAP_BOLT_ROTATION_SPEED: 50, // Milliseconds divisor for bolt rotation speed
-        ZAP_SOUND_MAX_DISTANCE: 400, // Maximum distance from player to hear zap sound
-        FENCE_MEMORY_DURATION: 600, // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
-        FENCE_AVOIDANCE_BUFFER: 30, // Safety margin dinosaurs maintain from remembered fences (MUST be < FENCE_PUSHBACK_FORCE)
-      },
-
-      // Audio
-      AUDIO: {
-        DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
-      },
-    };
-
-    // ============================================================================
-    // DIFFICULTY CONFIGURATION
-    // ============================================================================
-
-    const DIFFICULTY_MODIFIERS = {
-      easy: {
-        label: 'Easy',
-        playerHealthMultiplier: 1.4,      // 7 hearts (5 * 1.4)
-        playerAmmoMultiplier: 1.5,        // 15 ammo (10 * 1.5)
-        playerTranqAmmoMultiplier: 1.5,   // 22 tranq (15 * 1.5)
-        enemySpeedMultiplier: 0.8,        // 20% slower
-        invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
-      },
-      normal: {
-        label: 'Normal',
-        playerHealthMultiplier: 1.0,      // 5 hearts
-        playerAmmoMultiplier: 1.0,        // 10 ammo
-        playerTranqAmmoMultiplier: 1.0,   // 15 tranq
-        enemySpeedMultiplier: 1.0,        // Normal speed
-        invincibilityMultiplier: 1.0,     // 60 frames
-      },
-      hard: {
-        label: 'Hard',
-        playerHealthMultiplier: 0.6,      // 3 hearts (5 * 0.6)
-        playerAmmoMultiplier: 0.5,        // 5 ammo (10 * 0.5)
-        playerTranqAmmoMultiplier: 0.7,   // 10 tranq (15 * 0.7)
-        enemySpeedMultiplier: 1.3,        // 30% faster
-        invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
-      },
-    };
-
-    /**
-     * Apply difficulty modifiers to base game constants
-     */
-    const getAdjustedConstants = (difficulty) => {
-      const modifier = DIFFICULTY_MODIFIERS[difficulty];
-      return {
-        ...GAME_CONSTANTS,
-        PLAYER: {
-          ...GAME_CONSTANTS.PLAYER,
-          MAX_HEALTH: Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * modifier.playerHealthMultiplier),
-          START_AMMO: Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * modifier.playerAmmoMultiplier),
-        },
-        COMBAT: {
-          ...GAME_CONSTANTS.COMBAT,
-          INVINCIBILITY_FRAMES: Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * modifier.invincibilityMultiplier),
-        },
-        _difficultyModifier: modifier, // Store for enemy speed adjustments
-      };
-    };
-
-    // ============================================================================
-    // VIEWPORT SCALE CONFIGURATION
-    // ============================================================================
-
-    const VIEWPORT_SCALES = {
-      small: { width: 800, height: 600, label: 'Small' },
-      medium: { width: 1000, height: 750, label: 'Medium' },
-      large: { width: 1200, height: 900, label: 'Large' }
-    };
-
-    // Canvas sizing constants
-    const CANVAS_SIZING = {
-      WINDOW_PADDING: 20, // Horizontal padding from window edges
-      VERTICAL_SPACING_DESKTOP: 200, // Space for UI above/below canvas on desktop
-      VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile
     };
 
     // ============================================================================
