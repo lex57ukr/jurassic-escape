@@ -338,6 +338,55 @@
     };
 
     // ============================================================================
+    // LEVEL CONFIGURATION
+    // ============================================================================
+
+    const LEVEL_CONFIGS = {
+      1: {
+        name: "The Beginning",
+        dinosaurs: [
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 2, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false }
+        ],
+        obstacles: 40,
+        powerups: 3,
+        tarPits: 3,
+        electricFences: 2
+      },
+      2: {
+        name: "Deeper Danger",
+        dinosaurs: [
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 5, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 2, health: 4, speed: 1, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 2, health: 3, speed: 1.3, size: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 3, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 2, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE, color: '#8B7355', points: 75, aggressive: false, territorial: false }
+        ],
+        obstacles: 50,
+        powerups: 4,
+        tarPits: 5,
+        electricFences: 4
+      },
+      3: {
+        name: "Final Escape",
+        dinosaurs: [
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 6, health: 2, speed: 1.7, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 3, health: 4, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 3, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 3, health: 3, speed: 1.3, size: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 4, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 3, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE, color: '#8B7355', points: 75, aggressive: false, territorial: false }
+        ],
+        obstacles: 60,
+        powerups: 5,
+        tarPits: 7,
+        electricFences: 6
+      }
+    };
+
+    // ============================================================================
     // VIEWPORT SCALE CONFIGURATION
     // ============================================================================
 
@@ -1891,54 +1940,9 @@
         }
       });
 
-      const levelConfigs = {
-        1: {
-          name: "The Beginning",
-          dinosaurs: [
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 2, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false }
-          ],
-          obstacles: 40,
-          powerups: 3,
-          tarPits: 3,
-          electricFences: 2
-        },
-        2: {
-          name: "Deeper Danger",
-          dinosaurs: [
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 5, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 2, health: 4, speed: 1, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 2, health: 3, speed: 1.3, size: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 3, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 2, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE, color: '#8B7355', points: 75, aggressive: false, territorial: false }
-          ],
-          obstacles: 50,
-          powerups: 4,
-          tarPits: 5,
-          electricFences: 4
-        },
-        3: {
-          name: "Final Escape",
-          dinosaurs: [
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 6, health: 2, speed: 1.7, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 3, health: 4, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 3, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 3, health: 3, speed: 1.3, size: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 4, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false },
-            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 3, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE, color: '#8B7355', points: 75, aggressive: false, territorial: false }
-          ],
-          obstacles: 60,
-          powerups: 5,
-          tarPits: 7,
-          electricFences: 6
-        }
-      };
-
       const initGame = useCallback((level) => {
         const game = gameRef.current;
-        const config = levelConfigs[level];
+        const config = LEVEL_CONFIGS[level];
 
         // Apply difficulty modifiers
         const diffMod = DIFFICULTY_MODIFIERS[difficulty];
