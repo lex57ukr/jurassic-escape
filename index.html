@@ -135,10 +135,6 @@
 
       // Map
       MAP: {
-        WIDTH: 2400,
-        HEIGHT: 1800,
-        EXIT_X: 1800,
-        EXIT_Y: 1400,
         EXIT_WIDTH: 60,
         EXIT_HEIGHT: 60,
         EXIT_COLLISION_RADIUS: 30,
@@ -344,6 +340,10 @@
     const LEVEL_CONFIGS = {
       1: {
         name: "The Beginning",
+        mapWidth: 2400,
+        mapHeight: 1800,
+        exitX: 1800,
+        exitY: 1400,
         dinosaurs: [
           { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
           { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
@@ -356,6 +356,10 @@
       },
       2: {
         name: "Deeper Danger",
+        mapWidth: 3600,
+        mapHeight: 2700,
+        exitX: 3000,
+        exitY: 2200,
         dinosaurs: [
           { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 5, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
           { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 2, health: 4, speed: 1, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
@@ -371,6 +375,10 @@
       },
       3: {
         name: "Final Escape",
+        mapWidth: 4800,
+        mapHeight: 3600,
+        exitX: 4200,
+        exitY: 3000,
         dinosaurs: [
           { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 6, health: 2, speed: 1.7, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
           { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 3, health: 4, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
@@ -2916,15 +2924,15 @@
         mouseY: 0,
         keys: {},
         exit: {
-          x: GAME_CONSTANTS.MAP.EXIT_X,
-          y: GAME_CONSTANTS.MAP.EXIT_Y,
+          x: 0,
+          y: 0,
           width: GAME_CONSTANTS.MAP.EXIT_WIDTH,
           height: GAME_CONSTANTS.MAP.EXIT_HEIGHT
         },
         cameraX: 0,
         cameraY: 0,
-        mapWidth: GAME_CONSTANTS.MAP.WIDTH,
-        mapHeight: GAME_CONSTANTS.MAP.HEIGHT,
+        mapWidth: 0,
+        mapHeight: 0,
         speedBoostTimer: 0,
         touch: {
           joystick: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 },
@@ -2974,6 +2982,16 @@
         game.electricFences = [];
         game.keys = {};
         game.speedBoostTimer = 0;
+
+        // Set level-specific map dimensions and exit position
+        game.mapWidth = config.mapWidth;
+        game.mapHeight = config.mapHeight;
+        game.exit = {
+          x: config.exitX,
+          y: config.exitY,
+          width: GAME_CONSTANTS.MAP.EXIT_WIDTH,
+          height: GAME_CONSTANTS.MAP.EXIT_HEIGHT
+        };
 
         setPlayerHealth(playerMaxHealth);
         setPlayerAmmo(playerStartAmmo);
