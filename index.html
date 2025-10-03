@@ -3466,6 +3466,30 @@
         setShowSettingsMenu(true);
       }, []);
 
+      // Pause menu action handlers (memoized)
+      const handleContinue = useCallback(() => {
+        setShowPauseMenu(false);
+        playSound(SOUNDS.UNPAUSE);
+      }, [playSound]);
+
+      const handleRestartLevel = useCallback(() => {
+        setShowPauseMenu(false);
+        playSound(SOUNDS.UNPAUSE);
+        initGame(currentLevel);
+        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
+      }, [playSound, initGame, currentLevel]);
+
+      const handleExitToMenu = useCallback(() => {
+        setShowPauseMenu(false);
+        playSound(SOUNDS.VICTORY);
+        setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
+      }, [playSound]);
+
+      const handleOpenSettingsFromPause = useCallback(() => {
+        setShowPauseMenu(false);
+        setShowSettingsMenu(true);
+      }, []);
+
       const game = gameRef.current;
 
       return (
@@ -3577,40 +3601,25 @@
                     <h2 className="text-3xl font-bold text-green-400 mb-6">PAUSED</h2>
                     <div className="flex flex-col gap-4">
                       <button
-                        onClick={() => {
-                          setShowPauseMenu(false);
-                          playSound(SOUNDS.UNPAUSE);
-                        }}
+                        onClick={handleContinue}
                         className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
                       >
                         Continue
                       </button>
                       <button
-                        onClick={() => {
-                          setShowPauseMenu(false);
-                          playSound(SOUNDS.UNPAUSE);
-                          initGame(currentLevel);
-                          setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
-                        }}
+                        onClick={handleRestartLevel}
                         className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
                       >
                         Restart Level
                       </button>
                       <button
-                        onClick={() => {
-                          setShowPauseMenu(false);
-                          playSound(SOUNDS.VICTORY);
-                          setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
-                        }}
+                        onClick={handleExitToMenu}
                         className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
                       >
                         Exit to Menu
                       </button>
                       <button
-                        onClick={() => {
-                          setShowPauseMenu(false);
-                          setShowSettingsMenu(true);
-                        }}
+                        onClick={handleOpenSettingsFromPause}
                         className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg flex items-center justify-center gap-2"
                       >
                         <span>⚙️</span>
