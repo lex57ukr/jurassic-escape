@@ -34,6 +34,11 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `OBSTACLE_TYPES`: Environment types (TREE, BUSH)
 - `POWERUP_TYPES`: Collectible types (HEALTH, SPEED)
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
+- `AI.EXIT_TERRITORY_RADIUS`: 300px radius for exit protection zones
+- `AI.EXIT_GUARD_AGGRO_RANGE`: 350px chase range for exit guards
+- `EXIT.LOCK_ICON`: 🔒 emoji for locked exits
+- `EXIT.LOCK_ICON_SIZE`: 32px font size for lock icon
+- `EXIT.LOCK_ICON_OFFSET_Y`: -40px position above exit
 - `SOUNDS`: Unified audio configuration with `id` and `path` for each sound (SHOOT, HIT, DEATH, etc.)
 
 **Utility Functions:**
@@ -44,6 +49,8 @@ The codebase follows a **constants-first approach** for type safety and maintain
 **Entity Factory Functions:**
 
 - `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, etc.
+- `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with guard count tracking
+- `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)`: Creates guard dinosaur positioned around exit
 - Encapsulate entity creation logic and use constants throughout
 
 **Benefits:**
@@ -215,12 +222,22 @@ Levels defined in `LEVEL_CONFIGS`:
   - Level 2: 3600x2700 (50% larger, more exploration required)
   - Level 3: 4800x3600 (2x larger, epic final challenge with room for all 22 dinosaurs)
   - Viewport size remains constant regardless of world size (player sees same amount)
-- Each level specifies: map dimensions, exit position, dinosaur types/counts, obstacle count, powerup count, hazard counts
+- Each level specifies: map dimensions, exit position, exit guards, dinosaur types/counts, obstacle count, powerup count, hazard counts
 - **Exit position**: Placed near far edge of each level's map
   - Level 1: (1800, 1400)
   - Level 2: (3000, 2200)
   - Level 3: (4200, 3000)
-- Win condition: Reach exit zone (golden EXIT rectangle)
+- **Exit guard system**: Exit is protected by guard dinosaurs that must be defeated to unlock
+  - Level 1: 3 Velociraptors
+  - Level 2: 3 Velociraptors + 1 Dilophosaurus
+  - Level 3: 3 Velociraptors + 1 Dilophosaurus + 1 T-Rex (boss fight)
+  - Guards patrol a 300-pixel radius territory around exit (larger than normal 200px territories)
+  - Exit territory has no skull marker (only dashed red circle)
+  - Exit shows 🔒 lock icon and appears gray when locked
+  - When all guards are defeated, exit unlocks (turns golden) and territory is removed
+  - Guards use existing territorial AI (PATROL, CHASE, TERRITORY_RETURN states)
+  - Factory functions: `createExitTerritory()`, `createExitGuard()`
+- Win condition: Reach exit zone (golden EXIT rectangle) when unlocked
 - Player stats reset between levels, score persists
 - Entity counts scale naturally with larger worlds: Level 1 (40 obstacles, 3 tar, 2 fence), Level 2 (50 obstacles, 5 tar, 4 fence), Level 3 (60 obstacles, 7 tar, 6 fence)
 

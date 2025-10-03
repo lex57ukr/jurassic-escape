@@ -107,6 +107,58 @@
         DILOPHOSAURUS_BASE_SIZE: 24,
       },
 
+      // Dinosaur Stats (default values for each type)
+      DINOSAUR_STATS: {
+        raptor: {
+          health: 2,
+          speed: 1.5,
+          color: '#8B4513',
+          points: 100,
+          aggressive: true,
+          territorial: false
+        },
+        trex: {
+          health: 4,
+          speed: 1.0,
+          color: '#654321',
+          points: 300,
+          aggressive: true,
+          territorial: false
+        },
+        stego: {
+          health: 3,
+          speed: 0.8,
+          color: '#556B2F',
+          points: 200,
+          aggressive: true,
+          territorial: false
+        },
+        para: {
+          health: 2,
+          speed: 1.2,
+          color: '#CD853F',
+          points: 50,
+          aggressive: false,
+          territorial: false
+        },
+        trike: {
+          health: 3,
+          speed: 0.9,
+          color: '#8B7355',
+          points: 75,
+          aggressive: false,
+          territorial: false
+        },
+        dilo: {
+          health: 3,
+          speed: 1.3,
+          color: '#9ACD32',
+          points: 150,
+          aggressive: true,
+          territorial: true
+        }
+      },
+
       // Tranquilizer
       TRANQUILIZER: {
         SPEED: 6,
@@ -139,6 +191,13 @@
         EXIT_HEIGHT: 60,
         EXIT_COLLISION_RADIUS: 30,
         MAX_LEVEL: 3, // Total number of levels in the game
+      },
+
+      // Exit Lock
+      EXIT: {
+        LOCK_ICON: '🔒',
+        LOCK_ICON_SIZE: 32,
+        LOCK_ICON_OFFSET_Y: -40, // Position above exit
       },
 
       // Obstacle Types
@@ -212,6 +271,9 @@
         SPIT_DAMAGE: 1,                // Damage from spit
         FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
         TERRITORY_MARKER_ICON: '💀',   // Icon for territory center marker
+        EXIT_TERRITORY_RADIUS: 300,    // Larger radius for exit protection zone
+        EXIT_GUARD_AGGRO_RANGE: 350,   // Guard chase range at exit
+        EXIT_GUARD_SPAWN_RADIUS_MULTIPLIER: 0.7, // Multiplier for guard spawn distance from exit center
       },
 
       // Touch Controls
@@ -344,10 +406,13 @@
         mapHeight: 1800,
         exitX: 1800,
         exitY: 1400,
+        exitGuards: [
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3 }
+        ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 2, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false }
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 2 }
         ],
         obstacles: 40,
         powerups: 3,
@@ -360,13 +425,17 @@
         mapHeight: 2700,
         exitX: 3000,
         exitY: 2200,
+        exitGuards: [
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 1 }
+        ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 5, health: 2, speed: 1.5, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 2, health: 4, speed: 1, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 2, health: 3, speed: 1.3, size: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 3, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 2, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE, color: '#8B7355', points: 75, aggressive: false, territorial: false }
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 5 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 2 }
         ],
         obstacles: 50,
         powerups: 4,
@@ -379,13 +448,18 @@
         mapHeight: 3600,
         exitX: 4200,
         exitY: 3000,
+        exitGuards: [
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 1 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 1 }
+        ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 6, health: 2, speed: 1.7, size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 3, health: 4, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE, color: '#654321', points: 300, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 3, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 3, health: 3, speed: 1.3, size: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 4, health: 2, speed: 1.2, size: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE, color: '#CD853F', points: 50, aggressive: false, territorial: false },
-          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 3, health: 3, speed: 0.9, size: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE, color: '#8B7355', points: 75, aggressive: false, territorial: false }
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 6, speed: 1.7 }, // Faster raptors
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 3, speed: 1.2 }, // Faster T-Rex
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 3, speed: 0.9 }, // Slightly faster
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 4 },
+          { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 3 }
         ],
         obstacles: 60,
         powerups: 5,
@@ -703,6 +777,79 @@
     };
 
     /**
+     * Create an exit territory object
+     * @param {number} exitX - Exit X position
+     * @param {number} exitY - Exit Y position
+     * @param {number} totalGuards - Total number of guards protecting this exit
+     */
+    const createExitTerritory = (exitX, exitY, totalGuards) => {
+      return {
+        x: exitX,
+        y: exitY,
+        radius: GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS,
+        isExitTerritory: true,
+        guardCount: totalGuards
+      };
+    };
+
+    /**
+     * Create an exit guard dinosaur
+     * @param {string} dinoType - Dinosaur type constant
+     * @param {number} angle - Angle in degrees for positioning around exit
+     * @param {number} exitX - Exit X position
+     * @param {number} exitY - Exit Y position
+     * @param {number} territoryIndex - Index of exit territory in territories array
+     * @param {string} difficulty - Current difficulty setting
+     */
+    const createExitGuard = (dinoType, angle, exitX, exitY, territoryIndex, difficulty) => {
+      // Convert angle to radians
+      const angleRad = (angle * Math.PI) / 180;
+
+      // Position guard in circle around exit
+      const spawnRadius = GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS * GAME_CONSTANTS.AI.EXIT_GUARD_SPAWN_RADIUS_MULTIPLIER;
+      const x = exitX + Math.cos(angleRad) * spawnRadius;
+      const y = exitY + Math.sin(angleRad) * spawnRadius;
+
+      // Get dinosaur stats from constants
+      const stats = getDinosaurStats(dinoType);
+
+      // Apply difficulty modifiers
+      const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+      const adjustedSpeed = stats.speed * diffMod.enemySpeedMultiplier;
+
+      return {
+        type: dinoType,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        health: stats.health,
+        maxHealth: stats.health,
+        speed: adjustedSpeed,
+        baseSpeed: adjustedSpeed, // Store base speed for AI calculations
+        size: stats.size,
+        color: stats.color,
+        points: stats.points,
+        aggressive: true, // Exit guards are always aggressive
+        territorial: true, // Exit guards are always territorial
+        territoryX: exitX,
+        territoryY: exitY,
+        territoryRadius: GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS, // Territory radius for AI
+        territoryIndex,
+        aggroRange: GAME_CONSTANTS.AI.EXIT_GUARD_AGGRO_RANGE, // Aggro range for territorial behavior
+        state: GAME_CONSTANTS.AI.STATES.PATROL,
+        patrolAngle: Math.random() * Math.PI * 2,
+        isSleeping: false,
+        sleepTimer: 0,
+        tranqHits: 0,
+        spitCooldown: 0, // Cooldown for spit attacks
+        facingLeft: false,
+        zapTimer: 0,
+        avoidFences: []
+      };
+    };
+
+    /**
      * Find nearest dinosaur to a position
      */
     const findNearestDinosaur = (x, y, dinosaurs) => {
@@ -718,6 +865,49 @@
       });
 
       return nearest;
+    };
+
+    /**
+     * Get default stats for a dinosaur type
+     * @param {string} dinoType - Dinosaur type (e.g., 'raptor', 'trex')
+     * @returns {Object} Stats object with health, speed, size, color, points, aggressive, territorial
+     */
+    const getDinosaurStats = (dinoType) => {
+      const stats = GAME_CONSTANTS.DINOSAUR_STATS[dinoType];
+      if (!stats) {
+        console.warn(`Unknown dinosaur type: ${dinoType}, using raptor defaults`);
+        return {
+          ...GAME_CONSTANTS.DINOSAUR_STATS.raptor,
+          size: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE
+        };
+      }
+
+      // Add size from DINOSAUR_TYPES based on type
+      let size;
+      switch (dinoType) {
+        case GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE;
+          break;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX_BASE_SIZE;
+          break;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS_BASE_SIZE;
+          break;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS_BASE_SIZE;
+          break;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS_BASE_SIZE;
+          break;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS_BASE_SIZE;
+          break;
+        default:
+          size = GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR_BASE_SIZE;
+      }
+
+      return { ...stats, size }; // Return copy with size added
     };
 
     /**
@@ -1593,12 +1783,14 @@
       const screenX = territory.x - cameraX;
       const screenY = territory.y - cameraY;
 
-      // Draw skull marker
-      ctx.fillStyle = '#8B0000';
-      ctx.font = '24px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(GAME_CONSTANTS.AI.TERRITORY_MARKER_ICON, screenX, screenY);
+      // Draw skull marker (skip for exit territories)
+      if (!territory.isExitTerritory) {
+        ctx.fillStyle = '#8B0000';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(GAME_CONSTANTS.AI.TERRITORY_MARKER_ICON, screenX, screenY);
+      }
 
       // Draw territory circle outline (faint)
       ctx.strokeStyle = 'rgba(139, 0, 0, 0.2)';
@@ -2094,13 +2286,33 @@
 
                 // Remove territory if territorial
                 if (dino.territorial && dino.territoryIndex !== undefined) {
-                  game.territories.splice(dino.territoryIndex, 1);
-                  // Update indices
-                  game.dinosaurs.forEach(d => {
-                    if (d.territorial && d.territoryIndex !== undefined && d.territoryIndex > dino.territoryIndex) {
-                      d.territoryIndex--;
+                  const territory = game.territories[dino.territoryIndex];
+                  let shouldRemoveTerritory = false;
+
+                  // Handle exit territory guard death
+                  if (territory && territory.isExitTerritory) {
+                    territory.guardCount--;
+                    // If all guards are dead, unlock exit and mark for removal
+                    if (territory.guardCount === 0) {
+                      game.exitLocked = false;
+                      shouldRemoveTerritory = true;
                     }
-                  });
+                  } else {
+                    // Normal territory always removed
+                    shouldRemoveTerritory = true;
+                  }
+
+                  // Remove territory and update indices (shared logic)
+                  if (shouldRemoveTerritory) {
+                    game.territories.splice(dino.territoryIndex, 1);
+
+                    // Update territoryIndex for remaining dinosaurs
+                    game.dinosaurs.forEach(d => {
+                      if (d.territorial && d.territoryIndex !== undefined && d.territoryIndex > dino.territoryIndex) {
+                        d.territoryIndex--;
+                      }
+                    });
+                  }
                 }
 
                 game.dinosaurs.splice(i, 1);
@@ -2188,8 +2400,8 @@
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
 
-          // Spit attack
-          if (dist < GAME_CONSTANTS.AI.SPIT_ATTACK_RANGE && dino.spitCooldown <= 0) {
+          // Spit attack (only Dilophosaurus)
+          if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS && dist < GAME_CONSTANTS.AI.SPIT_ATTACK_RANGE && dino.spitCooldown <= 0) {
             game.spit.push(createSpitProjectile(dino.x, dino.y, player.x, player.y));
             dino.spitCooldown = GAME_CONSTANTS.AI.SPIT_ATTACK_COOLDOWN;
           }
@@ -3006,8 +3218,14 @@
 
         // Create dinosaurs
         let dinoIndex = 0;
-        config.dinosaurs.forEach(dinoType => {
-          for (let i = 0; i < dinoType.count; i++) {
+        config.dinosaurs.forEach(dinoConfig => {
+          // Get default stats for this dinosaur type
+          const defaultStats = getDinosaurStats(dinoConfig.type);
+
+          // Merge config overrides with defaults
+          const stats = { ...defaultStats, ...dinoConfig };
+
+          for (let i = 0; i < stats.count; i++) {
             // Calculate initial spawn position
             const initialX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_X + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
             const initialY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
@@ -3016,7 +3234,7 @@
             const spawnPos = findValidSpawnPosition(
               initialX,
               initialY,
-              dinoType.size,
+              stats.size,
               game.obstacles,
               game
             );
@@ -3026,18 +3244,18 @@
               y: spawnPos.y,
               vx: 0,
               vy: 0,
-              health: dinoType.health,
-              maxHealth: dinoType.health,
-              speed: dinoType.speed * diffMod.enemySpeedMultiplier, // Apply difficulty
-              baseSpeed: dinoType.speed * diffMod.enemySpeedMultiplier,
-              size: dinoType.size,
-              color: dinoType.color,
-              type: dinoType.type,
-              points: dinoType.points,
-              aggressive: dinoType.aggressive,
-              territorial: dinoType.territorial,
-              aggroRange: dinoType.aggressive ? GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
-              fleeRange: dinoType.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
+              health: stats.health,
+              maxHealth: stats.health,
+              speed: stats.speed * diffMod.enemySpeedMultiplier, // Apply difficulty
+              baseSpeed: stats.speed * diffMod.enemySpeedMultiplier,
+              size: stats.size,
+              color: stats.color,
+              type: stats.type,
+              points: stats.points,
+              aggressive: stats.aggressive,
+              territorial: stats.territorial,
+              aggroRange: stats.aggressive ? GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
+              fleeRange: stats.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
               state: GAME_CONSTANTS.AI.STATES.PATROL,
               patrolAngle: Math.random() * Math.PI * 2,
               isSleeping: false,
@@ -3050,7 +3268,7 @@
             };
 
             // Create territory for territorial dinosaurs
-            if (dinoType.territorial) {
+            if (stats.territorial) {
               // Find a non-overlapping territory position that avoids obstacles
               let territoryX = spawnPos.x;
               let territoryY = spawnPos.y;
@@ -3074,7 +3292,7 @@
                 if (!overlapping) {
                   for (const obstacle of game.obstacles) {
                     const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
-                    if (dist < obstacle.radius + dinoType.size + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
+                    if (dist < obstacle.radius + stats.size + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
                       overlapping = true;
                       break;
                     }
@@ -3112,6 +3330,35 @@
             dinoIndex++;
           }
         });
+
+        // Create exit guards and territory
+        if (config.exitGuards && config.exitGuards.length > 0) {
+          // Calculate total number of guards
+          const totalGuards = config.exitGuards.reduce((sum, guardType) => sum + guardType.count, 0);
+
+          // Create exit territory
+          const exitTerritory = createExitTerritory(config.exitX, config.exitY, totalGuards);
+          game.territories.push(exitTerritory);
+          const exitTerritoryIndex = game.territories.length - 1;
+
+          // Set exit as locked
+          game.exitLocked = true;
+
+          // Spawn guards in a circle around exit
+          let guardIndex = 0;
+          config.exitGuards.forEach(guardType => {
+            for (let i = 0; i < guardType.count; i++) {
+              // Calculate evenly spaced angle around exit
+              const angle = (guardIndex / totalGuards) * 360;
+              const guard = createExitGuard(guardType.type, angle, config.exitX, config.exitY, exitTerritoryIndex, difficulty);
+              game.dinosaurs.push(guard);
+              guardIndex++;
+            }
+          });
+        } else {
+          // No guards, exit is unlocked
+          game.exitLocked = false;
+        }
 
         // Create powerups
         for (let i = 0; i < config.powerups; i++) {
@@ -3314,16 +3561,18 @@
             return;
           }
 
-          // Check win condition
-          const exitCenterX = game.exit.x + game.exit.width / 2;
-          const exitCenterY = game.exit.y + game.exit.height / 2;
-          if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
-            if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
-              setGameState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE);
-              playSound(SOUNDS.LEVEL_COMPLETE);
-            } else {
-              setGameState(GAME_CONSTANTS.GAME_STATES.WON);
-              playSound(SOUNDS.VICTORY);
+          // Check win condition (only if exit is unlocked)
+          if (!game.exitLocked) {
+            const exitCenterX = game.exit.x + game.exit.width / 2;
+            const exitCenterY = game.exit.y + game.exit.height / 2;
+            if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
+              if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
+                setGameState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE);
+                playSound(SOUNDS.LEVEL_COMPLETE);
+              } else {
+                setGameState(GAME_CONSTANTS.GAME_STATES.WON);
+                playSound(SOUNDS.VICTORY);
+              }
             }
           }
 
@@ -3341,15 +3590,27 @@
           // Draw exit
           const exitScreenX = game.exit.x - game.cameraX;
           const exitScreenY = game.exit.y - game.cameraY;
-          ctx.fillStyle = '#FFD700';
+          ctx.fillStyle = game.exitLocked ? '#888' : '#FFD700'; // Gray if locked, gold if unlocked
           ctx.fillRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
-          ctx.strokeStyle = '#FFA500';
+          ctx.strokeStyle = game.exitLocked ? '#555' : '#FFA500';
           ctx.lineWidth = 3;
           ctx.strokeRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
           ctx.fillStyle = '#000';
           ctx.font = '14px Arial';
           ctx.textAlign = 'center';
           ctx.fillText('EXIT', exitScreenX + game.exit.width / 2, exitScreenY + game.exit.height / 2 + 5);
+
+          // Draw lock icon if exit is locked
+          if (game.exitLocked) {
+            ctx.font = `${GAME_CONSTANTS.EXIT.LOCK_ICON_SIZE}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(
+              GAME_CONSTANTS.EXIT.LOCK_ICON,
+              exitScreenX + game.exit.width / 2,
+              exitScreenY + GAME_CONSTANTS.EXIT.LOCK_ICON_OFFSET_Y
+            );
+          }
 
           // Draw tar pits
           game.tarPits.forEach(tarPit => {
