@@ -846,6 +846,347 @@
     };
 
     /**
+     * Draw tar pit with bubble animation
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} tarPit - Tar pit object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawTarPit = (ctx, tarPit, cameraX, cameraY) => {
+      const screenX = tarPit.x - cameraX;
+      const screenY = tarPit.y - cameraY;
+
+      // Dark tar pit
+      ctx.fillStyle = '#1a0a00';
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, tarPit.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lighter brown rim
+      ctx.strokeStyle = '#3d2817';
+      ctx.lineWidth = GAME_CONSTANTS.HAZARDS.TAR_PIT_RIM_WIDTH;
+      ctx.stroke();
+
+      // Update and draw multiple bubbles
+      tarPit.bubbles.forEach(bubble => {
+        bubble.timer++;
+        if (bubble.timer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
+          bubble.timer = 0;
+          // Randomize position for next cycle
+          bubble.offsetX = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
+          bubble.offsetY = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
+        }
+
+        // Draw bubble during active phase
+        if (bubble.timer < GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION) {
+          const bubbleProgress = bubble.timer / GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION;
+          const bubbleRadius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_BASE_RADIUS + bubbleProgress * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_GROWTH;
+          const bubbleAlpha = 1 - bubbleProgress;
+
+          ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
+          ctx.beginPath();
+          ctx.arc(screenX + bubble.offsetX, screenY + bubble.offsetY, bubbleRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    };
+
+    /**
+     * Draw electric fence with spark animation
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} fence - Electric fence object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawElectricFence = (ctx, fence, cameraX, cameraY) => {
+      const screenX = fence.x - cameraX;
+      const screenY = fence.y - cameraY;
+
+      ctx.save();
+      ctx.translate(screenX, screenY);
+      ctx.rotate(fence.rotation);
+
+      // Fence base (dark gray/black)
+      ctx.fillStyle = '#2a2a2a';
+      ctx.fillRect(-fence.width / 2, -fence.height / 2, fence.width, fence.height);
+
+      // Electric wires (yellow)
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = GAME_CONSTANTS.HAZARDS.FENCE_WIRE_WIDTH;
+      ctx.beginPath();
+      ctx.moveTo(-fence.width / 2, -fence.height / 4);
+      ctx.lineTo(fence.width / 2, -fence.height / 4);
+      ctx.moveTo(-fence.width / 2, fence.height / 4);
+      ctx.lineTo(fence.width / 2, fence.height / 4);
+      ctx.stroke();
+
+      // Update spark animation
+      fence.sparkTimer++;
+      if (fence.sparkTimer >= GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY) {
+        fence.sparkTimer = 0;
+      }
+
+      // Draw sparks at intervals
+      if (fence.sparkTimer < GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION) {
+        const sparkProgress = fence.sparkTimer / GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION;
+        const sparkAlpha = 1 - sparkProgress;
+
+        ctx.fillStyle = `rgba(255, 255, 100, ${sparkAlpha})`;
+        ctx.beginPath();
+        ctx.arc(Math.random() * fence.width - fence.width / 2, 0, GAME_CONSTANTS.HAZARDS.FENCE_SPARK_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    };
+
+    /**
+     * Draw obstacle (tree or bush)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} obstacle - Obstacle object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawObstacle = (ctx, obstacle, cameraX, cameraY) => {
+      const screenX = obstacle.x - cameraX;
+      const screenY = obstacle.y - cameraY;
+
+      if (obstacle.type === 'tree') {
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(screenX - 5, screenY - 5, 10, 15);
+        ctx.fillStyle = '#228B22';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY - 10, obstacle.radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#2F4F2F';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, obstacle.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    /**
+     * Draw powerup (health or speed)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} powerup - Powerup object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawPowerup = (ctx, powerup, cameraX, cameraY) => {
+      if (!powerup.active) return;
+
+      const screenX = powerup.x - cameraX;
+      const screenY = powerup.y - cameraY;
+
+      if (powerup.type === 'health') {
+        ctx.fillStyle = '#ff1744';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw cross
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(screenX - 5, screenY);
+        ctx.lineTo(screenX + 5, screenY);
+        ctx.moveTo(screenX, screenY - 5);
+        ctx.lineTo(screenX, screenY + 5);
+        ctx.stroke();
+      } else if (powerup.type === 'speed') {
+        ctx.fillStyle = '#00e5ff';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw lightning bolt
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(screenX + 2, screenY - 6);
+        ctx.lineTo(screenX - 2, screenY);
+        ctx.lineTo(screenX + 1, screenY);
+        ctx.lineTo(screenX - 2, screenY + 6);
+        ctx.lineTo(screenX + 2, screenY);
+        ctx.lineTo(screenX - 1, screenY);
+        ctx.closePath();
+        ctx.fill();
+      }
+    };
+
+    /**
+     * Draw tranquilizer depot (green crate with syringe icon)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} depot - Tranq depot object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawTranqDepot = (ctx, depot, cameraX, cameraY) => {
+      if (!depot.active) return;
+
+      const screenX = depot.x - cameraX;
+      const screenY = depot.y - cameraY;
+
+      // Draw green crate
+      ctx.fillStyle = '#228B22';
+      ctx.strokeStyle = '#006400';
+      ctx.lineWidth = 2;
+      ctx.fillRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
+      ctx.strokeRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
+
+      // Draw syringe icon
+      ctx.fillStyle = '#00FF00';
+      ctx.beginPath();
+      ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.fillRect(screenX - 1, screenY, 2, 6);
+      ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
+    };
+
+    /**
+     * Draw territory marker (skull emoji and circle outline)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} territory - Territory object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawTerritory = (ctx, territory, cameraX, cameraY) => {
+      const screenX = territory.x - cameraX;
+      const screenY = territory.y - cameraY;
+
+      // Draw skull marker
+      ctx.fillStyle = '#8B0000';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('💀', screenX, screenY);
+
+      // Draw territory circle outline (faint)
+      ctx.strokeStyle = 'rgba(139, 0, 0, 0.2)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, territory.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+
+    /**
+     * Draw player character with safari gear and rotating gun
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} player - Player object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     * @param {number} mouseX - Mouse X position (world coordinates)
+     * @param {number} mouseY - Mouse Y position (world coordinates)
+     * @param {number} speedBoostTimer - Speed boost timer value
+     */
+    const drawPlayer = (ctx, player, cameraX, cameraY, mouseX, mouseY, speedBoostTimer) => {
+      const screenX = player.x - cameraX;
+      const screenY = player.y - cameraY - player.jumpHeight;
+
+      // Jump shadow
+      if (player.isJumping) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(screenX, player.y - cameraY, player.radius * 0.8, player.radius * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Speed boost glow effect
+      if (speedBoostTimer > 0) {
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, player.radius + 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Zap effect (electric shock animation)
+      drawZapEffect(ctx, screenX, screenY, player.radius, player.zapTimer);
+
+      const mouseAngle = Math.atan2(mouseY - player.y, mouseX - player.x);
+
+      ctx.save();
+      ctx.translate(screenX, screenY);
+
+      // Apply invincibility flashing effect
+      if (isInvincible(player) && Math.floor(player.invincibilityTimer / 5) % 2 === 0) {
+        ctx.globalAlpha = 0.5;
+      }
+
+      // Body (khaki shirt)
+      ctx.fillStyle = '#C3B091';
+      ctx.beginPath();
+      ctx.arc(0, 2, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = '#F4A460';
+      ctx.beginPath();
+      ctx.arc(0, -6, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Safari hat
+      ctx.fillStyle = '#8B7355';
+      ctx.beginPath();
+      ctx.ellipse(0, -11, 10, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#A0826D';
+      ctx.beginPath();
+      ctx.arc(0, -13, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-2, -7, 1, 0, Math.PI * 2);
+      ctx.arc(2, -7, 1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Arms and gun
+      ctx.rotate(mouseAngle);
+
+      // Gun
+      ctx.fillStyle = '#2F4F4F';
+      ctx.fillRect(8, -2, 10, 4);
+      ctx.fillStyle = '#696969';
+      ctx.fillRect(18, -1, 4, 2);
+
+      // Arms holding gun
+      ctx.strokeStyle = '#F4A460';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, 2);
+      ctx.lineTo(8, -2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, 2);
+      ctx.lineTo(8, 2);
+      ctx.stroke();
+
+      // Hands on gun
+      ctx.fillStyle = '#F4A460';
+      ctx.beginPath();
+      ctx.arc(8, -2, 2.5, 0, Math.PI * 2);
+      ctx.arc(8, 2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Reset alpha if it was modified
+      if (isInvincible(player)) {
+        ctx.globalAlpha = 1.0;
+      }
+
+      ctx.restore();
+    };
+
+    /**
      * Find a valid spawn position that doesn't collide with obstacles
      * @param {number} x - Initial x position
      * @param {number} y - Initial y position
@@ -2526,199 +2867,32 @@
 
           // Draw tar pits
           game.tarPits.forEach(tarPit => {
-            const screenX = tarPit.x - game.cameraX;
-            const screenY = tarPit.y - game.cameraY;
-
-            // Dark tar pit
-            ctx.fillStyle = '#1a0a00';
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, tarPit.radius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Lighter brown rim
-            ctx.strokeStyle = '#3d2817';
-            ctx.lineWidth = GAME_CONSTANTS.HAZARDS.TAR_PIT_RIM_WIDTH;
-            ctx.stroke();
-
-            // Update and draw multiple bubbles
-            tarPit.bubbles.forEach(bubble => {
-              bubble.timer++;
-              if (bubble.timer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
-                bubble.timer = 0;
-                // Randomize position for next cycle
-                bubble.offsetX = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
-                bubble.offsetY = (Math.random() - 0.5) * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD;
-              }
-
-              // Draw bubble during active phase
-              if (bubble.timer < GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION) {
-                const bubbleProgress = bubble.timer / GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION;
-                const bubbleRadius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_BASE_RADIUS + bubbleProgress * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_GROWTH;
-                const bubbleAlpha = 1 - bubbleProgress;
-
-                ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
-                ctx.beginPath();
-                ctx.arc(screenX + bubble.offsetX, screenY + bubble.offsetY, bubbleRadius, 0, Math.PI * 2);
-                ctx.fill();
-              }
-            });
+            drawTarPit(ctx, tarPit, game.cameraX, game.cameraY);
           });
 
           // Draw electric fences
           game.electricFences.forEach(fence => {
-            const screenX = fence.x - game.cameraX;
-            const screenY = fence.y - game.cameraY;
-
-            ctx.save();
-            ctx.translate(screenX, screenY);
-            ctx.rotate(fence.rotation);
-
-            // Fence base (dark gray/black)
-            ctx.fillStyle = '#2a2a2a';
-            ctx.fillRect(-fence.width / 2, -fence.height / 2, fence.width, fence.height);
-
-            // Electric wires (yellow)
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = GAME_CONSTANTS.HAZARDS.FENCE_WIRE_WIDTH;
-            ctx.beginPath();
-            ctx.moveTo(-fence.width / 2, -fence.height / 4);
-            ctx.lineTo(fence.width / 2, -fence.height / 4);
-            ctx.moveTo(-fence.width / 2, fence.height / 4);
-            ctx.lineTo(fence.width / 2, fence.height / 4);
-            ctx.stroke();
-
-            // Update spark animation
-            fence.sparkTimer++;
-            if (fence.sparkTimer >= GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY) {
-              fence.sparkTimer = 0;
-            }
-
-            // Draw sparks at intervals
-            if (fence.sparkTimer < GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION) {
-              const sparkProgress = fence.sparkTimer / GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION;
-              const sparkAlpha = 1 - sparkProgress;
-
-              ctx.fillStyle = `rgba(255, 255, 100, ${sparkAlpha})`;
-              ctx.beginPath();
-              ctx.arc(Math.random() * fence.width - fence.width / 2, 0, GAME_CONSTANTS.HAZARDS.FENCE_SPARK_RADIUS, 0, Math.PI * 2);
-              ctx.fill();
-            }
-
-            ctx.restore();
+            drawElectricFence(ctx, fence, game.cameraX, game.cameraY);
           });
 
           // Draw obstacles
           game.obstacles.forEach(obs => {
-            const screenX = obs.x - game.cameraX;
-            const screenY = obs.y - game.cameraY;
-
-            if (obs.type === 'tree') {
-              ctx.fillStyle = '#654321';
-              ctx.fillRect(screenX - 5, screenY - 5, 10, 15);
-              ctx.fillStyle = '#228B22';
-              ctx.beginPath();
-              ctx.arc(screenX, screenY - 10, obs.radius, 0, Math.PI * 2);
-              ctx.fill();
-            } else {
-              ctx.fillStyle = '#2F4F2F';
-              ctx.beginPath();
-              ctx.arc(screenX, screenY, obs.radius, 0, Math.PI * 2);
-              ctx.fill();
-            }
+            drawObstacle(ctx, obs, game.cameraX, game.cameraY);
           });
 
           // Draw powerups
           game.powerups.forEach(powerup => {
-            if (!powerup.active) return;
-
-            const screenX = powerup.x - game.cameraX;
-            const screenY = powerup.y - game.cameraY;
-
-            if (powerup.type === 'health') {
-              ctx.fillStyle = '#ff1744';
-              ctx.strokeStyle = '#fff';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.stroke();
-
-              // Draw cross
-              ctx.strokeStyle = '#fff';
-              ctx.lineWidth = 3;
-              ctx.beginPath();
-              ctx.moveTo(screenX - 5, screenY);
-              ctx.lineTo(screenX + 5, screenY);
-              ctx.moveTo(screenX, screenY - 5);
-              ctx.lineTo(screenX, screenY + 5);
-              ctx.stroke();
-            } else if (powerup.type === 'speed') {
-              ctx.fillStyle = '#00e5ff';
-              ctx.strokeStyle = '#fff';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.stroke();
-
-              // Draw lightning bolt
-              ctx.fillStyle = '#fff';
-              ctx.beginPath();
-              ctx.moveTo(screenX + 2, screenY - 6);
-              ctx.lineTo(screenX - 2, screenY);
-              ctx.lineTo(screenX + 1, screenY);
-              ctx.lineTo(screenX - 2, screenY + 6);
-              ctx.lineTo(screenX + 2, screenY);
-              ctx.lineTo(screenX - 1, screenY);
-              ctx.closePath();
-              ctx.fill();
-            }
+            drawPowerup(ctx, powerup, game.cameraX, game.cameraY);
           });
 
           // Draw tranquilizer depots
           game.tranqDepots.forEach(depot => {
-            if (!depot.active) return;
-
-            const screenX = depot.x - game.cameraX;
-            const screenY = depot.y - game.cameraY;
-
-            // Draw green crate
-            ctx.fillStyle = '#228B22';
-            ctx.strokeStyle = '#006400';
-            ctx.lineWidth = 2;
-            ctx.fillRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
-            ctx.strokeRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
-
-            // Draw syringe icon
-            ctx.fillStyle = '#00FF00';
-            ctx.beginPath();
-            ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FFF';
-            ctx.fillRect(screenX - 1, screenY, 2, 6);
-            ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
+            drawTranqDepot(ctx, depot, game.cameraX, game.cameraY);
           });
 
           // Draw territories (skull markers at center)
           game.territories.forEach(territory => {
-            const screenX = territory.x - game.cameraX;
-            const screenY = territory.y - game.cameraY;
-
-            // Draw skull marker
-            ctx.fillStyle = '#8B0000';
-            ctx.font = '24px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('💀', screenX, screenY);
-
-            // Draw territory circle outline (faint)
-            ctx.strokeStyle = 'rgba(139, 0, 0, 0.2)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(screenX, screenY, territory.radius, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            drawTerritory(ctx, territory, game.cameraX, game.cameraY);
           });
 
           // Draw dinosaurs
@@ -2793,101 +2967,7 @@
           });
 
           // Draw player
-          const playerScreenX = game.player.x - game.cameraX;
-          const playerScreenY = game.player.y - game.cameraY - game.player.jumpHeight;
-
-          // Jump shadow
-          if (game.player.isJumping) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(playerScreenX, game.player.y - game.cameraY, game.player.radius * 0.8, game.player.radius * 0.4, 0, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // Speed boost glow effect
-          if (game.speedBoostTimer > 0) {
-            ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
-            ctx.beginPath();
-            ctx.arc(playerScreenX, playerScreenY, game.player.radius + 5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // Zap effect (electric shock animation)
-          drawZapEffect(ctx, playerScreenX, playerScreenY, game.player.radius, game.player.zapTimer);
-
-          const mouseAngle = Math.atan2(game.mouseY - game.player.y, game.mouseX - game.player.x);
-
-          ctx.save();
-          ctx.translate(playerScreenX, playerScreenY);
-
-          // Apply invincibility flashing effect
-          if (isInvincible(game.player) && Math.floor(game.player.invincibilityTimer / 5) % 2 === 0) {
-            ctx.globalAlpha = 0.5;
-          }
-
-          // Body (khaki shirt)
-          ctx.fillStyle = '#C3B091';
-          ctx.beginPath();
-          ctx.arc(0, 2, 12, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Head
-          ctx.fillStyle = '#F4A460';
-          ctx.beginPath();
-          ctx.arc(0, -6, 8, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Safari hat
-          ctx.fillStyle = '#8B7355';
-          ctx.beginPath();
-          ctx.ellipse(0, -11, 10, 3, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#A0826D';
-          ctx.beginPath();
-          ctx.arc(0, -13, 6, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Eyes
-          ctx.fillStyle = '#000';
-          ctx.beginPath();
-          ctx.arc(-2, -7, 1, 0, Math.PI * 2);
-          ctx.arc(2, -7, 1, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Arms and gun
-          ctx.rotate(mouseAngle);
-
-          // Gun
-          ctx.fillStyle = '#2F4F4F';
-          ctx.fillRect(8, -2, 10, 4);
-          ctx.fillStyle = '#696969';
-          ctx.fillRect(18, -1, 4, 2);
-
-          // Arms holding gun
-          ctx.strokeStyle = '#F4A460';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(0, 2);
-          ctx.lineTo(8, -2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(0, 2);
-          ctx.lineTo(8, 2);
-          ctx.stroke();
-
-          // Hands on gun
-          ctx.fillStyle = '#F4A460';
-          ctx.beginPath();
-          ctx.arc(8, -2, 2.5, 0, Math.PI * 2);
-          ctx.arc(8, 2, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Reset alpha if it was modified
-          if (isInvincible(game.player)) {
-            ctx.globalAlpha = 1.0;
-          }
-
-          ctx.restore();
+          drawPlayer(ctx, game.player, game.cameraX, game.cameraY, game.mouseX, game.mouseY, game.speedBoostTimer);
 
           // Draw bullets
           game.bullets.forEach(bullet => {
