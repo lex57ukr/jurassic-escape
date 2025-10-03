@@ -3217,76 +3217,7 @@
 
         let animationId;
 
-        const handleKeyDown = (e) => {
-          const key = e.key.toLowerCase();
-          game.keys[key] = true;
-
-          // Handle ESC to pause
-          if (key === 'escape') {
-            setShowPauseMenu(true);
-            playSound(SOUNDS.PAUSE);
-            return;
-          }
-
-          // Handle jump on spacebar press
-          if (key === ' ' && !game.player.isJumping) {
-            game.player.isJumping = true;
-            game.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
-            playSound(SOUNDS.JUMP);
-          }
-
-          // Handle weapon switching with Q key
-          if (key === 'q') {
-            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER : GAME_CONSTANTS.WEAPON_TYPES.REGULAR;
-            setCurrentWeapon(game.player.currentWeapon);
-          }
-        };
-
-        const handleKeyUp = (e) => {
-          game.keys[e.key.toLowerCase()] = false;
-        };
-
-        const handleMouseMove = (e) => {
-          const rect = canvas.getBoundingClientRect();
-          game.mouseX = e.clientX - rect.left + game.cameraX;
-          game.mouseY = e.clientY - rect.top + game.cameraY;
-        };
-
-        const handleClick = (e) => {
-          const rect = canvas.getBoundingClientRect();
-          let targetX = e.clientX - rect.left + game.cameraX;
-          let targetY = e.clientY - rect.top + game.cameraY;
-
-          // Use auto-aim if enabled
-          if (autoAim) {
-            const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
-            if (nearestDino) {
-              targetX = nearestDino.x;
-              targetY = nearestDino.y;
-            } else {
-              // Fallback to click position if no dinosaurs
-              targetX = e.clientX - rect.left + game.cameraX;
-              targetY = e.clientY - rect.top + game.cameraY;
-            }
-          }
-
-          if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR) {
-            if (game.player.ammo > 0) {
-              game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
-              game.player.ammo--;
-              setPlayerAmmo(game.player.ammo);
-              playSound(SOUNDS.SHOOT);
-            }
-          } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER) {
-            if (game.player.tranqAmmo > 0) {
-              game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
-              game.player.tranqAmmo--;
-              setPlayerTranqAmmo(game.player.tranqAmmo);
-              playSound(SOUNDS.TRANQ_SHOOT);
-            }
-          }
-        };
-
+        // Attach event listeners using memoized handlers
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('click', handleClick);
         window.addEventListener('keydown', handleKeyDown);
@@ -3562,7 +3493,7 @@
           window.removeEventListener('keydown', handleKeyDown);
           window.removeEventListener('keyup', handleKeyUp);
         };
-      }, [gameState, currentLevel, playSound, showPauseMenu]);
+      }, [gameState, currentLevel, playSound, showPauseMenu, showSettingsMenu, difficulty, handleKeyDown, handleKeyUp, handleMouseMove, handleClick]);
 
       const startGame = useCallback(() => {
         setCurrentLevel(1);
@@ -3716,6 +3647,83 @@
           localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
         }
       }, [isTouchDevice, autoAim]);
+
+      // Game event handlers (memoized)
+      const handleKeyDown = useCallback((e) => {
+        const game = gameRef.current;
+        const key = e.key.toLowerCase();
+        game.keys[key] = true;
+
+        // Handle ESC to pause
+        if (key === 'escape') {
+          setShowPauseMenu(true);
+          playSound(SOUNDS.PAUSE);
+          return;
+        }
+
+        // Handle jump on spacebar press
+        if (key === ' ' && !game.player.isJumping) {
+          game.player.isJumping = true;
+          game.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
+          playSound(SOUNDS.JUMP);
+        }
+
+        // Handle weapon switching with Q key
+        if (key === 'q') {
+          game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER : GAME_CONSTANTS.WEAPON_TYPES.REGULAR;
+          setCurrentWeapon(game.player.currentWeapon);
+        }
+      }, [playSound]);
+
+      const handleKeyUp = useCallback((e) => {
+        const game = gameRef.current;
+        game.keys[e.key.toLowerCase()] = false;
+      }, []);
+
+      const handleMouseMove = useCallback((e) => {
+        const game = gameRef.current;
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        game.mouseX = e.clientX - rect.left + game.cameraX;
+        game.mouseY = e.clientY - rect.top + game.cameraY;
+      }, []);
+
+      const handleClick = useCallback((e) => {
+        const game = gameRef.current;
+        const canvas = canvasRef.current;
+        const rect = canvas.getBoundingClientRect();
+        let targetX = e.clientX - rect.left + game.cameraX;
+        let targetY = e.clientY - rect.top + game.cameraY;
+
+        // Use auto-aim if enabled
+        if (autoAim) {
+          const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
+          if (nearestDino) {
+            targetX = nearestDino.x;
+            targetY = nearestDino.y;
+          } else {
+            // Fallback to click position if no dinosaurs
+            targetX = e.clientX - rect.left + game.cameraX;
+            targetY = e.clientY - rect.top + game.cameraY;
+          }
+        }
+
+        if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR) {
+          if (game.player.ammo > 0) {
+            game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
+            game.player.ammo--;
+            setPlayerAmmo(game.player.ammo);
+            playSound(SOUNDS.SHOOT);
+          }
+        } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER) {
+          if (game.player.tranqAmmo > 0) {
+            game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
+            game.player.tranqAmmo--;
+            setPlayerTranqAmmo(game.player.tranqAmmo);
+            playSound(SOUNDS.TRANQ_SHOOT);
+          }
+        }
+      }, [autoAim, playSound]);
 
       const game = gameRef.current;
 
