@@ -192,12 +192,12 @@
      */
     const getSleepDuration = (dinoType) => {
       switch (dinoType) {
-        case 'raptor': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
-        case 'stego': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_STEGO;
-        case 'trex': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TREX;
-        case 'para': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_PARA;
-        case 'trike': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TRIKE;
-        case 'dilo': return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_DILO;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_STEGO;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TREX;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_PARA;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_TRIKE;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_DILO;
         default: return GAME_CONSTANTS.TRANQUILIZER.SLEEP_DURATION_RAPTOR;
       }
     };
@@ -310,6 +310,16 @@
       BULLET: {
         SPEED: 8,
         RADIUS: 4,
+      },
+
+      // Dinosaur Types
+      DINOSAUR_TYPES: {
+        VELOCIRAPTOR: 'raptor',
+        TYRANNOSAURUS_REX: 'trex',
+        STEGOSAURUS: 'stego',
+        PARASAUROLOPHUS: 'para',
+        TRICERATOPS: 'trike',
+        DILOPHOSAURUS: 'dilo',
       },
 
       // Tranquilizer
@@ -776,9 +786,9 @@
         1: {
           name: "The Beginning",
           dinosaurs: [
-            { type: 'raptor', count: 3, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-            { type: 'para', count: 2, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false }
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 3, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 2, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false }
           ],
           obstacles: 40,
           powerups: 3,
@@ -788,12 +798,12 @@
         2: {
           name: "Deeper Danger",
           dinosaurs: [
-            { type: 'raptor', count: 5, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-            { type: 'trex', count: 2, health: 4, speed: 1, size: 35, color: '#654321', points: 300, aggressive: true, territorial: false },
-            { type: 'stego', count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-            { type: 'dilo', count: 2, health: 3, speed: 1.3, size: 24, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
-            { type: 'para', count: 3, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false },
-            { type: 'trike', count: 2, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false, territorial: false }
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 5, health: 2, speed: 1.5, size: 20, color: '#8B4513', points: 100, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 2, health: 4, speed: 1, size: 35, color: '#654321', points: 300, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 2, health: 3, speed: 0.8, size: 30, color: '#556B2F', points: 200, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 2, health: 3, speed: 1.3, size: 24, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 3, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 2, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false, territorial: false }
           ],
           obstacles: 50,
           powerups: 4,
@@ -803,12 +813,12 @@
         3: {
           name: "Final Escape",
           dinosaurs: [
-            { type: 'raptor', count: 6, health: 2, speed: 1.7, size: 20, color: '#8B4513', points: 100, aggressive: true, territorial: false },
-            { type: 'trex', count: 3, health: 4, speed: 1.2, size: 35, color: '#654321', points: 300, aggressive: true, territorial: false },
-            { type: 'stego', count: 3, health: 3, speed: 0.9, size: 30, color: '#556B2F', points: 200, aggressive: true, territorial: false },
-            { type: 'dilo', count: 3, health: 3, speed: 1.3, size: 24, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
-            { type: 'para', count: 4, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false },
-            { type: 'trike', count: 3, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false, territorial: false }
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR, count: 6, health: 2, speed: 1.7, size: 20, color: '#8B4513', points: 100, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX, count: 3, health: 4, speed: 1.2, size: 35, color: '#654321', points: 300, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS, count: 3, health: 3, speed: 0.9, size: 30, color: '#556B2F', points: 200, aggressive: true, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS, count: 3, health: 3, speed: 1.3, size: 24, color: '#9ACD32', points: 150, aggressive: true, territorial: true },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS, count: 4, health: 2, speed: 1.2, size: 25, color: '#CD853F', points: 50, aggressive: false, territorial: false },
+            { type: GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS, count: 3, health: 3, speed: 0.9, size: 28, color: '#8B7355', points: 75, aggressive: false, territorial: false }
           ],
           obstacles: 60,
           powerups: 5,
@@ -1436,17 +1446,17 @@
 
                     // Determine shots needed based on dinosaur type
                     let shotsNeeded;
-                    if (dino.type === 'raptor') {
+                    if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR) {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_RAPTOR;
-                    } else if (dino.type === 'stego') {
+                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS) {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_STEGO;
-                    } else if (dino.type === 'trex') {
+                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX) {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TREX;
-                    } else if (dino.type === 'para') {
+                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS) {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_PARA;
-                    } else if (dino.type === 'trike') {
+                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS) {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TRIKE;
-                    } else if (dino.type === 'dilo') {
+                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS) {
                       shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_DILO;
                     }
 
@@ -2124,7 +2134,7 @@
               ctx.scale(-1, 1);
             }
 
-            if (dino.type === 'raptor') {
+            if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR) {
               // Velociraptor - lean, aggressive predator stance
               const scale = dino.size / 20;
 
@@ -2216,7 +2226,7 @@
                 ctx.stroke();
               }
 
-            } else if (dino.type === 'trex') {
+            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX) {
               // T-Rex - massive head, tiny arms, powerful build
               const scale = dino.size / 35;
 
@@ -2332,7 +2342,7 @@
               ctx.lineTo(14 * scale, 13 * scale);
               ctx.stroke();
 
-            } else if (dino.type === 'stego') {
+            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS) {
               // Stegosaurus - distinctive plates and spiked tail
               const scale = dino.size / 30;
 
@@ -2449,7 +2459,7 @@
               ctx.arc(34 * scale, 3 * scale, 3 * scale, 0, Math.PI);
               ctx.stroke();
 
-            } else if (dino.type === 'para') {
+            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS) {
               // Parasaurolophus - duck-billed herbivore with distinctive head crest
               const scale = dino.size / 25;
 
@@ -2517,7 +2527,7 @@
               ctx.arc(23 * scale, -10 * scale, 2 * scale, 0, Math.PI * 2);
               ctx.fill();
 
-            } else if (dino.type === 'trike') {
+            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS) {
               // Triceratops - three-horned herbivore with frill
               const scale = dino.size / 28;
 
@@ -2612,7 +2622,7 @@
               ctx.arc(30 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
               ctx.fill();
 
-            } else if (dino.type === 'dilo') {
+            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS) {
               // Dilophosaurus - spitting territorial predator with neck frill
               const scale = dino.size / 24;
 
