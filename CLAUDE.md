@@ -80,13 +80,16 @@ All UI components wrapped with `React.memo` to prevent unnecessary re-renders wh
 
 **Handler Memoization with useCallback:**
 
-All event handlers wrapped in `useCallback` to create stable function references:
+All event handlers wrapped in `useCallback` and organized into logical sections within the JurassicEscape component:
 
-- **Pause menu handlers**: `handleContinue`, `handleRestartLevel`, `handleExitToMenu`, `handleOpenSettingsFromPause`
-- **Settings menu handlers**: `handleSoundToggle`, `handleVolumeChange`, `handleViewportScaleChange`, `handleDifficultyChange`, `handleAutoAimToggle`
-- **Game event handlers**: `handleKeyDown`, `handleKeyUp`, `handleMouseMove`, `handleClick` (desktop controls)
-- **Touch control handlers**: `handleJoystickStart`, `handleJoystickMove`, `handleJoystickEnd`, `handleWeaponSwitch`, `handleJumpStart`, `handleShootStart`, `handleShootEnd`
-- **Game flow handlers**: `startGame`, `nextLevel`, `handlePauseClick`, `handleSettingsClick`
+- **Game Flow Handlers**: `startGame`, `nextLevel`
+- **Desktop Input Handlers**: `handleKeyDown`, `handleKeyUp`, `handleMouseMove`, `handleClick`
+- **Mobile Touch Handlers**: `handleJoystickStart`, `handleJoystickMove`, `handleJoystickEnd`, `handleWeaponSwitch`, `handleJumpStart`, `handleShootStart`, `handleShootEnd`
+- **UI Interaction Handlers**: `handlePauseClick`, `handleSettingsClick`, `handleOpenSettings`, `handleCloseSettings`
+- **Pause Menu Handlers**: `handleContinue`, `handleRestartLevel`, `handleExitToMenu`, `handleOpenSettingsFromPause`
+- **Settings Menu Handlers**: `handleSoundToggle`, `handleVolumeChange`, `handleViewportScaleChange`, `handleDifficultyChange`, `handleAutoAimToggle`
+
+Handlers are grouped with clear section comments for easy navigation within the single-file architecture.
 
 **State Batching Pattern:**
 
