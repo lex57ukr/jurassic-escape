@@ -203,6 +203,21 @@
     };
 
     /**
+     * Get tranquilizer shots needed for a dinosaur type
+     */
+    const getTranqShotsNeeded = (dinoType) => {
+      switch (dinoType) {
+        case GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_RAPTOR;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_STEGO;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TREX;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_PARA;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TRIKE;
+        case GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_DILO;
+        default: return GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_RAPTOR;
+      }
+    };
+
+    /**
      * Draw electric zap effect on an entity
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} screenX - Screen X position
@@ -1445,20 +1460,7 @@
                     playSound('tranq_hit');
 
                     // Determine shots needed based on dinosaur type
-                    let shotsNeeded;
-                    if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR) {
-                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_RAPTOR;
-                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS) {
-                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_STEGO;
-                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX) {
-                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TREX;
-                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS) {
-                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_PARA;
-                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS) {
-                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_TRIKE;
-                    } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS) {
-                      shotsNeeded = GAME_CONSTANTS.TRANQUILIZER.SHOTS_NEEDED_DILO;
-                    }
+                    const shotsNeeded = getTranqShotsNeeded(dino.type);
 
                     // Show hit indicator
                     game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `${dino.tranqHits}/${shotsNeeded}`, '#00FF00'));
