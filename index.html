@@ -1332,6 +1332,7 @@
         POWERUP_RADIUS: 12,
         TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
         TRANQ_DEPOT_RADIUS: 15,
+        TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
       },
 
       // Ammo Pickup
@@ -1966,7 +1967,7 @@
             x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
             y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
             radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
-            ammo: 5,
+            ammo: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_AMMO,
             active: true
           });
         }
