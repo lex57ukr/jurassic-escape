@@ -2616,6 +2616,154 @@
       );
     });
 
+    const SettingsMenu = React.memo(({
+      soundEnabled,
+      volume,
+      viewportScale,
+      difficulty,
+      autoAim,
+      isTouchDevice,
+      onSoundToggle,
+      onVolumeChange,
+      onViewportScaleChange,
+      onDifficultyChange,
+      onAutoAimToggle,
+      onClose
+    }) => {
+      return (
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-8 rounded-lg text-center shadow-xl max-w-md w-full mx-4">
+            <h2 className="text-3xl font-bold text-green-400 mb-6">SETTINGS</h2>
+            <div className="flex flex-col gap-4">
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{soundEnabled ? '🔊' : '🔇'}</span>
+                    <span className="text-white font-semibold text-lg">Sound</span>
+                  </div>
+                  <button
+                    onClick={onSoundToggle}
+                    className={`px-6 py-2 font-bold rounded-lg transition-colors ${
+                      soundEnabled
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                    }`}
+                  >
+                    {soundEnabled ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              </div>
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔊</span>
+                    <span className="text-white font-semibold text-lg">Volume</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={Math.round(volume * 100)}
+                      onChange={onVolumeChange}
+                      className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to right, #16a34a 0%, #16a34a ${volume * 100}%, #4b5563 ${volume * 100}%, #4b5563 100%)`
+                      }}
+                    />
+                    <span className="text-white font-semibold text-lg min-w-[3rem] text-right">
+                      {Math.round(volume * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">📐</span>
+                    <span className="text-white font-semibold text-lg">Viewport Size</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {Object.entries(VIEWPORT_SCALES).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => onViewportScaleChange(key)}
+                        className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
+                          viewportScale === key
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                        }`}
+                      >
+                        {config.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">⚔️</span>
+                    <span className="text-white font-semibold text-lg">Difficulty</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {Object.entries(DIFFICULTY_MODIFIERS).map(([key, config]) => (
+                      <button
+                        key={key}
+                        onClick={() => onDifficultyChange(key)}
+                        className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
+                          difficulty === key
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                        }`}
+                      >
+                        {config.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-sm text-gray-300 text-center mt-1">
+                    {difficulty === 'easy' && `7 ❤️  15 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  22 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Slower enemies  90f invincibility`}
+                    {difficulty === 'normal' && `5 ❤️  10 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  15 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Normal enemies  60f invincibility`}
+                    {difficulty === 'hard' && `3 ❤️  5 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  10 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Faster enemies  45f invincibility`}
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🎯</span>
+                    <span className="text-white font-semibold text-lg">Auto-Aim</span>
+                  </div>
+                  <button
+                    onClick={onAutoAimToggle}
+                    disabled={isTouchDevice}
+                    className={`px-6 py-2 font-bold rounded-lg transition-colors ${
+                      isTouchDevice
+                        ? 'bg-green-600 text-white opacity-60 cursor-not-allowed'
+                        : autoAim
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                    }`}
+                  >
+                    {autoAim ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-400 text-center mt-2">
+                  {isTouchDevice ? 'Always enabled on mobile' : 'Helpful for trackpad users'}
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    });
+
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
       const [gameState, setGameState] = useState(GAME_CONSTANTS.GAME_STATES.MENU);
@@ -3728,136 +3876,20 @@
 
           {/* Settings Menu Overlay */}
           {showSettingsMenu && (
-            <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-              <div className="bg-gray-800 p-8 rounded-lg text-center shadow-xl max-w-md w-full mx-4">
-                <h2 className="text-3xl font-bold text-green-400 mb-6">SETTINGS</h2>
-                <div className="flex flex-col gap-4">
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{soundEnabled ? '🔊' : '🔇'}</span>
-                        <span className="text-white font-semibold text-lg">Sound</span>
-                      </div>
-                      <button
-                        onClick={handleSoundToggle}
-                        className={`px-6 py-2 font-bold rounded-lg transition-colors ${
-                          soundEnabled
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                        }`}
-                      >
-                        {soundEnabled ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">🔊</span>
-                        <span className="text-white font-semibold text-lg">Volume</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={Math.round(volume * 100)}
-                          onChange={handleVolumeChange}
-                          className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
-                          style={{
-                            background: `linear-gradient(to right, #16a34a 0%, #16a34a ${volume * 100}%, #4b5563 ${volume * 100}%, #4b5563 100%)`
-                          }}
-                        />
-                        <span className="text-white font-semibold text-lg min-w-[3rem] text-right">
-                          {Math.round(volume * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">📐</span>
-                        <span className="text-white font-semibold text-lg">Viewport Size</span>
-                      </div>
-                      <div className="flex gap-2">
-                        {Object.entries(VIEWPORT_SCALES).map(([key, config]) => (
-                          <button
-                            key={key}
-                            onClick={() => handleViewportScaleChange(key)}
-                            className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
-                              viewportScale === key
-                                ? 'bg-green-600 hover:bg-green-700 text-white'
-                                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                            }`}
-                          >
-                            {config.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">⚔️</span>
-                        <span className="text-white font-semibold text-lg">Difficulty</span>
-                      </div>
-                      <div className="flex gap-2">
-                        {Object.entries(DIFFICULTY_MODIFIERS).map(([key, config]) => (
-                          <button
-                            key={key}
-                            onClick={() => handleDifficultyChange(key)}
-                            className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
-                              difficulty === key
-                                ? 'bg-green-600 hover:bg-green-700 text-white'
-                                : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                            }`}
-                          >
-                            {config.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="text-sm text-gray-300 text-center mt-1">
-                        {difficulty === 'easy' && `7 ❤️  15 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  22 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Slower enemies  90f invincibility`}
-                        {difficulty === 'normal' && `5 ❤️  10 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  15 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Normal enemies  60f invincibility`}
-                        {difficulty === 'hard' && `3 ❤️  5 ${GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON}  10 ${GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER_ICON}  Faster enemies  45f invincibility`}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">🎯</span>
-                        <span className="text-white font-semibold text-lg">Auto-Aim</span>
-                      </div>
-                      <button
-                        onClick={handleAutoAimToggle}
-                        disabled={isTouchDevice}
-                        className={`px-6 py-2 font-bold rounded-lg transition-colors ${
-                          isTouchDevice
-                            ? 'bg-green-600 text-white opacity-60 cursor-not-allowed'
-                            : autoAim
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                        }`}
-                      >
-                        {autoAim ? 'ON' : 'OFF'}
-                      </button>
-                    </div>
-                    <div className="text-xs text-gray-400 text-center mt-2">
-                      {isTouchDevice ? 'Always enabled on mobile' : 'Helpful for trackpad users'}
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleCloseSettings}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
+            <SettingsMenu
+              soundEnabled={soundEnabled}
+              volume={volume}
+              viewportScale={viewportScale}
+              difficulty={difficulty}
+              autoAim={autoAim}
+              isTouchDevice={isTouchDevice}
+              onSoundToggle={handleSoundToggle}
+              onVolumeChange={handleVolumeChange}
+              onViewportScaleChange={handleViewportScaleChange}
+              onDifficultyChange={handleDifficultyChange}
+              onAutoAimToggle={handleAutoAimToggle}
+              onClose={handleCloseSettings}
+            />
           )}
         </div>
       );
