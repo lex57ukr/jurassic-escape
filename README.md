@@ -41,6 +41,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - Navigate through the prehistoric park
 - Avoid or eliminate dinosaurs
 - Collect powerups and ammo
+- **Defeat exit guards** protecting each level's exit (🔒 locked until guards are defeated)
 - Reach the golden EXIT zone to complete each level
 - Survive all 3 levels to win!
 
@@ -89,7 +90,17 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 ## 🎯 Features
 
-- **Three challenging levels** with increasing difficulty and hazards
+- **Three challenging levels** with progressively larger worlds and increasing difficulty
+  - Level 1: 2400x1800 (compact starting area)
+  - Level 2: 3600x2700 (50% larger exploration zone)
+  - Level 3: 4800x3600 (epic 2x sized final challenge)
+- **Exit guard boss fights**: Each level's exit is protected by guard dinosaurs
+  - Level 1: 3 Velociraptors
+  - Level 2: 3 Velociraptors + 1 Dilophosaurus
+  - Level 3: 3 Velociraptors + 1 Dilophosaurus + 1 T-Rex (ultimate boss fight)
+  - Exit shows 🔒 lock icon when guards are active
+  - Guards patrol 300-pixel territory around exit (larger than normal territories)
+  - Defeat all guards to unlock the golden exit
 - **Environmental hazards**: Tar pits that slow movement and electric fences that damage/stun
 - **Dual weapon system**: Regular gun and tranquilizer dart
   - **Tranquilizer**: Non-lethal option that puts dinosaurs to sleep
