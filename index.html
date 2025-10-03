@@ -218,6 +218,598 @@
     };
 
     /**
+     * Draw Tyrannosaurus Rex - massive head, tiny arms, powerful build
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     */
+    const drawTyrannosaurusRex = (ctx, scale) => {
+      // Tail (thick and powerful)
+      ctx.fillStyle = '#2E7D32';
+      ctx.beginPath();
+      ctx.moveTo(-20 * scale, 0);
+      ctx.quadraticCurveTo(-40 * scale, 5 * scale, -50 * scale, 0);
+      ctx.lineTo(-48 * scale, 3 * scale);
+      ctx.quadraticCurveTo(-38 * scale, 8 * scale, -20 * scale, 5 * scale);
+      ctx.fill();
+
+      // Massive leg
+      ctx.fillStyle = '#1B5E20';
+      ctx.beginPath();
+      ctx.ellipse(-10 * scale, 12 * scale, 10 * scale, 15 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lower leg
+      ctx.fillStyle = '#2E7D32';
+      ctx.fillRect(-13 * scale, 22 * scale, 6 * scale, 12 * scale);
+
+      // Large foot
+      ctx.fillStyle = '#1B5E20';
+      ctx.beginPath();
+      ctx.ellipse(-10 * scale, 34 * scale, 8 * scale, 4 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Three-toed claws
+      ctx.fillStyle = '#000';
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-10 * scale + i * 4 * scale, 34 * scale);
+        ctx.lineTo(-10 * scale + i * 5 * scale, 38 * scale);
+        ctx.lineTo(-10 * scale + i * 3 * scale, 36 * scale);
+        ctx.fill();
+      }
+
+      // Body (massive and robust)
+      ctx.fillStyle = '#388E3C';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 25 * scale, 18 * scale, -Math.PI * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Chest (lighter belly)
+      ctx.fillStyle = '#81C784';
+      ctx.beginPath();
+      ctx.ellipse(5 * scale, 5 * scale, 15 * scale, 12 * scale, -Math.PI * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Neck (thick)
+      ctx.fillStyle = '#388E3C';
+      ctx.beginPath();
+      ctx.ellipse(18 * scale, -8 * scale, 10 * scale, 8 * scale, Math.PI * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // MASSIVE head
+      ctx.fillStyle = '#2E7D32';
+      ctx.beginPath();
+      ctx.ellipse(32 * scale, -12 * scale, 18 * scale, 12 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lower jaw
+      ctx.fillStyle = '#1B5E20';
+      ctx.beginPath();
+      ctx.ellipse(35 * scale, -5 * scale, 15 * scale, 6 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye (small and menacing)
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(28 * scale, -16 * scale, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#8B0000';
+      ctx.beginPath();
+      ctx.arc(29 * scale, -16 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nostril
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(42 * scale, -10 * scale, 2 * scale, 1.5 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Large teeth
+      ctx.fillStyle = '#FFF';
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(25 * scale + i * 3.5 * scale, -8 * scale);
+        ctx.lineTo(26 * scale + i * 3.5 * scale, -15 * scale);
+        ctx.lineTo(27 * scale + i * 3.5 * scale, -8 * scale);
+        ctx.fill();
+
+        // Bottom teeth
+        ctx.beginPath();
+        ctx.moveTo(25 * scale + i * 3.5 * scale, -2 * scale);
+        ctx.lineTo(26 * scale + i * 3.5 * scale, 2 * scale);
+        ctx.lineTo(27 * scale + i * 3.5 * scale, -2 * scale);
+        ctx.fill();
+      }
+
+      // Comically tiny arms
+      ctx.fillStyle = '#388E3C';
+      ctx.beginPath();
+      ctx.ellipse(12 * scale, 6 * scale, 3 * scale, 6 * scale, Math.PI * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tiny claws
+      ctx.strokeStyle = '#1B5E20';
+      ctx.lineWidth = 1 * scale;
+      ctx.beginPath();
+      ctx.moveTo(13 * scale, 11 * scale);
+      ctx.lineTo(14 * scale, 13 * scale);
+      ctx.stroke();
+    };
+
+    /**
+     * Draw Velociraptor - lean, aggressive predator stance
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     */
+    const drawVelociraptor = (ctx, scale) => {
+      // Tail (long and curved upward)
+      ctx.fillStyle = '#CD7F32';
+      ctx.beginPath();
+      ctx.moveTo(-15 * scale, 2 * scale);
+      ctx.quadraticCurveTo(-30 * scale, -5 * scale, -40 * scale, -10 * scale);
+      ctx.lineTo(-38 * scale, -7 * scale);
+      ctx.quadraticCurveTo(-28 * scale, -3 * scale, -15 * scale, 4 * scale);
+      ctx.fill();
+
+      // Back leg (powerful haunches)
+      ctx.fillStyle = '#B8860B';
+      ctx.beginPath();
+      ctx.ellipse(-8 * scale, 8 * scale, 6 * scale, 10 * scale, Math.PI * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lower leg
+      ctx.fillStyle = '#CD7F32';
+      ctx.fillRect(-10 * scale, 15 * scale, 3 * scale, 8 * scale);
+
+      // Clawed foot
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      ctx.moveTo(-12 * scale, 23 * scale);
+      ctx.lineTo(-10 * scale, 20 * scale);
+      ctx.lineTo(-8 * scale, 23 * scale);
+      ctx.lineTo(-10 * scale, 24 * scale);
+      ctx.fill();
+
+      // Body (lean and muscular)
+      ctx.fillStyle = '#DAA520';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18 * scale, 10 * scale, -Math.PI * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Neck
+      ctx.fillStyle = '#DAA520';
+      ctx.beginPath();
+      ctx.ellipse(12 * scale, -5 * scale, 6 * scale, 5 * scale, Math.PI * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head (elongated snout)
+      ctx.fillStyle = '#CD7F32';
+      ctx.beginPath();
+      ctx.ellipse(20 * scale, -8 * scale, 10 * scale, 6 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Snout detail
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      ctx.ellipse(26 * scale, -8 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye (predatory)
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.ellipse(18 * scale, -10 * scale, 3 * scale, 4 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(19 * scale, -10 * scale, 1.5 * scale, 2 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Teeth
+      ctx.strokeStyle = '#FFF';
+      ctx.lineWidth = 1.5 * scale;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(20 * scale + i * 2 * scale, -6 * scale);
+        ctx.lineTo(20 * scale + i * 2 * scale, -4 * scale);
+        ctx.stroke();
+      }
+
+      // Small arms
+      ctx.fillStyle = '#CD7F32';
+      ctx.beginPath();
+      ctx.ellipse(8 * scale, 4 * scale, 3 * scale, 5 * scale, Math.PI * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Stripes on back
+      ctx.strokeStyle = '#8B4513';
+      ctx.lineWidth = 2 * scale;
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-5 * scale + i * 6 * scale, -8 * scale);
+        ctx.lineTo(-8 * scale + i * 6 * scale, -2 * scale);
+        ctx.stroke();
+      }
+    };
+
+    /**
+     * Draw Stegosaurus - distinctive plates and spiked tail
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     */
+    const drawStegosaurus = (ctx, scale) => {
+      // Tail with spikes
+      ctx.fillStyle = '#7B1FA2';
+      ctx.beginPath();
+      ctx.moveTo(-18 * scale, 2 * scale);
+      ctx.quadraticCurveTo(-35 * scale, -2 * scale, -45 * scale, -5 * scale);
+      ctx.lineTo(-43 * scale, -2 * scale);
+      ctx.quadraticCurveTo(-33 * scale, 1 * scale, -18 * scale, 5 * scale);
+      ctx.fill();
+
+      // Tail spikes (thagomizer)
+      ctx.fillStyle = '#F06292';
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-35 * scale - i * 5 * scale, -3 * scale);
+        ctx.lineTo(-38 * scale - i * 5 * scale, -12 * scale);
+        ctx.lineTo(-32 * scale - i * 5 * scale, -5 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#C2185B';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Back legs (sturdy)
+      ctx.fillStyle = '#6A1B9A';
+      ctx.fillRect(-12 * scale, 10 * scale, 8 * scale, 12 * scale);
+      ctx.fillRect(-2 * scale, 10 * scale, 8 * scale, 12 * scale);
+
+      // Feet
+      ctx.fillStyle = '#4A148C';
+      ctx.fillRect(-13 * scale, 22 * scale, 10 * scale, 3 * scale);
+      ctx.fillRect(-3 * scale, 22 * scale, 10 * scale, 3 * scale);
+
+      // Front legs (shorter)
+      ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
+      ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
+
+      // Body (large and rounded)
+      ctx.fillStyle = '#9C27B0';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 28 * scale, 14 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Belly (lighter)
+      ctx.fillStyle = '#BA68C8';
+      ctx.beginPath();
+      ctx.ellipse(0, 6 * scale, 22 * scale, 10 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Distinctive back plates (alternating heights)
+      for (let i = 0; i < 7; i++) {
+        const isHigh = i % 2 === 0;
+        const height = isHigh ? 22 : 16;
+        const xPos = -15 * scale + i * 6 * scale;
+
+        ctx.fillStyle = '#E91E63';
+        ctx.beginPath();
+        ctx.moveTo(xPos - 3 * scale, -8 * scale);
+        ctx.lineTo(xPos, -height * scale);
+        ctx.lineTo(xPos + 3 * scale, -8 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Plate outline and details
+        ctx.strokeStyle = '#C2185B';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Inner detail
+        ctx.strokeStyle = '#F48FB1';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(xPos - 1.5 * scale, -8 * scale);
+        ctx.lineTo(xPos, -(height - 2) * scale);
+        ctx.lineTo(xPos + 1.5 * scale, -8 * scale);
+        ctx.stroke();
+      }
+
+      // Neck
+      ctx.fillStyle = '#9C27B0';
+      ctx.beginPath();
+      ctx.ellipse(20 * scale, -2 * scale, 8 * scale, 6 * scale, -Math.PI * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head (small and low)
+      ctx.fillStyle = '#7B1FA2';
+      ctx.beginPath();
+      ctx.ellipse(30 * scale, 0, 8 * scale, 6 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye (gentle herbivore)
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(32 * scale, -2 * scale, 3 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(33 * scale, -2 * scale, 1.5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nostril
+      ctx.fillStyle = '#4A148C';
+      ctx.beginPath();
+      ctx.arc(36 * scale, 1 * scale, 1.5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak-like mouth
+      ctx.strokeStyle = '#4A148C';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(34 * scale, 3 * scale, 3 * scale, 0, Math.PI);
+      ctx.stroke();
+    };
+
+    /**
+     * Draw Parasaurolophus - duck-billed herbivore with distinctive head crest
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     */
+    const drawParasaurolophus = (ctx, scale) => {
+      // Tail
+      ctx.fillStyle = '#D2691E';
+      ctx.beginPath();
+      ctx.moveTo(-12 * scale, 0);
+      ctx.quadraticCurveTo(-25 * scale, 2 * scale, -35 * scale, 0);
+      ctx.lineTo(-33 * scale, 2 * scale);
+      ctx.quadraticCurveTo(-23 * scale, 4 * scale, -12 * scale, 2 * scale);
+      ctx.fill();
+
+      // Hind legs
+      ctx.fillStyle = '#CD853F';
+      ctx.fillRect(-10 * scale, 8 * scale, 5 * scale, 10 * scale);
+      ctx.fillRect(-2 * scale, 8 * scale, 5 * scale, 10 * scale);
+
+      // Front legs
+      ctx.fillRect(8 * scale, 10 * scale, 4 * scale, 8 * scale);
+      ctx.fillRect(14 * scale, 10 * scale, 4 * scale, 8 * scale);
+
+      // Body
+      ctx.fillStyle = '#DEB887';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 20 * scale, 12 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Belly
+      ctx.fillStyle = '#F4A460';
+      ctx.beginPath();
+      ctx.ellipse(0, 5 * scale, 15 * scale, 8 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Neck
+      ctx.fillStyle = '#DEB887';
+      ctx.beginPath();
+      ctx.ellipse(15 * scale, -5 * scale, 7 * scale, 6 * scale, -Math.PI * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head with duck bill
+      ctx.fillStyle = '#CD853F';
+      ctx.beginPath();
+      ctx.ellipse(22 * scale, -8 * scale, 8 * scale, 6 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Duck bill
+      ctx.fillStyle = '#8B6914';
+      ctx.beginPath();
+      ctx.ellipse(28 * scale, -8 * scale, 5 * scale, 4 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Distinctive head crest (swept back)
+      ctx.fillStyle = '#B8860B';
+      ctx.beginPath();
+      ctx.moveTo(20 * scale, -12 * scale);
+      ctx.quadraticCurveTo(15 * scale, -18 * scale, 10 * scale, -15 * scale);
+      ctx.lineTo(12 * scale, -13 * scale);
+      ctx.quadraticCurveTo(16 * scale, -15 * scale, 20 * scale, -10 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(23 * scale, -10 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    /**
+     * Draw Triceratops - three-horned herbivore with frill
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     */
+    const drawTriceratops = (ctx, scale) => {
+      // Tail
+      ctx.fillStyle = '#A0826D';
+      ctx.beginPath();
+      ctx.moveTo(-15 * scale, 2 * scale);
+      ctx.quadraticCurveTo(-28 * scale, 0, -35 * scale, -2 * scale);
+      ctx.lineTo(-33 * scale, 0);
+      ctx.quadraticCurveTo(-26 * scale, 2 * scale, -15 * scale, 4 * scale);
+      ctx.fill();
+
+      // Hind legs (sturdy)
+      ctx.fillStyle = '#8B7355';
+      ctx.fillRect(-12 * scale, 10 * scale, 7 * scale, 12 * scale);
+      ctx.fillRect(-2 * scale, 10 * scale, 7 * scale, 12 * scale);
+
+      // Front legs (shorter, sturdier)
+      ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
+      ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
+
+      // Body (massive)
+      ctx.fillStyle = '#D2B48C';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 22 * scale, 14 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Belly
+      ctx.fillStyle = '#F5DEB3';
+      ctx.beginPath();
+      ctx.ellipse(0, 6 * scale, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Neck/shoulders
+      ctx.fillStyle = '#D2B48C';
+      ctx.beginPath();
+      ctx.ellipse(18 * scale, -2 * scale, 10 * scale, 8 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Frill (distinctive bony collar)
+      ctx.fillStyle = '#CD853F';
+      ctx.beginPath();
+      ctx.ellipse(22 * scale, -8 * scale, 12 * scale, 10 * scale, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+
+      // Frill outline
+      ctx.strokeStyle = '#8B6914';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(22 * scale, -8 * scale, 12 * scale, 10 * scale, 0, Math.PI, Math.PI * 2);
+      ctx.stroke();
+
+      // Head
+      ctx.fillStyle = '#A0826D';
+      ctx.beginPath();
+      ctx.ellipse(28 * scale, -2 * scale, 10 * scale, 7 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak
+      ctx.fillStyle = '#8B6914';
+      ctx.beginPath();
+      ctx.ellipse(35 * scale, -1 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nose horn (short)
+      ctx.fillStyle = '#696969';
+      ctx.beginPath();
+      ctx.moveTo(33 * scale, -3 * scale);
+      ctx.lineTo(35 * scale, -8 * scale);
+      ctx.lineTo(37 * scale, -3 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      // Two brow horns (longer)
+      ctx.beginPath();
+      ctx.moveTo(26 * scale, -6 * scale);
+      ctx.lineTo(25 * scale, -14 * scale);
+      ctx.lineTo(28 * scale, -6 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(30 * scale, -6 * scale);
+      ctx.lineTo(29 * scale, -14 * scale);
+      ctx.lineTo(32 * scale, -6 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(30 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    /**
+     * Draw Dilophosaurus - spitting territorial predator with expandable neck frill
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     * @param {string} aiState - AI state ('chase' causes frill to expand)
+     */
+    const drawDilophosaurus = (ctx, scale, aiState) => {
+      // Tail
+      ctx.fillStyle = '#7FFF00';
+      ctx.beginPath();
+      ctx.moveTo(-10 * scale, 0);
+      ctx.quadraticCurveTo(-22 * scale, -2 * scale, -30 * scale, -5 * scale);
+      ctx.lineTo(-28 * scale, -3 * scale);
+      ctx.quadraticCurveTo(-20 * scale, 0, -10 * scale, 2 * scale);
+      ctx.fill();
+
+      // Hind legs
+      ctx.fillStyle = '#9ACD32';
+      ctx.fillRect(-8 * scale, 6 * scale, 4 * scale, 10 * scale);
+      ctx.fillRect(-2 * scale, 6 * scale, 4 * scale, 10 * scale);
+
+      // Front legs (shorter)
+      ctx.fillRect(6 * scale, 8 * scale, 3 * scale, 8 * scale);
+      ctx.fillRect(11 * scale, 8 * scale, 3 * scale, 8 * scale);
+
+      // Body (lean predator)
+      ctx.fillStyle = '#ADFF2F';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Black spots/stripes
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(-5 * scale, -3 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.arc(2 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.arc(-8 * scale, 2 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Neck
+      ctx.fillStyle = '#ADFF2F';
+      ctx.beginPath();
+      ctx.ellipse(12 * scale, -6 * scale, 6 * scale, 5 * scale, -Math.PI * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = '#9ACD32';
+      ctx.beginPath();
+      ctx.ellipse(20 * scale, -10 * scale, 7 * scale, 5 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Distinctive neck frill (colorful, expanded when aggressive)
+      const frillExpanded = aiState === 'chase';
+      const frillSize = frillExpanded ? 10 : 7;
+      ctx.fillStyle = frillExpanded ? '#FF6347' : '#FFA07A';
+      ctx.beginPath();
+      ctx.arc(14 * scale, -8 * scale, frillSize * scale, Math.PI * 0.7, Math.PI * 1.3);
+      ctx.fill();
+
+      // Frill outline
+      ctx.strokeStyle = '#FF4500';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(14 * scale, -8 * scale, frillSize * scale, Math.PI * 0.7, Math.PI * 1.3);
+      ctx.stroke();
+
+      // Snout
+      ctx.fillStyle = '#7FFF00';
+      ctx.beginPath();
+      ctx.ellipse(26 * scale, -10 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye (predatory)
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(21 * scale, -11 * scale, 2 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc(21.5 * scale, -11 * scale, 1 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Teeth
+      ctx.fillStyle = '#FFF';
+      for (let i = 0; i < 4; i++) {
+        ctx.fillRect((24 + i * 1.5) * scale, -9 * scale, 0.8 * scale, 2 * scale);
+      }
+    };
+
+    /**
      * Draw electric zap effect on an entity
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} screenX - Screen X position
@@ -2136,578 +2728,25 @@
               ctx.scale(-1, 1);
             }
 
-            if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR) {
-              // Velociraptor - lean, aggressive predator stance
-              const scale = dino.size / 20;
-
-              // Tail (long and curved upward)
-              ctx.fillStyle = '#CD7F32';
-              ctx.beginPath();
-              ctx.moveTo(-15 * scale, 2 * scale);
-              ctx.quadraticCurveTo(-30 * scale, -5 * scale, -40 * scale, -10 * scale);
-              ctx.lineTo(-38 * scale, -7 * scale);
-              ctx.quadraticCurveTo(-28 * scale, -3 * scale, -15 * scale, 4 * scale);
-              ctx.fill();
-
-              // Back leg (powerful haunches)
-              ctx.fillStyle = '#B8860B';
-              ctx.beginPath();
-              ctx.ellipse(-8 * scale, 8 * scale, 6 * scale, 10 * scale, Math.PI * 0.2, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Lower leg
-              ctx.fillStyle = '#CD7F32';
-              ctx.fillRect(-10 * scale, 15 * scale, 3 * scale, 8 * scale);
-
-              // Clawed foot
-              ctx.fillStyle = '#8B4513';
-              ctx.beginPath();
-              ctx.moveTo(-12 * scale, 23 * scale);
-              ctx.lineTo(-10 * scale, 20 * scale);
-              ctx.lineTo(-8 * scale, 23 * scale);
-              ctx.lineTo(-10 * scale, 24 * scale);
-              ctx.fill();
-
-              // Body (lean and muscular)
-              ctx.fillStyle = '#DAA520';
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 18 * scale, 10 * scale, -Math.PI * 0.1, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Neck
-              ctx.fillStyle = '#DAA520';
-              ctx.beginPath();
-              ctx.ellipse(12 * scale, -5 * scale, 6 * scale, 5 * scale, Math.PI * 0.3, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Head (elongated snout)
-              ctx.fillStyle = '#CD7F32';
-              ctx.beginPath();
-              ctx.ellipse(20 * scale, -8 * scale, 10 * scale, 6 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Snout detail
-              ctx.fillStyle = '#8B4513';
-              ctx.beginPath();
-              ctx.ellipse(26 * scale, -8 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Eye (predatory)
-              ctx.fillStyle = '#FFD700';
-              ctx.beginPath();
-              ctx.ellipse(18 * scale, -10 * scale, 3 * scale, 4 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#000';
-              ctx.beginPath();
-              ctx.ellipse(19 * scale, -10 * scale, 1.5 * scale, 2 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Teeth
-              ctx.strokeStyle = '#FFF';
-              ctx.lineWidth = 1.5 * scale;
-              for (let i = 0; i < 5; i++) {
-                ctx.beginPath();
-                ctx.moveTo(20 * scale + i * 2 * scale, -6 * scale);
-                ctx.lineTo(20 * scale + i * 2 * scale, -4 * scale);
-                ctx.stroke();
-              }
-
-              // Small arms
-              ctx.fillStyle = '#CD7F32';
-              ctx.beginPath();
-              ctx.ellipse(8 * scale, 4 * scale, 3 * scale, 5 * scale, Math.PI * 0.5, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Stripes on back
-              ctx.strokeStyle = '#8B4513';
-              ctx.lineWidth = 2 * scale;
-              for (let i = 0; i < 4; i++) {
-                ctx.beginPath();
-                ctx.moveTo(-5 * scale + i * 6 * scale, -8 * scale);
-                ctx.lineTo(-8 * scale + i * 6 * scale, -2 * scale);
-                ctx.stroke();
-              }
-
-            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX) {
-              // T-Rex - massive head, tiny arms, powerful build
-              const scale = dino.size / 35;
-
-              // Tail (thick and powerful)
-              ctx.fillStyle = '#2E7D32';
-              ctx.beginPath();
-              ctx.moveTo(-20 * scale, 0);
-              ctx.quadraticCurveTo(-40 * scale, 5 * scale, -50 * scale, 0);
-              ctx.lineTo(-48 * scale, 3 * scale);
-              ctx.quadraticCurveTo(-38 * scale, 8 * scale, -20 * scale, 5 * scale);
-              ctx.fill();
-
-              // Massive leg
-              ctx.fillStyle = '#1B5E20';
-              ctx.beginPath();
-              ctx.ellipse(-10 * scale, 12 * scale, 10 * scale, 15 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Lower leg
-              ctx.fillStyle = '#2E7D32';
-              ctx.fillRect(-13 * scale, 22 * scale, 6 * scale, 12 * scale);
-
-              // Large foot
-              ctx.fillStyle = '#1B5E20';
-              ctx.beginPath();
-              ctx.ellipse(-10 * scale, 34 * scale, 8 * scale, 4 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Three-toed claws
-              ctx.fillStyle = '#000';
-              for (let i = -1; i <= 1; i++) {
-                ctx.beginPath();
-                ctx.moveTo(-10 * scale + i * 4 * scale, 34 * scale);
-                ctx.lineTo(-10 * scale + i * 5 * scale, 38 * scale);
-                ctx.lineTo(-10 * scale + i * 3 * scale, 36 * scale);
-                ctx.fill();
-              }
-
-              // Body (massive and robust)
-              ctx.fillStyle = '#388E3C';
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 25 * scale, 18 * scale, -Math.PI * 0.15, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Chest (lighter belly)
-              ctx.fillStyle = '#81C784';
-              ctx.beginPath();
-              ctx.ellipse(5 * scale, 5 * scale, 15 * scale, 12 * scale, -Math.PI * 0.15, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Neck (thick)
-              ctx.fillStyle = '#388E3C';
-              ctx.beginPath();
-              ctx.ellipse(18 * scale, -8 * scale, 10 * scale, 8 * scale, Math.PI * 0.4, 0, Math.PI * 2);
-              ctx.fill();
-
-              // MASSIVE head
-              ctx.fillStyle = '#2E7D32';
-              ctx.beginPath();
-              ctx.ellipse(32 * scale, -12 * scale, 18 * scale, 12 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Lower jaw
-              ctx.fillStyle = '#1B5E20';
-              ctx.beginPath();
-              ctx.ellipse(35 * scale, -5 * scale, 15 * scale, 6 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Eye (small and menacing)
-              ctx.fillStyle = '#FFF';
-              ctx.beginPath();
-              ctx.arc(28 * scale, -16 * scale, 4 * scale, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#8B0000';
-              ctx.beginPath();
-              ctx.arc(29 * scale, -16 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Nostril
-              ctx.fillStyle = '#000';
-              ctx.beginPath();
-              ctx.ellipse(42 * scale, -10 * scale, 2 * scale, 1.5 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Large teeth
-              ctx.fillStyle = '#FFF';
-              for (let i = 0; i < 8; i++) {
-                ctx.beginPath();
-                ctx.moveTo(25 * scale + i * 3.5 * scale, -8 * scale);
-                ctx.lineTo(26 * scale + i * 3.5 * scale, -15 * scale);
-                ctx.lineTo(27 * scale + i * 3.5 * scale, -8 * scale);
-                ctx.fill();
-
-                // Bottom teeth
-                ctx.beginPath();
-                ctx.moveTo(25 * scale + i * 3.5 * scale, -2 * scale);
-                ctx.lineTo(26 * scale + i * 3.5 * scale, 2 * scale);
-                ctx.lineTo(27 * scale + i * 3.5 * scale, -2 * scale);
-                ctx.fill();
-              }
-
-              // Comically tiny arms
-              ctx.fillStyle = '#388E3C';
-              ctx.beginPath();
-              ctx.ellipse(12 * scale, 6 * scale, 3 * scale, 6 * scale, Math.PI * 0.3, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Tiny claws
-              ctx.strokeStyle = '#1B5E20';
-              ctx.lineWidth = 1 * scale;
-              ctx.beginPath();
-              ctx.moveTo(13 * scale, 11 * scale);
-              ctx.lineTo(14 * scale, 13 * scale);
-              ctx.stroke();
-
-            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS) {
-              // Stegosaurus - distinctive plates and spiked tail
-              const scale = dino.size / 30;
-
-              // Tail with spikes
-              ctx.fillStyle = '#7B1FA2';
-              ctx.beginPath();
-              ctx.moveTo(-18 * scale, 2 * scale);
-              ctx.quadraticCurveTo(-35 * scale, -2 * scale, -45 * scale, -5 * scale);
-              ctx.lineTo(-43 * scale, -2 * scale);
-              ctx.quadraticCurveTo(-33 * scale, 1 * scale, -18 * scale, 5 * scale);
-              ctx.fill();
-
-              // Tail spikes (thagomizer)
-              ctx.fillStyle = '#F06292';
-              for (let i = 0; i < 4; i++) {
-                ctx.beginPath();
-                ctx.moveTo(-35 * scale - i * 5 * scale, -3 * scale);
-                ctx.lineTo(-38 * scale - i * 5 * scale, -12 * scale);
-                ctx.lineTo(-32 * scale - i * 5 * scale, -5 * scale);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#C2185B';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-              }
-
-              // Back legs (sturdy)
-              ctx.fillStyle = '#6A1B9A';
-              ctx.fillRect(-12 * scale, 10 * scale, 8 * scale, 12 * scale);
-              ctx.fillRect(-2 * scale, 10 * scale, 8 * scale, 12 * scale);
-
-              // Feet
-              ctx.fillStyle = '#4A148C';
-              ctx.fillRect(-13 * scale, 22 * scale, 10 * scale, 3 * scale);
-              ctx.fillRect(-3 * scale, 22 * scale, 10 * scale, 3 * scale);
-
-              // Front legs (shorter)
-              ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
-              ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
-
-              // Body (large and rounded)
-              ctx.fillStyle = '#9C27B0';
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 28 * scale, 14 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Belly (lighter)
-              ctx.fillStyle = '#BA68C8';
-              ctx.beginPath();
-              ctx.ellipse(0, 6 * scale, 22 * scale, 10 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Distinctive back plates (alternating heights)
-              for (let i = 0; i < 7; i++) {
-                const isHigh = i % 2 === 0;
-                const height = isHigh ? 22 : 16;
-                const xPos = -15 * scale + i * 6 * scale;
-
-                ctx.fillStyle = '#E91E63';
-                ctx.beginPath();
-                ctx.moveTo(xPos - 3 * scale, -8 * scale);
-                ctx.lineTo(xPos, -height * scale);
-                ctx.lineTo(xPos + 3 * scale, -8 * scale);
-                ctx.closePath();
-                ctx.fill();
-
-                // Plate outline and details
-                ctx.strokeStyle = '#C2185B';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-
-                // Inner detail
-                ctx.strokeStyle = '#F48FB1';
-                ctx.lineWidth = 0.8;
-                ctx.beginPath();
-                ctx.moveTo(xPos - 1.5 * scale, -8 * scale);
-                ctx.lineTo(xPos, -(height - 2) * scale);
-                ctx.lineTo(xPos + 1.5 * scale, -8 * scale);
-                ctx.stroke();
-              }
-
-              // Neck
-              ctx.fillStyle = '#9C27B0';
-              ctx.beginPath();
-              ctx.ellipse(20 * scale, -2 * scale, 8 * scale, 6 * scale, -Math.PI * 0.3, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Head (small and low)
-              ctx.fillStyle = '#7B1FA2';
-              ctx.beginPath();
-              ctx.ellipse(30 * scale, 0, 8 * scale, 6 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Eye (gentle herbivore)
-              ctx.fillStyle = '#FFF';
-              ctx.beginPath();
-              ctx.arc(32 * scale, -2 * scale, 3 * scale, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#000';
-              ctx.beginPath();
-              ctx.arc(33 * scale, -2 * scale, 1.5 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Nostril
-              ctx.fillStyle = '#4A148C';
-              ctx.beginPath();
-              ctx.arc(36 * scale, 1 * scale, 1.5 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Beak-like mouth
-              ctx.strokeStyle = '#4A148C';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.arc(34 * scale, 3 * scale, 3 * scale, 0, Math.PI);
-              ctx.stroke();
-
-            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS) {
-              // Parasaurolophus - duck-billed herbivore with distinctive head crest
-              const scale = dino.size / 25;
-
-              // Tail
-              ctx.fillStyle = '#D2691E';
-              ctx.beginPath();
-              ctx.moveTo(-12 * scale, 0);
-              ctx.quadraticCurveTo(-25 * scale, 2 * scale, -35 * scale, 0);
-              ctx.lineTo(-33 * scale, 2 * scale);
-              ctx.quadraticCurveTo(-23 * scale, 4 * scale, -12 * scale, 2 * scale);
-              ctx.fill();
-
-              // Hind legs
-              ctx.fillStyle = '#CD853F';
-              ctx.fillRect(-10 * scale, 8 * scale, 5 * scale, 10 * scale);
-              ctx.fillRect(-2 * scale, 8 * scale, 5 * scale, 10 * scale);
-
-              // Front legs
-              ctx.fillRect(8 * scale, 10 * scale, 4 * scale, 8 * scale);
-              ctx.fillRect(14 * scale, 10 * scale, 4 * scale, 8 * scale);
-
-              // Body
-              ctx.fillStyle = '#DEB887';
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 20 * scale, 12 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Belly
-              ctx.fillStyle = '#F4A460';
-              ctx.beginPath();
-              ctx.ellipse(0, 5 * scale, 15 * scale, 8 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Neck
-              ctx.fillStyle = '#DEB887';
-              ctx.beginPath();
-              ctx.ellipse(15 * scale, -5 * scale, 7 * scale, 6 * scale, -Math.PI * 0.2, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Head with duck bill
-              ctx.fillStyle = '#CD853F';
-              ctx.beginPath();
-              ctx.ellipse(22 * scale, -8 * scale, 8 * scale, 6 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Duck bill
-              ctx.fillStyle = '#8B6914';
-              ctx.beginPath();
-              ctx.ellipse(28 * scale, -8 * scale, 5 * scale, 4 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Distinctive head crest (swept back)
-              ctx.fillStyle = '#B8860B';
-              ctx.beginPath();
-              ctx.moveTo(20 * scale, -12 * scale);
-              ctx.quadraticCurveTo(15 * scale, -18 * scale, 10 * scale, -15 * scale);
-              ctx.lineTo(12 * scale, -13 * scale);
-              ctx.quadraticCurveTo(16 * scale, -15 * scale, 20 * scale, -10 * scale);
-              ctx.closePath();
-              ctx.fill();
-
-              // Eye
-              ctx.fillStyle = '#000';
-              ctx.beginPath();
-              ctx.arc(23 * scale, -10 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS) {
-              // Triceratops - three-horned herbivore with frill
-              const scale = dino.size / 28;
-
-              // Tail
-              ctx.fillStyle = '#A0826D';
-              ctx.beginPath();
-              ctx.moveTo(-15 * scale, 2 * scale);
-              ctx.quadraticCurveTo(-28 * scale, 0, -35 * scale, -2 * scale);
-              ctx.lineTo(-33 * scale, 0);
-              ctx.quadraticCurveTo(-26 * scale, 2 * scale, -15 * scale, 4 * scale);
-              ctx.fill();
-
-              // Hind legs (sturdy)
-              ctx.fillStyle = '#8B7355';
-              ctx.fillRect(-12 * scale, 10 * scale, 7 * scale, 12 * scale);
-              ctx.fillRect(-2 * scale, 10 * scale, 7 * scale, 12 * scale);
-
-              // Front legs (shorter, sturdier)
-              ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
-              ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
-
-              // Body (massive)
-              ctx.fillStyle = '#D2B48C';
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 22 * scale, 14 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Belly
-              ctx.fillStyle = '#F5DEB3';
-              ctx.beginPath();
-              ctx.ellipse(0, 6 * scale, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Neck/shoulders
-              ctx.fillStyle = '#D2B48C';
-              ctx.beginPath();
-              ctx.ellipse(18 * scale, -2 * scale, 10 * scale, 8 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Frill (distinctive bony collar)
-              ctx.fillStyle = '#CD853F';
-              ctx.beginPath();
-              ctx.ellipse(22 * scale, -8 * scale, 12 * scale, 10 * scale, 0, Math.PI, Math.PI * 2);
-              ctx.fill();
-
-              // Frill outline
-              ctx.strokeStyle = '#8B6914';
-              ctx.lineWidth = 2;
-              ctx.beginPath();
-              ctx.ellipse(22 * scale, -8 * scale, 12 * scale, 10 * scale, 0, Math.PI, Math.PI * 2);
-              ctx.stroke();
-
-              // Head
-              ctx.fillStyle = '#A0826D';
-              ctx.beginPath();
-              ctx.ellipse(28 * scale, -2 * scale, 10 * scale, 7 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Beak
-              ctx.fillStyle = '#8B6914';
-              ctx.beginPath();
-              ctx.ellipse(35 * scale, -1 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Nose horn (short)
-              ctx.fillStyle = '#696969';
-              ctx.beginPath();
-              ctx.moveTo(33 * scale, -3 * scale);
-              ctx.lineTo(35 * scale, -8 * scale);
-              ctx.lineTo(37 * scale, -3 * scale);
-              ctx.closePath();
-              ctx.fill();
-
-              // Two brow horns (longer)
-              ctx.beginPath();
-              ctx.moveTo(26 * scale, -6 * scale);
-              ctx.lineTo(25 * scale, -14 * scale);
-              ctx.lineTo(28 * scale, -6 * scale);
-              ctx.closePath();
-              ctx.fill();
-
-              ctx.beginPath();
-              ctx.moveTo(30 * scale, -6 * scale);
-              ctx.lineTo(29 * scale, -14 * scale);
-              ctx.lineTo(32 * scale, -6 * scale);
-              ctx.closePath();
-              ctx.fill();
-
-              // Eye
-              ctx.fillStyle = '#000';
-              ctx.beginPath();
-              ctx.arc(30 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-            } else if (dino.type === GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS) {
-              // Dilophosaurus - spitting territorial predator with neck frill
-              const scale = dino.size / 24;
-
-              // Tail
-              ctx.fillStyle = '#7FFF00';
-              ctx.beginPath();
-              ctx.moveTo(-10 * scale, 0);
-              ctx.quadraticCurveTo(-22 * scale, -2 * scale, -30 * scale, -5 * scale);
-              ctx.lineTo(-28 * scale, -3 * scale);
-              ctx.quadraticCurveTo(-20 * scale, 0, -10 * scale, 2 * scale);
-              ctx.fill();
-
-              // Hind legs
-              ctx.fillStyle = '#9ACD32';
-              ctx.fillRect(-8 * scale, 6 * scale, 4 * scale, 10 * scale);
-              ctx.fillRect(-2 * scale, 6 * scale, 4 * scale, 10 * scale);
-
-              // Front legs (shorter)
-              ctx.fillRect(6 * scale, 8 * scale, 3 * scale, 8 * scale);
-              ctx.fillRect(11 * scale, 8 * scale, 3 * scale, 8 * scale);
-
-              // Body (lean predator)
-              ctx.fillStyle = '#ADFF2F';
-              ctx.beginPath();
-              ctx.ellipse(0, 0, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Black spots/stripes
-              ctx.fillStyle = '#000';
-              ctx.beginPath();
-              ctx.arc(-5 * scale, -3 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.arc(2 * scale, -4 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.arc(-8 * scale, 2 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Neck
-              ctx.fillStyle = '#ADFF2F';
-              ctx.beginPath();
-              ctx.ellipse(12 * scale, -6 * scale, 6 * scale, 5 * scale, -Math.PI * 0.3, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Head
-              ctx.fillStyle = '#9ACD32';
-              ctx.beginPath();
-              ctx.ellipse(20 * scale, -10 * scale, 7 * scale, 5 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Distinctive neck frill (colorful, expanded when aggressive)
-              const frillExpanded = dino.state === 'chase';
-              const frillSize = frillExpanded ? 10 : 7;
-              ctx.fillStyle = frillExpanded ? '#FF6347' : '#FFA07A';
-              ctx.beginPath();
-              ctx.arc(14 * scale, -8 * scale, frillSize * scale, Math.PI * 0.7, Math.PI * 1.3);
-              ctx.fill();
-
-              // Frill outline
-              ctx.strokeStyle = '#FF4500';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.arc(14 * scale, -8 * scale, frillSize * scale, Math.PI * 0.7, Math.PI * 1.3);
-              ctx.stroke();
-
-              // Snout
-              ctx.fillStyle = '#7FFF00';
-              ctx.beginPath();
-              ctx.ellipse(26 * scale, -10 * scale, 4 * scale, 3 * scale, 0, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Eye (predatory)
-              ctx.fillStyle = '#FFF';
-              ctx.beginPath();
-              ctx.arc(21 * scale, -11 * scale, 2 * scale, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.fillStyle = '#FF0000';
-              ctx.beginPath();
-              ctx.arc(21.5 * scale, -11 * scale, 1 * scale, 0, Math.PI * 2);
-              ctx.fill();
-
-              // Teeth
-              ctx.fillStyle = '#FFF';
-              for (let i = 0; i < 4; i++) {
-                ctx.fillRect((24 + i * 1.5) * scale, -9 * scale, 0.8 * scale, 2 * scale);
-              }
+            switch (dino.type) {
+              case GAME_CONSTANTS.DINOSAUR_TYPES.VELOCIRAPTOR:
+                drawVelociraptor(ctx, dino.size / 20);
+                break;
+              case GAME_CONSTANTS.DINOSAUR_TYPES.TYRANNOSAURUS_REX:
+                drawTyrannosaurusRex(ctx, dino.size / 35);
+                break;
+              case GAME_CONSTANTS.DINOSAUR_TYPES.STEGOSAURUS:
+                drawStegosaurus(ctx, dino.size / 30);
+                break;
+              case GAME_CONSTANTS.DINOSAUR_TYPES.PARASAUROLOPHUS:
+                drawParasaurolophus(ctx, dino.size / 25);
+                break;
+              case GAME_CONSTANTS.DINOSAUR_TYPES.TRICERATOPS:
+                drawTriceratops(ctx, dino.size / 28);
+                break;
+              case GAME_CONSTANTS.DINOSAUR_TYPES.DILOPHOSAURUS:
+                drawDilophosaurus(ctx, dino.size / 24, dino.aiState);
+                break;
             }
 
             ctx.restore();
