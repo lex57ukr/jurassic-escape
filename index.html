@@ -3490,6 +3490,43 @@
         setShowSettingsMenu(true);
       }, []);
 
+      // Settings menu handlers (memoized)
+      const handleSoundToggle = useCallback(() => {
+        const newValue = !soundEnabled;
+        setSoundEnabled(newValue);
+        localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
+        if (newValue) playSound(SOUNDS.GAME_START);
+      }, [soundEnabled, playSound]);
+
+      const handleVolumeChange = useCallback((e) => {
+        const newVolume = parseInt(e.target.value) / 100;
+        setVolume(newVolume);
+        localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
+      }, []);
+
+      const handleViewportScaleChange = useCallback((key) => {
+        setViewportScale(key);
+        localStorage.setItem('jurassicEscapeViewportScale', key);
+      }, []);
+
+      const handleDifficultyChange = useCallback((key) => {
+        setDifficulty(key);
+        localStorage.setItem('jurassicEscapeDifficulty', key);
+        // Enable auto-aim on Easy difficulty
+        if (key === 'easy') {
+          setAutoAim(true);
+          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
+        }
+      }, []);
+
+      const handleAutoAimToggle = useCallback(() => {
+        if (!isTouchDevice) {
+          const newValue = !autoAim;
+          setAutoAim(newValue);
+          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
+        }
+      }, [isTouchDevice, autoAim]);
+
       const game = gameRef.current;
 
       return (
@@ -3686,12 +3723,7 @@
                         <span className="text-white font-semibold text-lg">Sound</span>
                       </div>
                       <button
-                        onClick={() => {
-                          const newValue = !soundEnabled;
-                          setSoundEnabled(newValue);
-                          localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
-                          if (newValue) playSound(SOUNDS.GAME_START);
-                        }}
+                        onClick={handleSoundToggle}
                         className={`px-6 py-2 font-bold rounded-lg transition-colors ${
                           soundEnabled
                             ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -3714,11 +3746,7 @@
                           min="0"
                           max="100"
                           value={Math.round(volume * 100)}
-                          onChange={(e) => {
-                            const newVolume = parseInt(e.target.value) / 100;
-                            setVolume(newVolume);
-                            localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
-                          }}
+                          onChange={handleVolumeChange}
                           className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                           style={{
                             background: `linear-gradient(to right, #16a34a 0%, #16a34a ${volume * 100}%, #4b5563 ${volume * 100}%, #4b5563 100%)`
@@ -3740,10 +3768,7 @@
                         {Object.entries(VIEWPORT_SCALES).map(([key, config]) => (
                           <button
                             key={key}
-                            onClick={() => {
-                              setViewportScale(key);
-                              localStorage.setItem('jurassicEscapeViewportScale', key);
-                            }}
+                            onClick={() => handleViewportScaleChange(key)}
                             className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
                               viewportScale === key
                                 ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -3766,15 +3791,7 @@
                         {Object.entries(DIFFICULTY_MODIFIERS).map(([key, config]) => (
                           <button
                             key={key}
-                            onClick={() => {
-                              setDifficulty(key);
-                              localStorage.setItem('jurassicEscapeDifficulty', key);
-                              // Enable auto-aim on Easy difficulty
-                              if (key === 'easy') {
-                                setAutoAim(true);
-                                localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
-                              }
-                            }}
+                            onClick={() => handleDifficultyChange(key)}
                             className={`flex-1 px-4 py-2 font-bold rounded-lg transition-colors ${
                               difficulty === key
                                 ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -3799,13 +3816,7 @@
                         <span className="text-white font-semibold text-lg">Auto-Aim</span>
                       </div>
                       <button
-                        onClick={() => {
-                          if (!isTouchDevice) {
-                            const newValue = !autoAim;
-                            setAutoAim(newValue);
-                            localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
-                          }
-                        }}
+                        onClick={handleAutoAimToggle}
                         disabled={isTouchDevice}
                         className={`px-6 py-2 font-bold rounded-lg transition-colors ${
                           isTouchDevice
