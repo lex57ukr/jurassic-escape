@@ -40,6 +40,15 @@
       // Random Number Generation
       RANDOM_CENTER: 0.5, // Center point for creating bidirectional random ranges (-0.5 to +0.5)
 
+      // Game States
+      GAME_STATES: {
+        MENU: 'menu',
+        PLAYING: 'playing',
+        LEVEL_COMPLETE: 'levelComplete',
+        WON: 'won',
+        LOST: 'lost',
+      },
+
       // Player
       PLAYER: {
         START_X: 100,
@@ -1706,7 +1715,7 @@
 
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
-      const [gameState, setGameState] = useState('menu');
+      const [gameState, setGameState] = useState(GAME_CONSTANTS.GAME_STATES.MENU);
       const [score, setScore] = useState(0);
       const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.PLAYER.MAX_HEALTH);
       const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.PLAYER.START_AMMO);
@@ -2202,7 +2211,7 @@
       }, [difficulty]);
 
       useEffect(() => {
-        if (gameState !== 'playing') return;
+        if (gameState !== GAME_CONSTANTS.GAME_STATES.PLAYING) return;
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -2328,7 +2337,7 @@
 
                   // Check if player died
                   if (game.player.health <= 0) {
-                    setGameState('lost');
+                    setGameState(GAME_CONSTANTS.GAME_STATES.LOST);
                     playSound('game_over');
                   }
                 }
@@ -2580,7 +2589,7 @@
                 playSound('player_hurt');
 
                 if (game.player.health <= 0) {
-                  setGameState('lost');
+                  setGameState(GAME_CONSTANTS.GAME_STATES.LOST);
                   playSound('game_over');
                 }
               }
@@ -2918,7 +2927,7 @@
                 clampToBounds(game.player, game.player.radius, game.mapWidth, game.mapHeight);
 
                 if (game.player.health <= 0) {
-                  setGameState('lost');
+                  setGameState(GAME_CONSTANTS.GAME_STATES.LOST);
                   playSound('game_over');
                 }
               }
@@ -2930,10 +2939,10 @@
           const exitCenterY = game.exit.y + game.exit.height / 2;
           if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
             if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
-              setGameState('levelComplete');
+              setGameState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE);
               playSound('level_complete');
             } else {
-              setGameState('won');
+              setGameState(GAME_CONSTANTS.GAME_STATES.WON);
               playSound('victory');
             }
           }
@@ -3128,7 +3137,7 @@
         setCurrentLevel(1);
         setScore(0);
         initGame(1);
-        setGameState('playing');
+        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
         playSound('game_start');
       };
 
@@ -3136,14 +3145,14 @@
         const next = currentLevel + 1;
         setCurrentLevel(next);
         initGame(next);
-        setGameState('playing');
+        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
       };
 
       const game = gameRef.current;
 
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
-          {gameState === 'menu' && (
+          {gameState === GAME_CONSTANTS.GAME_STATES.MENU && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">JURASSIC ESCAPE</h1>
               <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
@@ -3192,7 +3201,7 @@
             </div>
           )}
 
-          {gameState === 'playing' && (
+          {gameState === GAME_CONSTANTS.GAME_STATES.PLAYING && (
             <div className="flex flex-col items-center">
               <div className="flex gap-4 md:gap-8 mb-4 text-white items-center flex-wrap justify-center">
                 <div className="text-xl font-bold">Level {currentLevel}</div>
@@ -3382,7 +3391,7 @@
                           setShowPauseMenu(false);
                           playSound('unpause');
                           initGame(currentLevel);
-                          setGameState('playing');
+                          setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
                         }}
                         className="px-6 py-3 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
                       >
@@ -3392,7 +3401,7 @@
                         onClick={() => {
                           setShowPauseMenu(false);
                           playSound('victory');
-                          setGameState('menu');
+                          setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
                         }}
                         className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg"
                       >
@@ -3415,7 +3424,7 @@
             </div>
           )}
 
-          {gameState === 'levelComplete' && (
+          {gameState === GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">LEVEL {currentLevel} COMPLETE!</h1>
               <p className="text-2xl text-white mb-4">Score: {score}</p>
@@ -3428,7 +3437,7 @@
             </div>
           )}
 
-          {gameState === 'won' && (
+          {gameState === GAME_CONSTANTS.GAME_STATES.WON && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">YOU ESCAPED!</h1>
               <p className="text-3xl text-yellow-400 mb-2">ALL LEVELS COMPLETE!</p>
@@ -3442,7 +3451,7 @@
             </div>
           )}
 
-          {gameState === 'lost' && (
+          {gameState === GAME_CONSTANTS.GAME_STATES.LOST && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-red-500 mb-4">GAME OVER</h1>
               <p className="text-xl text-white mb-2">Level {currentLevel}</p>
@@ -3608,7 +3617,7 @@
                   <button
                     onClick={() => {
                       setShowSettingsMenu(false);
-                      if (gameState === 'playing') {
+                      if (gameState === GAME_CONSTANTS.GAME_STATES.PLAYING) {
                         setShowPauseMenu(true);
                       }
                     }}
