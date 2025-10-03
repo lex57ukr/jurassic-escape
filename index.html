@@ -71,6 +71,12 @@
         RADIUS: 4,
       },
 
+      // Weapon Types
+      WEAPON_TYPES: {
+        REGULAR: 'regular',
+        TRANQUILIZER: 'tranquilizer',
+      },
+
       // Dinosaur Types
       DINOSAUR_TYPES: {
         VELOCIRAPTOR: 'raptor',
@@ -417,7 +423,7 @@
         vx: dx * speed,
         vy: dy * speed,
         radius: GAME_CONSTANTS.BULLET.RADIUS,
-        type: 'regular'
+        type: GAME_CONSTANTS.WEAPON_TYPES.REGULAR
       };
     };
 
@@ -432,7 +438,7 @@
         vx: dx * GAME_CONSTANTS.TRANQUILIZER.SPEED,
         vy: dy * GAME_CONSTANTS.TRANQUILIZER.SPEED,
         radius: GAME_CONSTANTS.TRANQUILIZER.RADIUS,
-        type: 'tranquilizer'
+        type: GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER
       };
     };
 
@@ -1664,7 +1670,7 @@
       const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.PLAYER.MAX_HEALTH);
       const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.PLAYER.START_AMMO);
       const [playerTranqAmmo, setPlayerTranqAmmo] = useState(GAME_CONSTANTS.TRANQUILIZER.START_AMMO);
-      const [currentWeapon, setCurrentWeapon] = useState('regular');
+      const [currentWeapon, setCurrentWeapon] = useState(GAME_CONSTANTS.WEAPON_TYPES.REGULAR);
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
@@ -1795,7 +1801,7 @@
           maxHealth: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
           ammo: GAME_CONSTANTS.PLAYER.START_AMMO,
           tranqAmmo: GAME_CONSTANTS.TRANQUILIZER.START_AMMO,
-          currentWeapon: 'regular',
+          currentWeapon: GAME_CONSTANTS.WEAPON_TYPES.REGULAR,
           speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           radius: GAME_CONSTANTS.PLAYER.RADIUS,
@@ -1897,7 +1903,7 @@
           maxHealth: playerMaxHealth,
           ammo: playerStartAmmo,
           tranqAmmo: playerStartTranqAmmo,
-          currentWeapon: 'regular',
+          currentWeapon: GAME_CONSTANTS.WEAPON_TYPES.REGULAR,
           speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           radius: GAME_CONSTANTS.PLAYER.RADIUS,
@@ -1924,7 +1930,7 @@
         setPlayerHealth(playerMaxHealth);
         setPlayerAmmo(playerStartAmmo);
         setPlayerTranqAmmo(playerStartTranqAmmo);
-        setCurrentWeapon('regular');
+        setCurrentWeapon(GAME_CONSTANTS.WEAPON_TYPES.REGULAR);
         setSpeedBoostActive(false);
 
         // Create obstacles
@@ -2183,7 +2189,7 @@
 
           // Handle weapon switching with Q key
           if (key === 'q') {
-            game.player.currentWeapon = game.player.currentWeapon === 'regular' ? 'tranquilizer' : 'regular';
+            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER : GAME_CONSTANTS.WEAPON_TYPES.REGULAR;
             setCurrentWeapon(game.player.currentWeapon);
           }
         };
@@ -2216,14 +2222,14 @@
             }
           }
 
-          if (game.player.currentWeapon === 'regular') {
+          if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR) {
             if (game.player.ammo > 0) {
               game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
               game.player.ammo--;
               setPlayerAmmo(game.player.ammo);
               playSound('shoot');
             }
-          } else if (game.player.currentWeapon === 'tranquilizer') {
+          } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER) {
             if (game.player.tranqAmmo > 0) {
               game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
               game.player.tranqAmmo--;
@@ -2377,7 +2383,7 @@
 
           // Handle touch weapon switching
           if (game.touch.switchWeapon) {
-            game.player.currentWeapon = game.player.currentWeapon === 'regular' ? 'tranquilizer' : 'regular';
+            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER : GAME_CONSTANTS.WEAPON_TYPES.REGULAR;
             setCurrentWeapon(game.player.currentWeapon);
             game.touch.switchWeapon = false;
           }
@@ -2390,13 +2396,13 @@
             const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
             const targetY = nearestDino ? nearestDino.y : game.player.y;
 
-            if (game.player.currentWeapon === 'regular' && game.player.ammo > 0) {
+            if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR && game.player.ammo > 0) {
               game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
               game.player.ammo--;
               setPlayerAmmo(game.player.ammo);
               playSound('shoot');
               game.touch.shoot = false;
-            } else if (game.player.currentWeapon === 'tranquilizer' && game.player.tranqAmmo > 0) {
+            } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER && game.player.tranqAmmo > 0) {
               game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
               game.player.tranqAmmo--;
               setPlayerTranqAmmo(game.player.tranqAmmo);
@@ -2456,7 +2462,7 @@
               const dino = game.dinosaurs[i];
 
               if (circleCollision(bullet.x, bullet.y, bullet.radius, dino.x, dino.y, dino.size)) {
-                if (bullet.type === 'tranquilizer') {
+                if (bullet.type === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER) {
                   // Tranquilizer dart - track hits and put to sleep when threshold reached
                   if (!dino.isSleeping) {
                     dino.tranqHits++;
@@ -3021,7 +3027,7 @@
 
           // Draw bullets
           game.bullets.forEach(bullet => {
-            ctx.fillStyle = bullet.type === 'tranquilizer' ? '#00FF00' : '#ff0';
+            ctx.fillStyle = bullet.type === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER ? '#00FF00' : '#ff0';
             ctx.beginPath();
             ctx.arc(bullet.x - game.cameraX, bullet.y - game.cameraY, bullet.radius, 0, Math.PI * 2);
             ctx.fill();
@@ -3154,11 +3160,11 @@
                     <span key={i}>{i < playerHealth ? '❤️' : '🖤'}</span>
                   ))}
                 </div>
-                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === 'regular' ? 'bg-yellow-600' : 'bg-gray-700'}`}>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
                   <span>💥</span>
                   <span className="text-xl font-bold">{playerAmmo}</span>
                 </div>
-                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === 'tranquilizer' ? 'bg-green-600' : 'bg-gray-700'}`}>
+                <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
                   <span>💉</span>
                   <span className="text-xl font-bold">{playerTranqAmmo}</span>
                 </div>
@@ -3263,8 +3269,8 @@
                       gameRef.current.touch.switchWeapon = true;
                     }}
                   >
-                    <div className={`w-full h-full rounded-full ${gameRef.current.player.currentWeapon === 'regular' ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${gameRef.current.player.currentWeapon === 'regular' ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
-                      {gameRef.current.player.currentWeapon === 'regular' ? '💥' : '💉'}
+                    <div className={`w-full h-full rounded-full ${gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
+                      {gameRef.current.player.currentWeapon === GAME_CONSTANTS.WEAPON_TYPES.REGULAR ? '💥' : '💉'}
                     </div>
                   </div>
 
