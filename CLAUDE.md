@@ -208,12 +208,21 @@ All collision uses circle-vs-circle distance checks:
 
 #### Level Progression
 
-Levels defined in `levelConfigs`:
+Levels defined in `LEVEL_CONFIGS`:
 
-- Each level specifies dinosaur types/counts, obstacle count, powerup count, hazard counts (tar pits, electric fences)
-- Win condition: Reach exit zone (golden EXIT rectangle at map coordinates 1800, 1400)
+- **Per-level world sizes**: Each level has its own map dimensions, creating progressively larger worlds
+  - Level 1: 2400x1800 (compact, manageable starting area)
+  - Level 2: 3600x2700 (50% larger, more exploration required)
+  - Level 3: 4800x3600 (2x larger, epic final challenge with room for all 22 dinosaurs)
+  - Viewport size remains constant regardless of world size (player sees same amount)
+- Each level specifies: map dimensions, exit position, dinosaur types/counts, obstacle count, powerup count, hazard counts
+- **Exit position**: Placed near far edge of each level's map
+  - Level 1: (1800, 1400)
+  - Level 2: (3000, 2200)
+  - Level 3: (4200, 3000)
+- Win condition: Reach exit zone (golden EXIT rectangle)
 - Player stats reset between levels, score persists
-- Hazard counts increase with difficulty: Level 1 (3 tar, 2 fence), Level 2 (5 tar, 4 fence), Level 3 (7 tar, 6 fence)
+- Entity counts scale naturally with larger worlds: Level 1 (40 obstacles, 3 tar, 2 fence), Level 2 (50 obstacles, 5 tar, 4 fence), Level 3 (60 obstacles, 7 tar, 6 fence)
 
 #### Sound System
 
@@ -233,13 +242,13 @@ Levels defined in `levelConfigs`:
 
 ### Rendering
 
-- **Viewport scaling system**: Configurable canvas resolution via `VIEWPORT_SCALES` constant (lines 119-123)
+- **Viewport scaling system**: Configurable canvas resolution via `VIEWPORT_SCALES` constant
   - Small: 800x600 (default)
   - Medium: 1000x750
   - Large: 1200x900
   - All scales maintain 4:3 aspect ratio
-  - Game world remains 2400x1800 regardless of viewport size
-  - Larger viewports show more of the game world at once
+  - Game world size varies per level (Level 1: 2400x1800, Level 2: 3600x2700, Level 3: 4800x3600)
+  - Viewport size is independent of world size - larger viewports show more of the current level at once
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
