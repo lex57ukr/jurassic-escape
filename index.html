@@ -231,6 +231,8 @@
         TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
         TRANQ_DEPOT_RADIUS: 15,
         TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
+        AMMO_DEPOT_COUNT_PER_LEVEL: 2, // Number of regular ammo depots per level
+        AMMO_DEPOT_RADIUS: 15, // Same size as tranq depot
       },
 
       // Ammo Pickup
@@ -417,7 +419,8 @@
         obstacles: 40,
         powerups: 3,
         tarPits: 3,
-        electricFences: 2
+        electricFences: 2,
+        ammoPerDepot: 3 // Raptor (2 HP) + 1 buffer
       },
       2: {
         name: "Deeper Danger",
@@ -440,7 +443,8 @@
         obstacles: 50,
         powerups: 4,
         tarPits: 5,
-        electricFences: 4
+        electricFences: 4,
+        ammoPerDepot: 4 // Dilophosaurus (3 HP) + 1 buffer
       },
       3: {
         name: "Final Escape",
@@ -464,7 +468,8 @@
         obstacles: 60,
         powerups: 5,
         tarPits: 7,
-        electricFences: 6
+        electricFences: 6,
+        ammoPerDepot: 5 // T-Rex (4 HP) + 1 buffer
       }
     };
 
@@ -714,6 +719,22 @@
         y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
         ammo: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_AMMO,
+        active: true
+      };
+    };
+
+    /**
+     * Create a regular ammo depot object at fixed position
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} amount - Amount of regular ammo
+     */
+    const createAmmoDepot = (x, y, amount) => {
+      return {
+        x,
+        y,
+        radius: GAME_CONSTANTS.SPAWN.AMMO_DEPOT_RADIUS,
+        amount,
         active: true
       };
     };
@@ -1773,6 +1794,33 @@
     };
 
     /**
+     * Draw regular ammo depot (blue crate with bullet icon)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} depot - Ammo depot object
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     */
+    const drawAmmoDepot = (ctx, depot, cameraX, cameraY) => {
+      if (!depot.active) return;
+
+      const screenX = depot.x - cameraX;
+      const screenY = depot.y - cameraY;
+
+      // Draw blue crate
+      ctx.fillStyle = '#1E90FF';
+      ctx.strokeStyle = '#0047AB';
+      ctx.lineWidth = 2;
+      ctx.fillRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
+      ctx.strokeRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
+
+      // Draw bullet icon (💥 emoji)
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(GAME_CONSTANTS.WEAPON_TYPES.REGULAR_ICON, screenX, screenY);
+    };
+
+    /**
      * Draw territory marker (skull emoji and circle outline)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} territory - Territory object
@@ -2204,6 +2252,19 @@
           stateAccumulator.playerTranqAmmo = game.player.tranqAmmo;
           playSound(SOUNDS.PICKUP_TRANQ);
           game.floatingTexts.push(createFloatingText(depot.x, depot.y, `+${depot.ammo}`, '#00FF00'));
+        }
+      });
+
+      // Check regular ammo depot collection
+      game.ammoDepots.forEach(depot => {
+        if (!depot.active) return;
+
+        if (circleCollision(game.player.x, game.player.y, game.player.radius, depot.x, depot.y, depot.radius)) {
+          depot.active = false;
+          game.player.ammo += depot.amount;
+          stateAccumulator.playerAmmo = game.player.ammo;
+          playSound(SOUNDS.PICKUP_AMMO);
+          game.floatingTexts.push(createFloatingText(depot.x, depot.y, `+${depot.amount}`, '#FFD700'));
         }
       });
 
@@ -3129,6 +3190,7 @@
         territories: [],
         ammoPickups: [],
         tranqDepots: [],
+        ammoDepots: [],
         floatingTexts: [],
         powerups: [],
         obstacles: [],
@@ -3185,6 +3247,7 @@
         game.spit = [];
         game.ammoPickups = [];
         game.tranqDepots = [];
+        game.ammoDepots = [];
         game.floatingTexts = [];
         game.powerups = [];
         game.dinosaurs = [];
@@ -3370,6 +3433,15 @@
         for (let i = 0; i < depotCount; i++) {
           game.tranqDepots.push(createTranqDepot(game.mapWidth, game.mapHeight));
         }
+
+        // Create regular ammo depots (minimal ammo for strongest guard + 1 buffer)
+        // Depot 1: Near spawn, visible from start
+        game.ammoDepots.push(createAmmoDepot(250, 150, config.ammoPerDepot));
+
+        // Depot 2: Furthest corner from spawn (bottom-right)
+        const farCornerX = game.mapWidth - 200;
+        const farCornerY = game.mapHeight - 200;
+        game.ammoDepots.push(createAmmoDepot(farCornerX, farCornerY, config.ammoPerDepot));
 
         // Create tar pits
         for (let i = 0; i < config.tarPits; i++) {
@@ -3635,6 +3707,11 @@
           // Draw tranquilizer depots
           game.tranqDepots.forEach(depot => {
             drawTranqDepot(ctx, depot, game.cameraX, game.cameraY);
+          });
+
+          // Draw regular ammo depots
+          game.ammoDepots.forEach(depot => {
+            drawAmmoDepot(ctx, depot, game.cameraX, game.cameraY);
           });
 
           // Draw territories (skull markers at center)
