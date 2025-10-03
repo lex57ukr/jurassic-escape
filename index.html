@@ -1495,7 +1495,7 @@
       ctx.fill();
 
       // Distinctive neck frill (colorful, expanded when aggressive)
-      const frillExpanded = aiState === 'chase';
+      const frillExpanded = aiState === GAME_CONSTANTS.AI.STATES.CHASE;
       const frillSize = frillExpanded ? 10 : 7;
       ctx.fillStyle = frillExpanded ? '#FF6347' : '#FFA07A';
       ctx.beginPath();
