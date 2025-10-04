@@ -31,12 +31,14 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
 - `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
 - `WEAPONS`: Unified weapon configuration with all properties per weapon type:
-  - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius }`
-  - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier }`
+  - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius, ammoProperty, stateAmmoKey, soundEffect, bulletFactory }`
+  - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier, ammoProperty, stateAmmoKey, soundEffect, bulletFactory }`
   - Each weapon type is a full object (not just a string ID)
   - Entities store full weapon object: `bullet.weaponType = WEAPONS.REGULAR`, `player.currentWeapon = WEAPONS.REGULAR`
   - Direct property access: `bullet.weaponType.bulletColor`, `player.currentWeapon.icon`
-  - All weapon properties (visual, mechanical, ammo) in one place
+  - All weapon properties (visual, mechanical, ammo, state management) in one place
+  - `bulletFactory` references (`createBullet`, `createTranquilizer`) assigned after functions are defined
+  - Unified `fireWeapon()` helper uses weapon config for all shooting logic (no weapon-specific conditionals)
 - `DINOSAURS`: Unified dinosaur configuration with all properties per dinosaur type:
   - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration, spitAttack }`
   - Similar structure for TYRANNOSAURUS_REX, STEGOSAURUS, PARASAUROLOPHUS, TRICERATOPS, DILOPHOSAURUS
@@ -82,11 +84,21 @@ The codebase follows a **constants-first approach** for type safety and maintain
 **Entity Factory Functions:**
 
 - `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, `createMushroomPatch()`, etc.
+- `createBullet(fromX, fromY, toX, toY)`: Creates regular bullet projectile
+- `createTranquilizer(fromX, fromY, toX, toY)`: Creates tranquilizer dart projectile
 - `createTranqDepot(mapWidth, mapHeight)`: Creates tranquilizer depot with random position
 - `createAmmoDepot(x, y, amount)`: Creates regular ammo depot with fixed position and amount
 - `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with guard count tracking
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)`: Creates guard dinosaur positioned around exit
 - Encapsulate entity creation logic and use constants throughout
+
+**Weapon System Functions:**
+
+- `fireWeapon(weapon, player, targetX, targetY, game, playSound, stateAccumulator, setters)`: Unified weapon firing logic
+  - Uses weapon config for all behavior (ammo checking, bullet creation, state updates, sound)
+  - Works with both state accumulator (game loop) and direct setters (event handlers)
+  - Eliminates weapon-specific conditionals throughout codebase
+  - Returns boolean indicating if weapon was fired successfully
 
 **Benefits:**
 
