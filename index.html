@@ -922,6 +922,18 @@
     };
 
     /**
+     * Check if position is within map bounds
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} mapWidth - Map width
+     * @param {number} mapHeight - Map height
+     * @returns {boolean} True if position is within bounds
+     */
+    const isInBounds = (x, y, mapWidth, mapHeight) => {
+      return !(x < 0 || x > mapWidth || y < 0 || y > mapHeight);
+    };
+
+    /**
      * Check if circle collides with rotated rectangle (for electric fences)
      */
     const circleRectCollision = (circleX, circleY, radius, rectX, rectY, rectWidth, rectHeight, rotation) => {
@@ -1003,7 +1015,7 @@
     const createBullet = (fromX, fromY, toX, toY) => {
       const weapon = GAME_CONSTANTS.WEAPONS.REGULAR;
       const { dx, dy } = normalize(toX - fromX, toY - fromY);
-      return {
+      const bullet = {
         x: fromX,
         y: fromY,
         vx: dx * weapon.speed,
@@ -1011,6 +1023,24 @@
         radius: weapon.radius,
         weaponType: weapon
       };
+
+      // Add instance method for physics update
+      bullet.update = function(mapWidth, mapHeight) {
+        this.x += this.vx;
+        this.y += this.vy;
+        return isInBounds(this.x, this.y, mapWidth, mapHeight);
+      };
+
+      // Add instance method for rendering
+      bullet.draw = function(ctx, cameraX, cameraY) {
+        const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
+        ctx.fillStyle = this.weaponType.bulletColor;
+        ctx.beginPath();
+        ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      return bullet;
     };
 
     /**
@@ -1018,7 +1048,7 @@
      */
     const createTranquilizer = (fromX, fromY, toX, toY) => {
       const { dx, dy } = normalize(toX - fromX, toY - fromY);
-      return {
+      const tranq = {
         x: fromX,
         y: fromY,
         vx: dx * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.speed,
@@ -1026,6 +1056,24 @@
         radius: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.radius,
         weaponType: GAME_CONSTANTS.WEAPONS.TRANQUILIZER
       };
+
+      // Add instance method for physics update
+      tranq.update = function(mapWidth, mapHeight) {
+        this.x += this.vx;
+        this.y += this.vy;
+        return isInBounds(this.x, this.y, mapWidth, mapHeight);
+      };
+
+      // Add instance method for rendering
+      tranq.draw = function(ctx, cameraX, cameraY) {
+        const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
+        ctx.fillStyle = this.weaponType.bulletColor;
+        ctx.beginPath();
+        ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      };
+
+      return tranq;
     };
 
     /**
@@ -1333,7 +1381,7 @@
      */
     const createSpitProjectile = (fromX, fromY, toX, toY, dinoType) => {
       const angle = Math.atan2(toY - fromY, toX - fromX);
-      return {
+      const spit = {
         x: fromX,
         y: fromY,
         vx: Math.cos(angle) * dinoType.spitAttack.projectileSpeed,
@@ -1341,6 +1389,30 @@
         radius: dinoType.spitAttack.projectileRadius,
         damage: dinoType.spitAttack.damage
       };
+
+      // Add instance method for physics update
+      spit.update = function(mapWidth, mapHeight) {
+        this.x += this.vx;
+        this.y += this.vy;
+        return isInBounds(this.x, this.y, mapWidth, mapHeight);
+      };
+
+      // Add instance method for rendering
+      spit.draw = function(ctx, cameraX, cameraY) {
+        const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
+        const spitAttack = GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.spitAttack;
+        applyCanvasStyles(ctx, {
+          fillStyle: spitAttack.fillColor,
+          strokeStyle: spitAttack.strokeColor,
+          lineWidth: spitAttack.lineWidth
+        });
+        ctx.beginPath();
+        ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      };
+
+      return spit;
     };
 
     /**
@@ -3048,12 +3120,9 @@
      */
     const updateBullets = (game, playSound, stateAccumulator) => {
       game.bullets = game.bullets.filter(bullet => {
-        bullet.x += bullet.vx;
-        bullet.y += bullet.vy;
-
-        // Remove if out of bounds
-        if (bullet.x < 0 || bullet.x > game.mapWidth || bullet.y < 0 || bullet.y > game.mapHeight) {
-          return false;
+        // Use instance method for physics update
+        if (!bullet.update(game.mapWidth, game.mapHeight)) {
+          return false; // Remove if out of bounds
         }
 
         // Check collision with dinosaurs
@@ -3145,12 +3214,9 @@
      */
     const updateSpitProjectiles = (game, difficulty, playSound, stateAccumulator) => {
       game.spit = game.spit.filter(spit => {
-        spit.x += spit.vx;
-        spit.y += spit.vy;
-
-        // Remove if out of bounds
-        if (spit.x < 0 || spit.x > game.mapWidth || spit.y < 0 || spit.y > game.mapHeight) {
-          return false;
+        // Use instance method for physics update
+        if (!spit.update(game.mapWidth, game.mapHeight)) {
+          return false; // Remove if out of bounds
         }
 
         // Check collision with player
@@ -4513,29 +4579,11 @@
           // Draw player
           drawPlayer(ctx, game.player, game.cameraX, game.cameraY, game.mouseX, game.mouseY, game.speedBoostTimer);
 
-          // Draw bullets
-          game.bullets.forEach(bullet => {
-            const screenPos = toScreenCoords(bullet.x, bullet.y, game.cameraX, game.cameraY);
-            ctx.fillStyle = bullet.weaponType.bulletColor;
-            ctx.beginPath();
-            ctx.arc(screenPos.x, screenPos.y, bullet.radius, 0, Math.PI * 2);
-            ctx.fill();
-          });
-
-          // Draw spit projectiles
-          game.spit.forEach(spit => {
-            const screenPos = toScreenCoords(spit.x, spit.y, game.cameraX, game.cameraY);
-            const spitAttack = GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.spitAttack;
-            applyCanvasStyles(ctx, {
-              fillStyle: spitAttack.fillColor,
-              strokeStyle: spitAttack.strokeColor,
-              lineWidth: spitAttack.lineWidth
-            });
-            ctx.beginPath();
-            ctx.arc(screenPos.x, screenPos.y, spit.radius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-          });
+          // Draw projectiles (bullets and spit) using batch rendering
+          drawEntities(ctx, game.cameraX, game.cameraY,
+            game.bullets,  // Layer 1: Bullets
+            game.spit      // Layer 2: Spit projectiles
+          );
 
           // Draw ammo pickups with amount badge
           game.ammoPickups.forEach(pickup => {
