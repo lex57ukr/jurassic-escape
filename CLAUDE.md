@@ -84,11 +84,26 @@ if (dino.type.spitAttack && ...) { /* spit logic */ }
 
 ### 2. Instance Method Pattern
 
-**Entities encapsulate their own rendering behavior via instance methods.**
+**Entities encapsulate their own behavior via instance methods.**
 
-Factory functions add `draw()` methods to entities:
+Factory functions add `update()` and `draw()` methods to entities:
 
 ```javascript
+// Bullet factory adds instance methods:
+bullet.update = function(mapWidth, mapHeight) {
+  this.x += this.vx;
+  this.y += this.vy;
+  return !(this.x < 0 || this.x > mapWidth || this.y < 0 || this.y > mapHeight);
+};
+
+bullet.draw = function(ctx, cameraX, cameraY) {
+  const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
+  ctx.fillStyle = this.weaponType.bulletColor;
+  ctx.beginPath();
+  ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
+  ctx.fill();
+};
+
 // Obstacle factory adds instance method:
 obstacle.draw = function(ctx, cameraX, cameraY) {
   const screenX = this.x - cameraX;
@@ -96,22 +111,18 @@ obstacle.draw = function(ctx, cameraX, cameraY) {
   this.obstacleType.drawFunction(ctx, screenX, screenY, this.radius, this);
 };
 
-// Dinosaur factory adds instance method:
-dino.draw = function(ctx) {
-  const scale = this.size / this.type.baseSize;
-  this.type.drawFunction(ctx, scale, this);
-};
-
 // Usage - simple, direct, OOP:
-obstacle.draw(ctx, cameraX, cameraY);
-dino.draw(ctx);
+if (bullet.update(mapWidth, mapHeight)) {
+  bullet.draw(ctx, cameraX, cameraY);
+}
 ```
 
 **Benefits:**
 
-- Perfect encapsulation - each entity knows how to draw itself
+- Perfect encapsulation - each entity knows how to update and draw itself
 - Eliminates wrapper functions and type checking at render time
 - Enables batch rendering via `drawEntities()` utility
+- Cleaner game loop - physics and rendering encapsulated in entities
 
 ### 3. Factory Function Pattern
 
@@ -188,6 +199,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 
 **Collision & Positioning:**
 
+- `isInBounds(x, y, mapWidth, mapHeight)` - Check if position is within map bounds
 - `circleCollision(x1, y1, r1, x2, y2, r2)` - Circle-vs-circle collision
 - `circleRectCollision(...)` - Circle-vs-rotated-rectangle (for electric fences)
 - `distance(x1, y1, x2, y2)` - Euclidean distance
@@ -210,10 +222,11 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)` - Guard dinosaurs around exit
 
-**Projectile Factories:**
+**Projectile Factories** (all add `update()` and `draw()` instance methods):
 
-- `createBullet(fromX, fromY, toX, toY)` - Regular bullets
-- `createTranquilizer(fromX, fromY, toX, toY)` - Tranquilizer darts
+- `createBullet(fromX, fromY, toX, toY)` - Regular bullets (physics + rendering)
+- `createTranquilizer(fromX, fromY, toX, toY)` - Tranquilizer darts (physics + rendering)
+- `createSpitProjectile(fromX, fromY, toX, toY, dinoType)` - Spit attacks (physics + rendering)
 
 ## Game Loop Structure
 
