@@ -229,28 +229,27 @@
         },
       },
 
-      // Map
-      MAP: {
-        EXIT_WIDTH: 60,
-        EXIT_HEIGHT: 60,
-        EXIT_COLLISION_RADIUS: 30,
-        MAX_LEVEL: 3, // Total number of levels in the game
-      },
-
-      // Exit Lock
-      EXIT: {
-        LOCK_ICON: '🔒',
-        LOCK_ICON_SIZE: 32,
-        LOCK_ICON_OFFSET_Y: -40, // Position above exit
-        // Visual properties
-        LOCKED_FILL_COLOR: '#888',
-        LOCKED_STROKE_COLOR: '#555',
-        UNLOCKED_FILL_COLOR: '#FFD700',
-        UNLOCKED_STROKE_COLOR: '#FFA500',
-        BORDER_WIDTH: 3,
-        TEXT_FONT: '14px Arial',
-        TEXT_COLOR: '#000',
-        TEXT_OFFSET_Y: 5,
+      // Static Structures (non-interactive map objects)
+      STATIC_STRUCTURES: {
+        EXIT: {
+          id: 'exit',
+          width: 60,
+          height: 60,
+          collisionRadius: 30,
+          lockIcon: '🔒',
+          lockIconSize: 32,
+          lockIconOffsetY: -40, // Position above exit
+          // Visual properties
+          lockedFillColor: '#888',
+          lockedStrokeColor: '#555',
+          unlockedFillColor: '#FFD700',
+          unlockedStrokeColor: '#FFA500',
+          borderWidth: 3,
+          textFont: '14px Arial',
+          textColor: '#000',
+          textOffsetY: 5,
+          drawFunction: null, // Assigned after draw function definition
+        },
       },
 
       // Health Bar
@@ -1463,6 +1462,57 @@
       };
 
       return fence;
+    };
+
+    /**
+     * Create an exit (static structure)
+     * @param {number} x - Exit X position
+     * @param {number} y - Exit Y position
+     * @returns {Object} Exit object with draw() instance method
+     */
+    const createExit = (x, y) => {
+      const type = GAME_CONSTANTS.STATIC_STRUCTURES.EXIT;
+      const exit = {
+        x,
+        y,
+        structureType: type,
+        locked: true, // Exit starts locked (unlocks when conditions met)
+      };
+
+      // Add instance method for rendering
+      exit.draw = function(ctx, cameraX, cameraY) {
+        const screenX = this.x - cameraX;
+        const screenY = this.y - cameraY;
+
+        // Draw exit background
+        ctx.fillStyle = this.locked ? this.structureType.lockedFillColor : this.structureType.unlockedFillColor;
+        ctx.fillRect(screenX, screenY, this.structureType.width, this.structureType.height);
+
+        // Draw exit border
+        ctx.strokeStyle = this.locked ? this.structureType.lockedStrokeColor : this.structureType.unlockedStrokeColor;
+        ctx.lineWidth = this.structureType.borderWidth;
+        ctx.strokeRect(screenX, screenY, this.structureType.width, this.structureType.height);
+
+        // Draw "EXIT" text
+        ctx.fillStyle = this.structureType.textColor;
+        ctx.font = this.structureType.textFont;
+        ctx.textAlign = 'center';
+        ctx.fillText('EXIT', screenX + this.structureType.width / 2, screenY + this.structureType.height / 2 + this.structureType.textOffsetY);
+
+        // Draw lock icon if exit is locked
+        if (this.locked) {
+          ctx.font = `${this.structureType.lockIconSize}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(
+            this.structureType.lockIcon,
+            screenX + this.structureType.width / 2,
+            screenY + this.structureType.lockIconOffsetY
+          );
+        }
+      };
+
+      return exit;
     };
 
     /**
@@ -3171,7 +3221,7 @@
                     territory.guardCount--;
                     // If all guards are dead, unlock exit and mark for removal
                     if (territory.guardCount === 0) {
-                      game.exitLocked = false;
+                      if (game.exit) game.exit.locked = false;
                       shouldRemoveTerritory = true;
                     }
                   } else {
@@ -4032,15 +4082,11 @@
         floatingTexts: [],
         powerups: [],
         obstacles: [],
+        staticStructures: [], // Static map objects (exits, gates, signs, etc.)
+        exit: null, // Convenience reference to first static structure (set during initGame)
         mouseX: 0,
         mouseY: 0,
         keys: {},
-        exit: {
-          x: 0,
-          y: 0,
-          width: GAME_CONSTANTS.MAP.EXIT_WIDTH,
-          height: GAME_CONSTANTS.MAP.EXIT_HEIGHT
-        },
         cameraX: 0,
         cameraY: 0,
         mapWidth: 0,
@@ -4094,18 +4140,18 @@
         game.decorations = [];
         game.tarPits = [];
         game.electricFences = [];
+        game.staticStructures = [];
         game.keys = {};
         game.speedBoostTimer = 0;
 
-        // Set level-specific map dimensions and exit position
+        // Set level-specific map dimensions
         game.mapWidth = config.mapWidth;
         game.mapHeight = config.mapHeight;
-        game.exit = {
-          x: config.exitX,
-          y: config.exitY,
-          width: GAME_CONSTANTS.MAP.EXIT_WIDTH,
-          height: GAME_CONSTANTS.MAP.EXIT_HEIGHT
-        };
+
+        // Create exit structure
+        const exit = createExit(config.exitX, config.exitY);
+        game.staticStructures.push(exit);
+        game.exit = exit; // Convenience binding for direct access
 
         setPlayerHealth(playerMaxHealth);
         setPlayerAmmo(playerStartAmmo);
@@ -4276,7 +4322,7 @@
           const exitTerritoryIndex = game.territories.length - 1;
 
           // Set exit as locked
-          game.exitLocked = true;
+          if (game.exit) game.exit.locked = true;
 
           // Spawn guards in a circle around exit
           let guardIndex = 0;
@@ -4291,7 +4337,7 @@
           });
         } else {
           // No guards, exit is unlocked
-          game.exitLocked = false;
+          if (game.exit) game.exit.locked = false;
         }
 
         // Create powerups
@@ -4447,11 +4493,12 @@
           }
 
           // Check win condition (only if exit is unlocked)
-          if (!game.exitLocked) {
-            const exitCenterX = game.exit.x + game.exit.width / 2;
-            const exitCenterY = game.exit.y + game.exit.height / 2;
-            if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
-              if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
+          if (game.exit && !game.exit.locked) {
+            const exitCenterX = game.exit.x + game.exit.structureType.width / 2;
+            const exitCenterY = game.exit.y + game.exit.structureType.height / 2;
+            if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + game.exit.structureType.collisionRadius) {
+              // Check if there's another level after this one
+              if (LEVEL_CONFIGS[currentLevel + 1]) {
                 transitionToState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE, playSound, null, setGameState);
               } else {
                 transitionToState(GAME_CONSTANTS.GAME_STATES.WON, playSound, null, setGameState);
@@ -4470,41 +4517,17 @@
             ctx.fillRect(gx, gy, GAME_CONSTANTS.RENDER.GRASS_PATCH_SIZE, GAME_CONSTANTS.RENDER.GRASS_PATCH_SIZE);
           }
 
-          // Draw exit
-          const exitScreenX = game.exit.x - game.cameraX;
-          const exitScreenY = game.exit.y - game.cameraY;
-          ctx.fillStyle = game.exitLocked ? GAME_CONSTANTS.EXIT.LOCKED_FILL_COLOR : GAME_CONSTANTS.EXIT.UNLOCKED_FILL_COLOR;
-          ctx.fillRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
-          ctx.strokeStyle = game.exitLocked ? GAME_CONSTANTS.EXIT.LOCKED_STROKE_COLOR : GAME_CONSTANTS.EXIT.UNLOCKED_STROKE_COLOR;
-          ctx.lineWidth = GAME_CONSTANTS.EXIT.BORDER_WIDTH;
-          ctx.strokeRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
-          ctx.fillStyle = GAME_CONSTANTS.EXIT.TEXT_COLOR;
-          ctx.font = GAME_CONSTANTS.EXIT.TEXT_FONT;
-          ctx.textAlign = 'center';
-          ctx.fillText('EXIT', exitScreenX + game.exit.width / 2, exitScreenY + game.exit.height / 2 + GAME_CONSTANTS.EXIT.TEXT_OFFSET_Y);
-
-          // Draw lock icon if exit is locked
-          if (game.exitLocked) {
-            ctx.font = `${GAME_CONSTANTS.EXIT.LOCK_ICON_SIZE}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(
-              GAME_CONSTANTS.EXIT.LOCK_ICON,
-              exitScreenX + game.exit.width / 2,
-              exitScreenY + GAME_CONSTANTS.EXIT.LOCK_ICON_OFFSET_Y
-            );
-          }
-
           // Draw entities using batch utility (maintains z-index layering via argument order)
           drawEntities(ctx, game.cameraX, game.cameraY,
-            game.tarPits,           // Layer 1: Tar pits (ground hazards)
-            game.electricFences,    // Layer 2: Electric fences
-            game.decorations,       // Layer 3: Walkable decorations (grass, mushrooms)
-            game.obstacles,         // Layer 4: Blocking obstacles (trees, bushes)
-            game.powerups,          // Layer 5: Collectible powerups
-            game.tranqDepots,       // Layer 6: Tranquilizer depots
-            game.ammoDepots,        // Layer 7: Regular ammo depots
-            game.territories        // Layer 8: Territory markers
+            game.staticStructures, // Layer 1: Static structures (exits, gates, signs)
+            game.tarPits,          // Layer 2: Tar pits (ground hazards)
+            game.electricFences,   // Layer 3: Electric fences
+            game.decorations,      // Layer 4: Walkable decorations (grass, mushrooms)
+            game.obstacles,        // Layer 5: Blocking obstacles (trees, bushes)
+            game.powerups,         // Layer 6: Collectible powerups
+            game.tranqDepots,      // Layer 7: Tranquilizer depots
+            game.ammoDepots,       // Layer 8: Regular ammo depots
+            game.territories       // Layer 9: Territory markers
           );
 
           // Draw dinosaurs
