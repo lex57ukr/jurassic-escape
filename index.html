@@ -94,9 +94,8 @@
       // Physics
       PHYSICS: {
         GRAVITY: 0.5,
-        AMMO_GRAVITY: 0.15,
-        AMMO_BOUNCE_DAMPING: -0.7, // Higher value = more bouncing
-        AMMO_FRICTION: 0.85, // Higher value = less horizontal slowdown
+        AMMO_GRAVITY: 0.30, // Gravity for ammo pickups (vertical bouncing)
+        AMMO_BOUNCE_DAMPING: -0.65, // Bounce damping (vertical only) - higher = more bouncy
       },
 
       // Combat
@@ -430,10 +429,9 @@
       AMMO_PICKUP: {
         RADIUS: 8,
         COLLECTION_BONUS_RADIUS: 10,
-        HORIZONTAL_VELOCITY_RANGE: 2,
-        INITIAL_UPWARD_VELOCITY_MIN: -2,
-        INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
-        MIN_BOUNCE_VELOCITY: 0.05, // Minimum velocity before ammo disappears
+        INITIAL_UPWARD_VELOCITY: -7, // Initial upward velocity for vertical bounce (high for visibility)
+        MAX_BOUNCES: 10, // Maximum number of bounces before removal
+        PROGRESSIVE_DAMPING_FACTOR: 0.3, // How much damping reduces over bounce progression (0.3 = 30% reduction by final bounce)
         COLOR: '#FFD700', // Gold color
       },
 
@@ -631,9 +629,7 @@
         playerTranqAmmoMultiplier: 1.5,   // 22 tranq (15 * 1.5)
         enemySpeedMultiplier: 0.8,        // 20% slower
         invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
-        ammoDampingMultiplier: 1.14,      // 40% longer bouncing (-0.7 * 1.14 = -0.8)
-        ammoFrictionMultiplier: 1.06,     // Less horizontal slowdown (0.85 * 1.06 = 0.90)
-        ammoMinVelocityMultiplier: 0.7,   // Lower threshold (0.05 * 0.7 = 0.035)
+        ammoDampingMultiplier: 1.14,      // 40% longer bouncing (-0.65 * 1.14 = -0.741)
       },
       normal: {
         label: 'Normal',
@@ -643,8 +639,6 @@
         enemySpeedMultiplier: 1.0,        // Normal speed
         invincibilityMultiplier: 1.0,     // 60 frames
         ammoDampingMultiplier: 1.0,       // Baseline bouncing
-        ammoFrictionMultiplier: 1.0,      // Baseline friction
-        ammoMinVelocityMultiplier: 1.0,   // Baseline threshold
       },
       hard: {
         label: 'Hard',
@@ -653,9 +647,7 @@
         playerTranqAmmoMultiplier: 0.7,   // 10 tranq (15 * 0.7)
         enemySpeedMultiplier: 1.3,        // 30% faster
         invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
-        ammoDampingMultiplier: 0.86,      // 20% shorter bouncing (-0.7 * 0.86 = -0.6)
-        ammoFrictionMultiplier: 0.94,     // More horizontal slowdown (0.85 * 0.94 = 0.8)
-        ammoMinVelocityMultiplier: 1.4,   // Higher threshold (0.05 * 1.4 = 0.07)
+        ammoDampingMultiplier: 0.86,      // 20% shorter bouncing (-0.65 * 0.86 = -0.559)
       },
     };
 
@@ -1229,15 +1221,22 @@
 
     /**
      * Create an ammo pickup object with physics
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} startY - Starting Y for bounce physics
+     * @param {number} ammoAmount - Number of ammo this pickup restores
      */
-    const createAmmoPickup = (x, y, startY) => {
+    const createAmmoPickup = (x, y, startY, ammoAmount) => {
       return {
         x,
         y,
         startY,
         radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS,
-        vx: randomCentered(GAME_CONSTANTS.AMMO_PICKUP.HORIZONTAL_VELOCITY_RANGE),
-        vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_MIN + Math.random() * GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY_RANGE
+        vx: 0, // No horizontal velocity for vertical bounce
+        vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY,
+        ammoAmount,
+        hasBounced: false,
+        bounceCount: 0
       };
     };
 
@@ -2848,29 +2847,40 @@
       // Update ammo pickups
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
       const adjustedDamping = GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
-      const adjustedFriction = GAME_CONSTANTS.PHYSICS.AMMO_FRICTION * diffMod.ammoFrictionMultiplier;
-      const adjustedMinVelocity = GAME_CONSTANTS.AMMO_PICKUP.MIN_BOUNCE_VELOCITY * diffMod.ammoMinVelocityMultiplier;
 
       game.ammoPickups = game.ammoPickups.filter(pickup => {
-        pickup.x += pickup.vx;
+        // Vertical-only movement (no horizontal)
         pickup.y += pickup.vy;
         pickup.vy += GAME_CONSTANTS.PHYSICS.AMMO_GRAVITY;
 
+        // Bounce when hitting the ground
         if (pickup.y >= pickup.startY && pickup.vy > 0) {
           pickup.y = pickup.startY;
-          pickup.vy *= adjustedDamping;
-          pickup.vx *= adjustedFriction;
+          pickup.bounceCount++;
+
+          // Apply damping with progressive fade - each bounce loses more energy
+          // Formula: damping factor decreases as bounces increase to ensure it settles by MAX_BOUNCES
+          const maxBounces = GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
+          const bounceProgress = pickup.bounceCount / maxBounces;
+          const progressiveDamping = adjustedDamping * (1 - bounceProgress * GAME_CONSTANTS.AMMO_PICKUP.PROGRESSIVE_DAMPING_FACTOR);
+
+          pickup.vy *= progressiveDamping;
+          pickup.hasBounced = true; // Mark as bounced when first hitting ground
         }
 
-        if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
-          game.player.ammo++;
-          stateAccumulator.playerAmmo = game.player.ammo;
-          playSound(SOUNDS.PICKUP_AMMO);
-          return false;
+        // Check collection (only after first bounce)
+        if (pickup.hasBounced) {
+          if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
+            game.player.ammo += pickup.ammoAmount;
+            stateAccumulator.playerAmmo = game.player.ammo;
+            playSound(SOUNDS.PICKUP_AMMO);
+            game.floatingTexts.push(createFloatingText(pickup.x, pickup.y, `+${pickup.ammoAmount}`, '#FFD700'));
+            return false;
+          }
         }
 
-        // Remove ammo when motion stops
-        return Math.abs(pickup.vy) > adjustedMinVelocity || Math.abs(pickup.vx) > adjustedMinVelocity;
+        // Keep pickup until max bounces reached
+        return pickup.bounceCount < GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
       });
     };
 
@@ -2919,10 +2929,9 @@
               playSound(SOUNDS.HIT);
 
               if (dino.health <= 0) {
-                // Spawn ammo pickups
-                for (let j = 0; j < dino.maxHealth; j++) {
-                  game.ammoPickups.push(createAmmoPickup(dino.x, dino.y, dino.y));
-                }
+                // Spawn single ammo pickup that restores all ammo at once (at dinosaur's feet)
+                const groundY = dino.y + dino.size; // Spawn at dinosaur's bottom
+                game.ammoPickups.push(createAmmoPickup(dino.x, groundY, groundY, dino.maxHealth));
 
                 stateAccumulator.score = (stateAccumulator.score || 0) + dino.points;
                 game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
@@ -4420,12 +4429,20 @@
             ctx.stroke();
           });
 
-          // Draw ammo pickups
-          ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
+          // Draw ammo pickups with amount badge
           game.ammoPickups.forEach(pickup => {
+            // Draw the ammo ball
+            ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
             ctx.beginPath();
             ctx.arc(pickup.x - game.cameraX, pickup.y - game.cameraY, pickup.radius, 0, Math.PI * 2);
             ctx.fill();
+
+            // Draw the ammo amount badge
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`×${pickup.ammoAmount}`, pickup.x - game.cameraX, pickup.y - game.cameraY);
           });
 
           // Draw floating texts (optimized)
