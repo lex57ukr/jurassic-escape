@@ -1229,26 +1229,40 @@
      */
     const createPowerup = (mapWidth, mapHeight) => {
       const powerupType = Math.random() > 0.5 ? GAME_CONSTANTS.POWERUPS.HEALTH : GAME_CONSTANTS.POWERUPS.SPEED;
-      return {
+      const powerup = {
         x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         powerupType,
         radius: powerupType.radius,
         active: true
       };
+
+      // Add instance method for drawing
+      powerup.draw = function(ctx, cameraX, cameraY) {
+        drawPowerup(ctx, this, cameraX, cameraY);
+      };
+
+      return powerup;
     };
 
     /**
      * Create a tranquilizer depot object
      */
     const createTranqDepot = (mapWidth, mapHeight) => {
-      return {
+      const depot = {
         x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
         ammo: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_AMMO,
         active: true
       };
+
+      // Add instance method for drawing
+      depot.draw = function(ctx, cameraX, cameraY) {
+        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.DEPOT_STYLES.TRANQ);
+      };
+
+      return depot;
     };
 
     /**
@@ -1258,13 +1272,20 @@
      * @param {number} amount - Amount of regular ammo
      */
     const createAmmoDepot = (x, y, amount) => {
-      return {
+      const depot = {
         x,
         y,
         radius: GAME_CONSTANTS.SPAWN.AMMO_DEPOT_RADIUS,
         amount,
         active: true
       };
+
+      // Add instance method for drawing
+      depot.draw = function(ctx, cameraX, cameraY) {
+        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.DEPOT_STYLES.AMMO);
+      };
+
+      return depot;
     };
 
     /**
@@ -1365,13 +1386,20 @@
      * @param {number} totalGuards - Total number of guards protecting this exit
      */
     const createExitTerritory = (exitX, exitY, totalGuards) => {
-      return {
+      const territory = {
         x: exitX,
         y: exitY,
         radius: GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS,
         isExitTerritory: true,
         guardCount: totalGuards
       };
+
+      // Add instance method for drawing
+      territory.draw = function(ctx, cameraX, cameraY) {
+        drawTerritory(ctx, this, cameraX, cameraY);
+      };
+
+      return territory;
     };
 
     /**
@@ -4391,22 +4419,22 @@
 
           // Draw powerups
           game.powerups.forEach(powerup => {
-            drawPowerup(ctx, powerup, game.cameraX, game.cameraY);
+            powerup.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw tranquilizer depots
           game.tranqDepots.forEach(depot => {
-            drawDepot(ctx, depot, game.cameraX, game.cameraY, GAME_CONSTANTS.DEPOT_STYLES.TRANQ);
+            depot.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw regular ammo depots
           game.ammoDepots.forEach(depot => {
-            drawDepot(ctx, depot, game.cameraX, game.cameraY, GAME_CONSTANTS.DEPOT_STYLES.AMMO);
+            depot.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw territories (skull markers at center)
           game.territories.forEach(territory => {
-            drawTerritory(ctx, territory, game.cameraX, game.cameraY);
+            territory.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw dinosaurs
