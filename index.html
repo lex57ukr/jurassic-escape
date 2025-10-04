@@ -116,6 +116,7 @@
           territorial: false,
           tranqShots: 1,
           sleepDuration: 480, // 8 seconds at 60fps
+          spitAttack: null, // No ranged attack
         },
         TYRANNOSAURUS_REX: {
           id: 'trex',
@@ -128,6 +129,7 @@
           territorial: false,
           tranqShots: 3,
           sleepDuration: 240, // 4 seconds at 60fps
+          spitAttack: null, // No ranged attack
         },
         STEGOSAURUS: {
           id: 'stego',
@@ -140,6 +142,7 @@
           territorial: false,
           tranqShots: 2,
           sleepDuration: 360, // 6 seconds at 60fps
+          spitAttack: null, // No ranged attack
         },
         PARASAUROLOPHUS: {
           id: 'para',
@@ -152,6 +155,7 @@
           territorial: false,
           tranqShots: 1,
           sleepDuration: 420, // 7 seconds at 60fps
+          spitAttack: null, // No ranged attack
         },
         TRICERATOPS: {
           id: 'trike',
@@ -164,6 +168,7 @@
           territorial: false,
           tranqShots: 2,
           sleepDuration: 360, // 6 seconds at 60fps
+          spitAttack: null, // No ranged attack
         },
         DILOPHOSAURUS: {
           id: 'dilo',
@@ -176,6 +181,13 @@
           territorial: true,
           tranqShots: 2,
           sleepDuration: 360, // 6 seconds at 60fps
+          spitAttack: {
+            range: 180,              // Attack range in pixels
+            cooldown: 120,           // Frames between attacks (2 seconds at 60fps)
+            projectileSpeed: 4,      // Speed of projectile
+            projectileRadius: 6,     // Radius of projectile
+            damage: 1,               // Damage dealt to player
+          },
         },
       },
 
@@ -353,11 +365,6 @@
         TERRITORY_SPACING_MULTIPLIER: 2.2, // Minimum spacing between territories (as multiple of radius)
         TERRITORY_OBSTACLE_CLEARANCE: 20, // Extra clearance from obstacles for territory center
         TERRITORY_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid territory position
-        SPIT_ATTACK_RANGE: 180,        // Range for spit attack
-        SPIT_ATTACK_COOLDOWN: 120,     // Frames between spit attacks (2 seconds)
-        SPIT_PROJECTILE_SPEED: 4,      // Speed of spit projectiles
-        SPIT_PROJECTILE_RADIUS: 6,     // Radius of spit projectiles
-        SPIT_DAMAGE: 1,                // Damage from spit
         FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
         TERRITORY_MARKER_ICON: '💀',   // Icon for territory center marker
         EXIT_TERRITORY_RADIUS: 300,    // Larger radius for exit protection zone
@@ -522,12 +529,12 @@
         exitX: 1800,
         exitY: 1400,
         exitGuards: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id, count: 3 }
+          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 }
         ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS.id, count: 2 },
-          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS.id, count: 2 }
+          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS, count: 2 }
         ],
         obstacles: 40,
         powerups: 3,
@@ -542,16 +549,16 @@
         exitX: 3000,
         exitY: 2200,
         exitGuards: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.id, count: 1 }
+          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 1 }
         ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id, count: 7 },
-          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX.id, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS.id, count: 2 },
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.id, count: 2 },
-          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS.id, count: 4 },
-          { type: GAME_CONSTANTS.DINOSAURS.TRICERATOPS.id, count: 3 }
+          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 7 },
+          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS, count: 4 },
+          { type: GAME_CONSTANTS.DINOSAURS.TRICERATOPS, count: 3 }
         ],
         obstacles: 70,
         powerups: 4,
@@ -566,17 +573,17 @@
         exitX: 4200,
         exitY: 3000,
         exitGuards: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.id, count: 1 },
-          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX.id, count: 1 }
+          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 1 },
+          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX, count: 1 }
         ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id, count: 10, speed: 1.7 }, // Faster raptors
-          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX.id, count: 5, speed: 1.2 }, // Faster T-Rex
-          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS.id, count: 5, speed: 0.9 }, // Slightly faster
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.id, count: 5 },
-          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS.id, count: 6 },
-          { type: GAME_CONSTANTS.DINOSAURS.TRICERATOPS.id, count: 5 }
+          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 10, speed: 1.7 }, // Faster raptors
+          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX, count: 5, speed: 1.2 }, // Faster T-Rex
+          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS, count: 5, speed: 0.9 }, // Slightly faster
+          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 5 },
+          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS, count: 6 },
+          { type: GAME_CONSTANTS.DINOSAURS.TRICERATOPS, count: 5 }
         ],
         obstacles: 100,
         powerups: 5,
@@ -997,15 +1004,21 @@
 
     /**
      * Create a spit projectile object
+     * @param {number} fromX - Starting X position
+     * @param {number} fromY - Starting Y position
+     * @param {number} toX - Target X position
+     * @param {number} toY - Target Y position
+     * @param {Object} dinoType - Dinosaur config object with spitAttack properties
      */
-    const createSpitProjectile = (fromX, fromY, toX, toY) => {
+    const createSpitProjectile = (fromX, fromY, toX, toY, dinoType) => {
       const angle = Math.atan2(toY - fromY, toX - fromX);
       return {
         x: fromX,
         y: fromY,
-        vx: Math.cos(angle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
-        vy: Math.sin(angle) * GAME_CONSTANTS.AI.SPIT_PROJECTILE_SPEED,
-        radius: GAME_CONSTANTS.AI.SPIT_PROJECTILE_RADIUS
+        vx: Math.cos(angle) * dinoType.spitAttack.projectileSpeed,
+        vy: Math.sin(angle) * dinoType.spitAttack.projectileSpeed,
+        radius: dinoType.spitAttack.projectileRadius,
+        damage: dinoType.spitAttack.damage
       };
     };
 
@@ -1061,7 +1074,7 @@
 
     /**
      * Create an exit guard dinosaur
-     * @param {string} dinoType - Dinosaur type constant
+     * @param {Object} dinoType - Dinosaur config object from GAME_CONSTANTS.DINOSAURS (e.g., DINOSAURS.VELOCIRAPTOR)
      * @param {number} angle - Angle in degrees for positioning around exit
      * @param {number} exitX - Exit X position
      * @param {number} exitY - Exit Y position
@@ -1077,12 +1090,9 @@
       const x = exitX + Math.cos(angleRad) * spawnRadius;
       const y = exitY + Math.sin(angleRad) * spawnRadius;
 
-      // Get dinosaur stats from constants
-      const stats = getDinosaurStats(dinoType);
-
       // Apply difficulty modifiers
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
-      const adjustedSpeed = stats.speed * diffMod.enemySpeedMultiplier;
+      const adjustedSpeed = dinoType.speed * diffMod.enemySpeedMultiplier;
 
       return {
         type: dinoType,
@@ -1090,13 +1100,13 @@
         y,
         vx: 0,
         vy: 0,
-        health: stats.health,
-        maxHealth: stats.health,
+        health: dinoType.health,
+        maxHealth: dinoType.health,
         speed: adjustedSpeed,
         baseSpeed: adjustedSpeed, // Store base speed for AI calculations
-        size: stats.size,
-        color: stats.color,
-        points: stats.points,
+        size: dinoType.baseSize,
+        color: dinoType.color,
+        points: dinoType.points,
         aggressive: true, // Exit guards are always aggressive
         territorial: true, // Exit guards are always territorial
         territoryX: exitX,
@@ -1132,40 +1142,6 @@
       });
 
       return nearest;
-    };
-
-    /**
-     * Get default stats for a dinosaur type
-     * @param {string} dinoType - Dinosaur type (e.g., 'raptor', 'trex')
-     * @returns {Object} Stats object with health, speed, size, color, points, aggressive, territorial
-     */
-    const getDinosaurStats = (dinoType) => {
-      const config = getDinosaurConfig(dinoType);
-      // Rename baseSize to size for compatibility with existing code
-      return {
-        health: config.health,
-        speed: config.speed,
-        size: config.baseSize,
-        color: config.color,
-        points: config.points,
-        aggressive: config.aggressive,
-        territorial: config.territorial,
-      };
-    };
-
-    /**
-     * Get dinosaur config from type string ID
-     * Maps string ID ('raptor', 'trex', etc.) to DINOSAURS constant object
-     */
-    const getDinosaurConfig = (dinoTypeId) => {
-      // Find the DINOSAURS entry with matching id
-      for (const [key, config] of Object.entries(GAME_CONSTANTS.DINOSAURS)) {
-        if (config.id === dinoTypeId) {
-          return config;
-        }
-      }
-      // Fallback to raptor if not found
-      return GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR;
     };
 
     /**
@@ -2741,13 +2717,12 @@
                 dino.tranqHits++;
                 playSound(SOUNDS.TRANQ_HIT);
 
-                const dinoConfig = getDinosaurConfig(dino.type);
-                const shotsNeeded = dinoConfig.tranqShots;
+                const shotsNeeded = dino.type.tranqShots;
                 game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `${dino.tranqHits}/${shotsNeeded}`, '#00FF00'));
 
                 if (dino.tranqHits >= shotsNeeded) {
                   dino.isSleeping = true;
-                  dino.sleepTimer = dinoConfig.sleepDuration;
+                  dino.sleepTimer = dino.type.sleepDuration;
 
                   const tranqPoints = Math.round(dino.points * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.scoreMultiplier);
                   stateAccumulator.score = (stateAccumulator.score || 0) + tranqPoints;
@@ -2835,7 +2810,7 @@
             const diffMod = DIFFICULTY_MODIFIERS[difficulty];
             const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
 
-            game.player.health -= GAME_CONSTANTS.AI.SPIT_DAMAGE;
+            game.player.health -= spit.damage;
             grantInvincibility(game.player, invincibilityFrames);
             stateAccumulator.playerHealth = game.player.health;
             playSound(SOUNDS.PLAYER_HURT);
@@ -2866,6 +2841,9 @@
       const dist = distance(dino.x, dino.y, player.x, player.y);
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
 
+      // Set base speed (may be modified for specific states like flee)
+      dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
+
       if (dino.territorial) {
         // Territorial dinosaur logic
         const distFromTerritory = distance(dino.x, dino.y, dino.territoryX, dino.territoryY);
@@ -2880,26 +2858,23 @@
           // Chase player
           dino.state = GAME_CONSTANTS.AI.STATES.CHASE;
           const { dx, dy } = normalize(player.x - dino.x, player.y - dino.y);
-          dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
 
-          // Spit attack (only Dilophosaurus)
-          if (dino.type === GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.id && dist < GAME_CONSTANTS.AI.SPIT_ATTACK_RANGE && dino.spitCooldown <= 0) {
-            game.spit.push(createSpitProjectile(dino.x, dino.y, player.x, player.y));
-            dino.spitCooldown = GAME_CONSTANTS.AI.SPIT_ATTACK_COOLDOWN;
+          // Spit attack (if dinosaur has this capability)
+          if (dino.type.spitAttack && dist < dino.type.spitAttack.range && dino.spitCooldown <= 0) {
+            game.spit.push(createSpitProjectile(dino.x, dino.y, player.x, player.y, dino.type));
+            dino.spitCooldown = dino.type.spitAttack.cooldown;
           }
         } else if (distFromTerritory > dino.territoryRadius * returnThreshold) {
           // Return to territory
           dino.state = GAME_CONSTANTS.AI.STATES.TERRITORY_RETURN;
           const { dx, dy } = normalize(dino.territoryX - dino.x, dino.territoryY - dino.y);
-          dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
         } else {
           // Patrol
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
           dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
           dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
           dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
@@ -2914,12 +2889,10 @@
         if (dist < dino.aggroRange) {
           dino.state = GAME_CONSTANTS.AI.STATES.CHASE;
           const { dx, dy } = normalize(player.x - dino.x, player.y - dino.y);
-          dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
         } else {
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
           dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
           dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
           dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
@@ -2934,7 +2907,6 @@
           dino.vy = dy * dino.speed;
         } else {
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
           dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
           dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
           dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
@@ -3070,8 +3042,7 @@
 
             // Stun dinosaur
             dino.isSleeping = true;
-            const dinoConfig = getDinosaurConfig(dino.type);
-            dino.sleepTimer = Math.round(dinoConfig.sleepDuration * GAME_CONSTANTS.HAZARDS.FENCE_STUN_DURATION_MULTIPLIER);
+            dino.sleepTimer = Math.round(dino.type.sleepDuration * GAME_CONSTANTS.HAZARDS.FENCE_STUN_DURATION_MULTIPLIER);
             dino.zapTimer = GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
 
             // Remember to avoid this fence
@@ -3388,7 +3359,7 @@
                     <span className="text-white font-semibold text-lg">Viewport Size</span>
                   </div>
                   <div className="flex gap-2">
-                    {Object.entries(VIEWPORT_SCALES).map(([key, config]) => (
+                    {Object.entries(GAME_CONSTANTS.VIEWPORTS).map(([key, config]) => (
                       <button
                         key={key}
                         onClick={() => onViewportScaleChange(key)}
@@ -3778,13 +3749,12 @@
         // Create dinosaurs
         let dinoIndex = 0;
         config.dinosaurs.forEach(dinoConfig => {
-          // Get default stats for this dinosaur type
-          const defaultStats = getDinosaurStats(dinoConfig.type);
+          // Merge config overrides with dinosaur type defaults
+          // Config can override speed from LEVEL_CONFIGS (e.g., faster Level 3 raptors)
+          const baseSpeed = dinoConfig.speed || dinoConfig.type.speed;
+          const count = dinoConfig.count;
 
-          // Merge config overrides with defaults
-          const stats = { ...defaultStats, ...dinoConfig };
-
-          for (let i = 0; i < stats.count; i++) {
+          for (let i = 0; i < count; i++) {
             // Calculate initial spawn position
             const initialX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_X + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
             const initialY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
@@ -3793,7 +3763,7 @@
             const spawnPos = findValidSpawnPosition(
               initialX,
               initialY,
-              stats.size,
+              dinoConfig.type.baseSize,
               game.obstacles,
               game
             );
@@ -3803,18 +3773,18 @@
               y: spawnPos.y,
               vx: 0,
               vy: 0,
-              health: stats.health,
-              maxHealth: stats.health,
-              speed: stats.speed * diffMod.enemySpeedMultiplier, // Apply difficulty
-              baseSpeed: stats.speed * diffMod.enemySpeedMultiplier,
-              size: stats.size,
-              color: stats.color,
-              type: stats.type,
-              points: stats.points,
-              aggressive: stats.aggressive,
-              territorial: stats.territorial,
-              aggroRange: stats.aggressive ? GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
-              fleeRange: stats.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
+              health: dinoConfig.type.health,
+              maxHealth: dinoConfig.type.health,
+              speed: baseSpeed * diffMod.enemySpeedMultiplier, // Apply difficulty
+              baseSpeed: baseSpeed * diffMod.enemySpeedMultiplier,
+              size: dinoConfig.type.baseSize,
+              color: dinoConfig.type.color,
+              type: dinoConfig.type,
+              points: dinoConfig.type.points,
+              aggressive: dinoConfig.type.aggressive,
+              territorial: dinoConfig.type.territorial,
+              aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
+              fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
               state: GAME_CONSTANTS.AI.STATES.PATROL,
               patrolAngle: Math.random() * Math.PI * 2,
               isSleeping: false,
@@ -3827,7 +3797,7 @@
             };
 
             // Create territory for territorial dinosaurs
-            if (stats.territorial) {
+            if (dinoConfig.type.territorial) {
               // Find a non-overlapping territory position that avoids obstacles
               let territoryX = spawnPos.x;
               let territoryY = spawnPos.y;
@@ -3851,7 +3821,7 @@
                 if (!overlapping) {
                   for (const obstacle of game.obstacles) {
                     const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
-                    if (dist < obstacle.radius + stats.size + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
+                    if (dist < obstacle.radius + dinoConfig.type.baseSize + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
                       overlapping = true;
                       break;
                     }
@@ -4167,25 +4137,24 @@
               ctx.scale(-1, 1);
             }
 
-            const dinoConfig = getDinosaurConfig(dino.type);
             switch (dino.type) {
-              case GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.id:
-                drawVelociraptor(ctx, dino.size / dinoConfig.baseSize);
+              case GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR:
+                drawVelociraptor(ctx, dino.size / dino.type.baseSize);
                 break;
-              case GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX.id:
-                drawTyrannosaurusRex(ctx, dino.size / dinoConfig.baseSize);
+              case GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX:
+                drawTyrannosaurusRex(ctx, dino.size / dino.type.baseSize);
                 break;
-              case GAME_CONSTANTS.DINOSAURS.STEGOSAURUS.id:
-                drawStegosaurus(ctx, dino.size / dinoConfig.baseSize);
+              case GAME_CONSTANTS.DINOSAURS.STEGOSAURUS:
+                drawStegosaurus(ctx, dino.size / dino.type.baseSize);
                 break;
-              case GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS.id:
-                drawParasaurolophus(ctx, dino.size / dinoConfig.baseSize);
+              case GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS:
+                drawParasaurolophus(ctx, dino.size / dino.type.baseSize);
                 break;
-              case GAME_CONSTANTS.DINOSAURS.TRICERATOPS.id:
-                drawTriceratops(ctx, dino.size / dinoConfig.baseSize);
+              case GAME_CONSTANTS.DINOSAURS.TRICERATOPS:
+                drawTriceratops(ctx, dino.size / dino.type.baseSize);
                 break;
-              case GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.id:
-                drawDilophosaurus(ctx, dino.size / dinoConfig.baseSize, dino.aiState);
+              case GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS:
+                drawDilophosaurus(ctx, dino.size / dino.type.baseSize, dino.aiState);
                 break;
             }
 
