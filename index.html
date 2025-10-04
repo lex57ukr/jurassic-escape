@@ -247,7 +247,8 @@
             spotsColor: '#C0C0C0',  // Muted gray spots
           },
           sizes: {
-            spotsCount: 3,              // Number of spots per mushroom
+            spotsCount: 3,              // Default number of spots (fallback)
+            spotsCountOptions: [0, 2, 3], // Valid spot counts (0=plain, 2=few, 3=normal)
             stemWidthRatio: 0.4,        // Stem width relative to radius
             stemHeightRatio: 0.8,       // Stem height relative to radius
             capRadiusRatio: 0.7,        // Cap radius relative to radius
@@ -841,13 +842,16 @@
         const x = centerX + Math.cos(angle) * dist;
         const y = centerY + Math.sin(angle) * dist;
         const radius = GAME_CONSTANTS.SPAWN.MUSHROOM_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.MUSHROOM_MAX_RADIUS - GAME_CONSTANTS.SPAWN.MUSHROOM_MIN_RADIUS);
+        const spotOptions = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes.spotsCountOptions;
+        const spotCount = spotOptions[Math.floor(Math.random() * spotOptions.length)];
 
         mushrooms.push({
           x,
           y,
           radius,
           obstacleType: GAME_CONSTANTS.OBSTACLES.MUSHROOM,
-          colorIndex
+          colorIndex,
+          spotCount
         });
       }
 
@@ -1991,8 +1995,9 @@
      * @param {number} screenY - Screen Y position
      * @param {number} radius - Mushroom radius
      * @param {number} colorIndex - Index into cap colors array
+     * @param {Object} mushroom - Mushroom object (optional, for spotCount)
      */
-    const drawMushroom = (ctx, screenX, screenY, radius, colorIndex) => {
+    const drawMushroom = (ctx, screenX, screenY, radius, colorIndex, mushroom) => {
       const colors = GAME_CONSTANTS.OBSTACLES.MUSHROOM.colors;
       const sizes = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes;
 
@@ -2019,7 +2024,7 @@
 
       // Draw spots on cap
       ctx.fillStyle = colors.spotsColor;
-      const spotCount = sizes.spotsCount;
+      const spotCount = mushroom?.spotCount ?? sizes.spotsCount;
       for (let i = 0; i < spotCount; i++) {
         const angle = (i / spotCount) * Math.PI * 2;
         const spotDist = capRadius * sizes.spotDistanceRatio;
@@ -2100,7 +2105,7 @@
           drawBush(ctx, screenX, screenY, obstacle.radius);
           break;
         case GAME_CONSTANTS.OBSTACLES.MUSHROOM:
-          drawMushroom(ctx, screenX, screenY, obstacle.radius, obstacle.colorIndex || 0);
+          drawMushroom(ctx, screenX, screenY, obstacle.radius, obstacle.colorIndex || 0, obstacle);
           break;
         case GAME_CONSTANTS.OBSTACLES.GRASS:
           drawGrass(ctx, screenX, screenY, obstacle.radius, obstacle);
