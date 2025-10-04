@@ -283,9 +283,17 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
   - `GRASS`: non-blocking (blocksMovement: false, zIndex: 0), ground layer with individual blade rendering
   - Entity objects store reference: `{ x, y, radius, obstacleType: OBSTACLES.MUSHROOM }`
 - **Powerups**: Types defined in `GAME_CONSTANTS.POWERUPS` - `HEALTH` (red cross, ❤️ icon) and `SPEED` (lightning bolt, ⚡ icon)
-- **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
-  - Bouncing physics affected by difficulty: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
-  - Controlled by damping, friction, and minimum velocity threshold multipliers in `DIFFICULTY_MODIFIERS`
+- **Ammo pickups**: Single pickup per defeated dinosaur, bounces vertically with progressive fading amplitude
+  - Each pickup restores ammo equal to dinosaur's max health (1-4 shots depending on dinosaur type)
+  - Displays "×N" badge showing ammo amount on the bouncing ball
+  - Vertical-only bouncing (no horizontal movement) with progressive damping
+  - Spawns at dinosaur's feet, launches upward with initial velocity of -7 and gravity of 0.3
+  - Maximum 10 bounces before automatic removal (configurable via `MAX_BOUNCES`)
+  - Progressive damping: each bounce loses progressively more energy (30% reduction by final bounce)
+  - Can only be collected after first bounce (prevents instant collection)
+  - Bouncing duration affected by difficulty: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
+  - Controlled by damping multipliers in `DIFFICULTY_MODIFIERS`
+  - Floating text shows "+N" when collected
 - **Tranquilizer depots**: Green crates with syringe icons (💉), provide 5 tranq ammo each, randomly placed
 - **Regular ammo depots**: Blue crates with bullet icons (💥), provide minimal regular ammo to prevent softlocks
   - 2 depots per level at fixed positions: one near spawn (250, 150), one in far corner
@@ -410,13 +418,16 @@ Levels defined in `LEVEL_CONFIGS`:
     - Spawn with collision avoidance (obstacles, other fences, tar pits)
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; also bypasses electric fences; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by `GAME_CONSTANTS.POWERUPS.SPEED.multiplier` (1.8x) for `GAME_CONSTANTS.POWERUPS.SPEED.durationFrames` (300 frames = 5 seconds at 60fps)
-- **Ammo economy**: Start with 10 regular ammo (`GAME_CONSTANTS.PLAYER.START_AMMO`), tranquilizer ammo from `GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo` (15); dinosaurs drop regular ammo equal to their max health when killed
-  - Ammo pickups use physics-based bouncing animation with difficulty scaling
-  - **Easy difficulty**: 40% longer bouncing (damping: -0.8, friction: 0.90, threshold: 0.035)
-  - **Normal difficulty**: Baseline bouncing (damping: -0.7, friction: 0.85, threshold: 0.05)
-  - **Hard difficulty**: 20% shorter bouncing (damping: -0.6, friction: 0.8, threshold: 0.07)
-  - Bounces continuously with decreasing amplitude until motion stops
-  - No fixed bounce count or lifetime limit
+- **Ammo economy**: Start with 10 regular ammo (`GAME_CONSTANTS.PLAYER.START_AMMO`), tranquilizer ammo from `GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo` (15); dinosaurs drop single ammo pickup equal to their max health when killed
+  - Single ammo pickup per dinosaur with vertical-only bouncing animation
+  - Physics: initial velocity -7, gravity 0.3, base damping -0.65
+  - Exactly 10 bounces before removal (lifetime controlled by bounce count, not velocity/duration)
+  - **Difficulty scaling affects bounce physics** (count remains 10 across all difficulties):
+    - **Easy difficulty**: Higher/slower bounces (damping: -0.741, 40% more bouncy) - 10 bounces spread over longer duration
+    - **Normal difficulty**: Baseline bounces (damping: -0.65) - 10 bounces at standard duration
+    - **Hard difficulty**: Lower/faster bounces (damping: -0.559, 20% less bouncy) - 10 bounces complete more quickly
+  - Progressive damping factor of 0.3 (30% energy reduction by final bounce)
+  - Can only be collected after first bounce to prevent instant pickup
 - **Tranquilizer mechanic**: Multi-shot system based on dinosaur size (properties stored in `GAME_CONSTANTS.DINOSAURS`)
   - Raptor/Para: 1 shot (`tranqShots: 1`), Dilo/Stego/Trike: 2 shots, T-Rex: 3 shots
   - Shows hit counter as floating text (1/2, 2/3, etc.)
