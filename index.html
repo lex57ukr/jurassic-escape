@@ -42,11 +42,41 @@
 
       // Game States
       GAME_STATES: {
-        MENU: 'menu',
-        PLAYING: 'playing',
-        LEVEL_COMPLETE: 'levelComplete',
-        WON: 'won',
-        LOST: 'lost',
+        MENU: {
+          id: 'menu',
+          isTerminal: false,
+          runsGameLoop: false,
+          canPause: false,
+          soundEffect: null, // No sound when initially entering menu
+        },
+        PLAYING: {
+          id: 'playing',
+          isTerminal: false,
+          runsGameLoop: true,
+          canPause: true,
+          soundEffect: null, // Assigned after SOUNDS definition
+        },
+        LEVEL_COMPLETE: {
+          id: 'levelComplete',
+          isTerminal: true,
+          runsGameLoop: false,
+          canPause: false,
+          soundEffect: null, // Assigned after SOUNDS definition
+        },
+        WON: {
+          id: 'won',
+          isTerminal: true,
+          runsGameLoop: false,
+          canPause: false,
+          soundEffect: null, // Assigned after SOUNDS definition
+        },
+        LOST: {
+          id: 'lost',
+          isTerminal: true,
+          runsGameLoop: false,
+          canPause: false,
+          soundEffect: null, // Assigned after SOUNDS definition
+        },
       },
 
       // Player
@@ -902,15 +932,6 @@
     };
 
     /**
-     * Check if game state is terminal (game loop should stop)
-     */
-    const isTerminalState = (state) => {
-      return state === GAME_CONSTANTS.GAME_STATES.LOST ||
-             state === GAME_CONSTANTS.GAME_STATES.WON ||
-             state === GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE;
-    };
-
-    /**
      * Clamp entity position to map boundaries
      */
     const clampToBounds = (entity, size, mapWidth, mapHeight) => {
@@ -978,6 +999,33 @@
     GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
     GAME_CONSTANTS.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
     GAME_CONSTANTS.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
+
+    // Assign sound effects to game state configs
+    GAME_CONSTANTS.GAME_STATES.PLAYING.soundEffect = SOUNDS.GAME_START;
+    GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE.soundEffect = SOUNDS.LEVEL_COMPLETE;
+    GAME_CONSTANTS.GAME_STATES.WON.soundEffect = SOUNDS.VICTORY;
+    GAME_CONSTANTS.GAME_STATES.LOST.soundEffect = SOUNDS.GAME_OVER;
+
+    /**
+     * Transition to a new game state with automatic sound effect handling
+     * @param {Object} newState - State object from GAME_CONSTANTS.GAME_STATES
+     * @param {Function} playSound - Sound playing function
+     * @param {Object|null} stateAccumulator - State accumulator for batched updates (game loop), or null
+     * @param {Function|null} setGameState - Direct setState function (when not using accumulator)
+     */
+    const transitionToState = (newState, playSound, stateAccumulator = null, setGameState = null) => {
+      // Set the new state
+      if (stateAccumulator) {
+        stateAccumulator.gameState = newState;
+      } else if (setGameState) {
+        setGameState(newState);
+      }
+
+      // Play the associated sound effect if it exists
+      if (newState.soundEffect) {
+        playSound(newState.soundEffect);
+      }
+    };
 
     /**
      * Unified weapon firing logic
@@ -2728,8 +2776,7 @@
 
               // Check if player died
               if (game.player.health <= 0) {
-                stateAccumulator.gameState = GAME_CONSTANTS.GAME_STATES.LOST;
-                playSound(SOUNDS.GAME_OVER);
+                transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator);
                 return true; // Game over
               }
             }
@@ -2958,8 +3005,7 @@
             playSound(SOUNDS.PLAYER_HURT);
 
             if (game.player.health <= 0) {
-              stateAccumulator.gameState = GAME_CONSTANTS.GAME_STATES.LOST;
-              playSound(SOUNDS.GAME_OVER);
+              transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator);
               return false; // Game over
             }
           }
@@ -3230,8 +3276,7 @@
               playSound(SOUNDS.PLAYER_HURT);
 
               if (game.player.health <= 0) {
-                stateAccumulator.gameState = GAME_CONSTANTS.GAME_STATES.LOST;
-                playSound(SOUNDS.GAME_OVER);
+                transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator);
                 return true; // Game over
               }
             }
@@ -4093,7 +4138,7 @@
       }, [difficulty]);
 
       useEffect(() => {
-        if (gameState !== GAME_CONSTANTS.GAME_STATES.PLAYING) return;
+        if (!gameState.runsGameLoop) return;
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -4180,7 +4225,7 @@
           });
 
           // Stop game loop if game over
-          if (stateAccumulator.gameState !== undefined && isTerminalState(stateAccumulator.gameState)) {
+          if (stateAccumulator.gameState !== undefined && stateAccumulator.gameState.isTerminal) {
             return;
           }
 
@@ -4190,11 +4235,9 @@
             const exitCenterY = game.exit.y + game.exit.height / 2;
             if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + GAME_CONSTANTS.MAP.EXIT_COLLISION_RADIUS) {
               if (currentLevel < GAME_CONSTANTS.MAP.MAX_LEVEL) {
-                setGameState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE);
-                playSound(SOUNDS.LEVEL_COMPLETE);
+                transitionToState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE, playSound, null, setGameState);
               } else {
-                setGameState(GAME_CONSTANTS.GAME_STATES.WON);
-                playSound(SOUNDS.VICTORY);
+                transitionToState(GAME_CONSTANTS.GAME_STATES.WON, playSound, null, setGameState);
               }
             }
           }
@@ -4448,8 +4491,7 @@
         setCurrentLevel(1);
         setScore(0);
         initGame(1);
-        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
-        playSound(SOUNDS.GAME_START);
+        transitionToState(GAME_CONSTANTS.GAME_STATES.PLAYING, playSound, null, setGameState);
       }, [initGame, playSound]);
 
       const nextLevel = useCallback(() => {
@@ -4609,7 +4651,7 @@
 
       const handleCloseSettings = useCallback(() => {
         setShowSettingsMenu(false);
-        if (gameState === GAME_CONSTANTS.GAME_STATES.PLAYING) {
+        if (gameState.canPause) {
           setShowPauseMenu(true);
         }
       }, [gameState]);

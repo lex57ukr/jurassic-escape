@@ -29,7 +29,20 @@ The codebase follows a **constants-first approach** for type safety and maintain
 **Core Constants:**
 
 - `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
-- `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
+- `GAME_STATES`: Unified game state configuration with all properties per state:
+  - `GAME_STATES.MENU`: `{ id, isTerminal, runsGameLoop, canPause, soundEffect }`
+  - `GAME_STATES.PLAYING`: `{ id, isTerminal, runsGameLoop, canPause, soundEffect }`
+  - `GAME_STATES.LEVEL_COMPLETE`: `{ id, isTerminal, runsGameLoop, canPause, soundEffect }`
+  - `GAME_STATES.WON`: `{ id, isTerminal, runsGameLoop, canPause, soundEffect }`
+  - `GAME_STATES.LOST`: `{ id, isTerminal, runsGameLoop, canPause, soundEffect }`
+  - Each state is a full object (not just a string ID)
+  - React state stores full state object: `gameState = GAME_CONSTANTS.GAME_STATES.PLAYING`
+  - Direct property access: `gameState.isTerminal`, `gameState.runsGameLoop`, `gameState.canPause`
+  - `isTerminal`: Boolean indicating if game loop should stop (LOST, WON, LEVEL_COMPLETE are terminal)
+  - `runsGameLoop`: Boolean indicating if game loop should execute (only PLAYING runs the loop)
+  - `canPause`: Boolean indicating if pause menu is allowed (only PLAYING can be paused)
+  - `soundEffect`: References SOUNDS object, assigned after SOUNDS is defined
+  - State transitions handled by `transitionToState()` helper which automatically plays associated sound effects
 - `WEAPONS`: Unified weapon configuration with all properties per weapon type:
   - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius, ammoConfig: { playerKey, stateKey }, soundEffect, bulletFactory }`
   - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier, ammoConfig: { playerKey, stateKey }, soundEffect, bulletFactory }`
@@ -83,6 +96,11 @@ The codebase follows a **constants-first approach** for type safety and maintain
 
 - `randomCentered(range)`: Generates random values centered around zero (±range/2) using RANDOM_CENTER constant
 - `randomizeBubbleOffset()`: Returns randomized {offsetX, offsetY} for tar pit bubble positioning using `randomCentered()`
+- `transitionToState(newState, playSound, stateAccumulator, setGameState)`: Unified state transition handler
+  - Automatically sets new game state via stateAccumulator (game loop) or setGameState (event handlers)
+  - Automatically plays associated sound effect if state has one
+  - Eliminates manual `playSound()` calls after state changes
+  - Usage: `transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator)` or `transitionToState(GAME_CONSTANTS.GAME_STATES.WON, playSound, null, setGameState)`
 
 **Entity Factory Functions:**
 
@@ -111,13 +129,18 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - **Easier refactoring**: Change values in one location, no scattered constants
 - **Self-documenting code**: `GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.tranqShots` is clearer than separate constants
 - **Eliminates lookup functions**: Direct property access instead of switch statements (e.g., removed `getSleepDurationForType()`, `getShotsNeededForType()`)
-- **Consistent pattern**: All entity types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS) follow the same unified object pattern - store full object references, access properties directly
+- **Consistent pattern**: All entity types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS, GAME_STATES) follow the same unified object pattern - store full object references, access properties directly
 
 ### Game State Management
 
 The main `JurassicEscape` component manages:
 
-- **Game states**: Defined in `GAME_CONSTANTS.GAME_STATES` - `MENU`, `PLAYING`, `LEVEL_COMPLETE`, `WON`, `LOST`
+- **Game states**: Defined in `GAME_CONSTANTS.GAME_STATES` as full objects with properties
+  - Each state object contains: `id`, `isTerminal`, `runsGameLoop`, `canPause`, `soundEffect`
+  - React state stores the full state object (not a string ID)
+  - State comparisons use object reference equality: `gameState === GAME_CONSTANTS.GAME_STATES.PLAYING`
+  - State transitions use `transitionToState()` helper to automatically handle sound effects
+  - Properties enable declarative logic: `if (!gameState.runsGameLoop) return;` instead of `if (gameState !== PLAYING)`
 - **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `autoAim`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
   - Player, bullets, dinosaurs, obstacles, decorations, powerups, ammoPickups, tranqDepots, ammoDepots
@@ -447,18 +470,18 @@ Levels defined in `LEVEL_CONFIGS`:
 - Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
-  - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS/HAZARDS pattern - each entity type is a full object with all properties
-    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `weaponType: WEAPONS.REGULAR`, `dino.type: DINOSAURS.VELOCIRAPTOR`, `powerupType: POWERUPS.HEALTH`, `hazardType: HAZARDS.TAR_PIT`
-    - All entity types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS) store full object references
-    - All properties (visual, behavioral, mechanical) defined in one place
-    - Direct property access: `bullet.weaponType.bulletColor`, `dino.type.tranqShots`, `powerup.powerupType.durationFrames`, `obstacle.obstacleType.colors`, `fence.hazardType.zap.duration`
+  - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS/HAZARDS/GAME_STATES pattern - each entity/state type is a full object with all properties
+    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `weaponType: WEAPONS.REGULAR`, `dino.type: DINOSAURS.VELOCIRAPTOR`, `powerupType: POWERUPS.HEALTH`, `hazardType: HAZARDS.TAR_PIT`, `gameState: GAME_STATES.PLAYING`
+    - All entity and state types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS, GAME_STATES) store full object references
+    - All properties (visual, behavioral, mechanical, functional) defined in one place
+    - Direct property access: `bullet.weaponType.bulletColor`, `dino.type.tranqShots`, `powerup.powerupType.durationFrames`, `obstacle.obstacleType.colors`, `fence.hazardType.zap.duration`, `gameState.isTerminal`
     - Capability system: Use nullable objects (e.g., `spitAttack: null` vs `spitAttack: { ... }`) for optional features
   - **Separate generic spawn constants from type-specific properties**: Generic spawn logic (e.g., `DEFAULT_ENTITY_CLEARANCE`, `HAZARD_SPAWN_MAX_ATTEMPTS`) belongs in `SPAWN` namespace, not in type definitions
   - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
   - Avoid string literals for types - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
-  - Pass full object references when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`
-  - Eliminate lookup/helper functions when consolidating - replace switch statements with direct property access
-  - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`)
+  - Pass full object references when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`; state stores `gameState: GAME_STATES.PLAYING`, code accesses `gameState.runsGameLoop`
+  - Eliminate lookup/helper functions when consolidating - replace switch statements with direct property access (e.g., removed `isTerminalState()` in favor of `gameState.isTerminal`)
+  - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`, `transitionToState()`)
   - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, `createTarPit()`, `createElectricFence()`, etc.)
   - Separate concerns: blocking entities (`obstacles` array) vs decorative (`decorations` array), determined by `blocksMovement` property
   - Keep constants at the top of the file before utility functions and components
