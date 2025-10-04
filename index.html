@@ -4150,6 +4150,9 @@
 
         let animationId;
 
+        // Focus canvas to receive keyboard events
+        canvas.focus();
+
         // Attach event listeners using memoized handlers
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('click', handleClick);
@@ -4525,6 +4528,11 @@
         const key = e.key.toLowerCase();
         game.keys[key] = true;
 
+        // Prevent browser defaults for game keys
+        if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'escape'].includes(key)) {
+          e.preventDefault();
+        }
+
         // Handle ESC to pause
         if (key === 'escape') {
           setShowPauseMenu(true);
@@ -4672,6 +4680,8 @@
       const handleContinue = useCallback(() => {
         setShowPauseMenu(false);
         playSound(SOUNDS.UNPAUSE);
+        // Refocus canvas to ensure keyboard input works after resuming
+        canvasRef.current?.focus();
       }, [playSound]);
 
       const handleRestartLevel = useCallback(() => {
@@ -4803,6 +4813,7 @@
                   height={GAME_CONSTANTS.VIEWPORTS[viewportScale].height}
                   style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
                   className="border-4 border-green-600 bg-green-900 cursor-crosshair"
+                  tabIndex={0}
                 />
 
                 {/* Touch Controls Overlay */}

@@ -450,6 +450,8 @@ Levels defined in `LEVEL_CONFIGS`:
   - Keyboard state stored in `game.keys` object, mouse position relative to canvas
   - Touch state in `game.touch` object with joystick (active, startX/Y, currentX/Y) and button states (shoot, jump)
   - Virtual joystick calculates normalized direction vector and speed multiplier from displacement
+  - Canvas focus management: `tabIndex={0}` on canvas for keyboard focusability, `canvas.focus()` called when game loop starts and after unpausing
+  - `preventDefault()` on all game keys (WASD, arrows, spacebar, Q, ESC) to prevent browser shortcuts from interfering
 - **Mobile support**:
   - Viewport meta tag prevents zoom and enables proper mobile rendering
   - Responsive canvas sizing effect updates on window resize
