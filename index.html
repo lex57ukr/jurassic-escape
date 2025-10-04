@@ -3500,7 +3500,7 @@
       });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
-      // Sound system with pooling for simultaneous playback
+      // Sound system with cloneNode and requestAnimationFrame
       const soundsRef = useRef({});
 
       const playSound = useCallback((sound) => {
@@ -3511,14 +3511,17 @@
         const soundData = soundsRef.current[soundId];
         if (!soundData) return;
 
-        // Clone the audio element for simultaneous playback
-        const audio = soundData.cloneNode();
-        audio.volume = volume;
-        audio.play().catch(e => console.log('Audio play failed:', e));
+        // Use requestAnimationFrame to defer audio playback off main thread
+        requestAnimationFrame(() => {
+          // Clone the audio element for simultaneous playback
+          const audio = soundData.cloneNode();
+          audio.volume = volume;
+          audio.play().catch(e => console.log('Audio play failed:', e));
 
-        // Clean up after playing
-        audio.addEventListener('ended', () => {
-          audio.remove();
+          // Clean up after playing
+          audio.addEventListener('ended', () => {
+            audio.remove();
+          });
         });
       }, [soundEnabled, volume]);
 
