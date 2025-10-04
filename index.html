@@ -400,6 +400,22 @@
         ALPHA_OPAQUE: 1.0,
       },
 
+      // Sleeping Z-Z-Z Animation
+      Z_ANIMATION: {
+        FILL_COLOR: '#FFF',
+        SHADOW_COLOR: '#000',
+        SHADOW_BLUR: 2,
+        TEXT_ALIGN: 'center',
+        // Three Z's with increasing size
+        Z_SMALL: { FONT: 'bold 16px Arial', OFFSET_X: 0, OFFSET_Y: -10 },
+        Z_MEDIUM: { FONT: 'bold 20px Arial', OFFSET_X: 8, OFFSET_Y: -18 },
+        Z_LARGE: { FONT: 'bold 24px Arial', OFFSET_X: 18, OFFSET_Y: -28 },
+        // Bobbing animation
+        BOB_SPEED: 200, // Milliseconds per cycle
+        BOB_AMPLITUDE: 3, // Pixels
+        CULLING_BUFFER: 50, // Pixels beyond viewport to skip rendering
+      },
+
       // Environmental Hazards - Unified object-based constants with type-specific properties
       HAZARDS: {
         TAR_PIT: {
@@ -4203,30 +4219,50 @@
             ctx.fillStyle = '#0f0';
             ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth * (dino.health / dino.maxHealth), barHeight);
 
-            // Sleeping Z-Z-Z
-            if (dino.isSleeping) {
-              ctx.fillStyle = '#FFF';
-              ctx.strokeStyle = '#000';
-              ctx.lineWidth = 1;
-              ctx.font = 'bold 16px Arial';
-              ctx.textAlign = 'center';
-
-              const zOffset = Math.sin(Date.now() / 200) * 3;
-              ctx.strokeText('Z', screenX + dino.size, screenY - dino.size - 10 + zOffset);
-              ctx.fillText('Z', screenX + dino.size, screenY - dino.size - 10 + zOffset);
-
-              ctx.font = 'bold 20px Arial';
-              ctx.strokeText('Z', screenX + dino.size + 8, screenY - dino.size - 18 + zOffset);
-              ctx.fillText('Z', screenX + dino.size + 8, screenY - dino.size - 18 + zOffset);
-
-              ctx.font = 'bold 24px Arial';
-              ctx.strokeText('Z', screenX + dino.size + 18, screenY - dino.size - 28 + zOffset);
-              ctx.fillText('Z', screenX + dino.size + 18, screenY - dino.size - 28 + zOffset);
-            }
-
             // Zap effect (electric shock animation)
             drawZapEffect(ctx, screenX, screenY, dino.size, dino.zapTimer);
           });
+
+          // Draw sleeping Z-Z-Z (batched, optimized)
+          const sleepingDinos = game.dinosaurs.filter(dino => dino.isSleeping);
+          if (sleepingDinos.length > 0) {
+            ctx.fillStyle = GAME_CONSTANTS.Z_ANIMATION.FILL_COLOR;
+            ctx.textAlign = GAME_CONSTANTS.Z_ANIMATION.TEXT_ALIGN;
+            ctx.shadowColor = GAME_CONSTANTS.Z_ANIMATION.SHADOW_COLOR;
+            ctx.shadowBlur = GAME_CONSTANTS.Z_ANIMATION.SHADOW_BLUR;
+
+            const buffer = GAME_CONSTANTS.Z_ANIMATION.CULLING_BUFFER;
+            const bobOffset = Math.sin(Date.now() / GAME_CONSTANTS.Z_ANIMATION.BOB_SPEED) * GAME_CONSTANTS.Z_ANIMATION.BOB_AMPLITUDE;
+
+            sleepingDinos.forEach(dino => {
+              const screenX = dino.x - game.cameraX;
+              const screenY = dino.y - game.cameraY;
+
+              // Cull off-screen sleeping dinos
+              if (screenX < -buffer || screenX > canvas.width + buffer || screenY < -buffer || screenY > canvas.height + buffer) {
+                return;
+              }
+
+              // Draw three Z's with increasing size
+              ctx.font = GAME_CONSTANTS.Z_ANIMATION.Z_SMALL.FONT;
+              ctx.fillText('Z',
+                screenX + dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_SMALL.OFFSET_X,
+                screenY - dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_SMALL.OFFSET_Y + bobOffset);
+
+              ctx.font = GAME_CONSTANTS.Z_ANIMATION.Z_MEDIUM.FONT;
+              ctx.fillText('Z',
+                screenX + dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_MEDIUM.OFFSET_X,
+                screenY - dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_MEDIUM.OFFSET_Y + bobOffset);
+
+              ctx.font = GAME_CONSTANTS.Z_ANIMATION.Z_LARGE.FONT;
+              ctx.fillText('Z',
+                screenX + dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_LARGE.OFFSET_X,
+                screenY - dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_LARGE.OFFSET_Y + bobOffset);
+            });
+
+            // Reset state once at end
+            ctx.shadowBlur = 0;
+          }
 
           // Draw player
           drawPlayer(ctx, game.player, game.cameraX, game.cameraY, game.mouseX, game.mouseY, game.speedBoostTimer);
