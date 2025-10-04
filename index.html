@@ -187,6 +187,9 @@
             projectileSpeed: 4,      // Speed of projectile
             projectileRadius: 6,     // Radius of projectile
             damage: 1,               // Damage dealt to player
+            fillColor: '#9ACD32',    // Yellow-green fill
+            strokeColor: '#556B2F',  // Dark olive stroke
+            lineWidth: 1,            // Stroke width
           },
         },
       },
@@ -204,6 +207,27 @@
         LOCK_ICON: '🔒',
         LOCK_ICON_SIZE: 32,
         LOCK_ICON_OFFSET_Y: -40, // Position above exit
+        // Visual properties
+        LOCKED_FILL_COLOR: '#888',
+        LOCKED_STROKE_COLOR: '#555',
+        UNLOCKED_FILL_COLOR: '#FFD700',
+        UNLOCKED_STROKE_COLOR: '#FFA500',
+        BORDER_WIDTH: 3,
+        TEXT_FONT: '14px Arial',
+        TEXT_COLOR: '#000',
+        TEXT_OFFSET_Y: 5,
+      },
+
+      // Health Bar
+      HEALTH_BAR: {
+        WIDTH_MULTIPLIER: 2.5,
+        HEIGHT: 5,
+        POSITION_MULTIPLIER: 1.5,
+        BORDER_OFFSET: 1,
+        BORDER_PADDING: 2,
+        BORDER_COLOR: '#000',
+        BACKGROUND_COLOR: '#f00',
+        HEALTH_COLOR: '#0f0',
       },
 
       // Obstacles - Unified object-based constants with visual properties
@@ -344,6 +368,7 @@
         INITIAL_UPWARD_VELOCITY_MIN: -2,
         INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
         MIN_BOUNCE_VELOCITY: 0.05, // Minimum velocity before ammo disappears
+        COLOR: '#FFD700', // Gold color
       },
 
       // AI Behavior
@@ -4111,15 +4136,15 @@
           // Draw exit
           const exitScreenX = game.exit.x - game.cameraX;
           const exitScreenY = game.exit.y - game.cameraY;
-          ctx.fillStyle = game.exitLocked ? '#888' : '#FFD700'; // Gray if locked, gold if unlocked
+          ctx.fillStyle = game.exitLocked ? GAME_CONSTANTS.EXIT.LOCKED_FILL_COLOR : GAME_CONSTANTS.EXIT.UNLOCKED_FILL_COLOR;
           ctx.fillRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
-          ctx.strokeStyle = game.exitLocked ? '#555' : '#FFA500';
-          ctx.lineWidth = 3;
+          ctx.strokeStyle = game.exitLocked ? GAME_CONSTANTS.EXIT.LOCKED_STROKE_COLOR : GAME_CONSTANTS.EXIT.UNLOCKED_STROKE_COLOR;
+          ctx.lineWidth = GAME_CONSTANTS.EXIT.BORDER_WIDTH;
           ctx.strokeRect(exitScreenX, exitScreenY, game.exit.width, game.exit.height);
-          ctx.fillStyle = '#000';
-          ctx.font = '14px Arial';
+          ctx.fillStyle = GAME_CONSTANTS.EXIT.TEXT_COLOR;
+          ctx.font = GAME_CONSTANTS.EXIT.TEXT_FONT;
           ctx.textAlign = 'center';
-          ctx.fillText('EXIT', exitScreenX + game.exit.width / 2, exitScreenY + game.exit.height / 2 + 5);
+          ctx.fillText('EXIT', exitScreenX + game.exit.width / 2, exitScreenY + game.exit.height / 2 + GAME_CONSTANTS.EXIT.TEXT_OFFSET_Y);
 
           // Draw lock icon if exit is locked
           if (game.exitLocked) {
@@ -4210,14 +4235,15 @@
             ctx.restore();
 
             // Health bar
-            const barWidth = dino.size * 2.5;
-            const barHeight = 5;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(screenX - barWidth / 2 - 1, screenY - dino.size * 1.5 - 1, barWidth + 2, barHeight + 2);
-            ctx.fillStyle = '#f00';
-            ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth, barHeight);
-            ctx.fillStyle = '#0f0';
-            ctx.fillRect(screenX - barWidth / 2, screenY - dino.size * 1.5, barWidth * (dino.health / dino.maxHealth), barHeight);
+            const barWidth = dino.size * GAME_CONSTANTS.HEALTH_BAR.WIDTH_MULTIPLIER;
+            const barHeight = GAME_CONSTANTS.HEALTH_BAR.HEIGHT;
+            const barY = screenY - dino.size * GAME_CONSTANTS.HEALTH_BAR.POSITION_MULTIPLIER;
+            ctx.fillStyle = GAME_CONSTANTS.HEALTH_BAR.BORDER_COLOR;
+            ctx.fillRect(screenX - barWidth / 2 - GAME_CONSTANTS.HEALTH_BAR.BORDER_OFFSET, barY - GAME_CONSTANTS.HEALTH_BAR.BORDER_OFFSET, barWidth + GAME_CONSTANTS.HEALTH_BAR.BORDER_PADDING, barHeight + GAME_CONSTANTS.HEALTH_BAR.BORDER_PADDING);
+            ctx.fillStyle = GAME_CONSTANTS.HEALTH_BAR.BACKGROUND_COLOR;
+            ctx.fillRect(screenX - barWidth / 2, barY, barWidth, barHeight);
+            ctx.fillStyle = GAME_CONSTANTS.HEALTH_BAR.HEALTH_COLOR;
+            ctx.fillRect(screenX - barWidth / 2, barY, barWidth * (dino.health / dino.maxHealth), barHeight);
 
             // Zap effect (electric shock animation)
             drawZapEffect(ctx, screenX, screenY, dino.size, dino.zapTimer);
@@ -4277,9 +4303,10 @@
 
           // Draw spit projectiles
           game.spit.forEach(spit => {
-            ctx.fillStyle = '#9ACD32';
-            ctx.strokeStyle = '#556B2F';
-            ctx.lineWidth = 1;
+            const spitAttack = GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.spitAttack;
+            ctx.fillStyle = spitAttack.fillColor;
+            ctx.strokeStyle = spitAttack.strokeColor;
+            ctx.lineWidth = spitAttack.lineWidth;
             ctx.beginPath();
             ctx.arc(spit.x - game.cameraX, spit.y - game.cameraY, spit.radius, 0, Math.PI * 2);
             ctx.fill();
@@ -4287,7 +4314,7 @@
           });
 
           // Draw ammo pickups
-          ctx.fillStyle = '#FFD700';
+          ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
           game.ammoPickups.forEach(pickup => {
             ctx.beginPath();
             ctx.arc(pickup.x - game.cameraX, pickup.y - game.cameraY, pickup.radius, 0, Math.PI * 2);
