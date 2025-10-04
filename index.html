@@ -312,6 +312,20 @@
           radius: 12,
           icon: '❤️',
           color: '#ff1744',
+          fillColor: '#ff1744',
+          strokeColor: '#fff',
+          lineWidth: 2,
+          drawIcon: (ctx, screenX, screenY) => {
+            // Draw cross
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(screenX - 5, screenY);
+            ctx.lineTo(screenX + 5, screenY);
+            ctx.moveTo(screenX, screenY - 5);
+            ctx.lineTo(screenX, screenY + 5);
+            ctx.stroke();
+          },
         },
         SPEED: {
           id: 'speed',
@@ -320,6 +334,22 @@
           color: '#00e5ff',
           durationFrames: 300, // 5 seconds at 60fps
           multiplier: 1.8,
+          fillColor: '#00e5ff',
+          strokeColor: '#fff',
+          lineWidth: 2,
+          drawIcon: (ctx, screenX, screenY) => {
+            // Draw lightning bolt
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(screenX + 2, screenY - 6);
+            ctx.lineTo(screenX - 2, screenY);
+            ctx.lineTo(screenX + 1, screenY);
+            ctx.lineTo(screenX - 2, screenY + 6);
+            ctx.lineTo(screenX + 2, screenY);
+            ctx.lineTo(screenX - 1, screenY);
+            ctx.closePath();
+            ctx.fill();
+          },
         },
       },
 
@@ -369,6 +399,37 @@
         INITIAL_UPWARD_VELOCITY_RANGE: -1.5,
         MIN_BOUNCE_VELOCITY: 0.05, // Minimum velocity before ammo disappears
         COLOR: '#FFD700', // Gold color
+      },
+
+      // Depot Visual Styles
+      DEPOT_STYLES: {
+        TRANQ: {
+          fillColor: '#228B22',
+          strokeColor: '#006400',
+          lineWidth: 2,
+          drawIcon: (ctx, screenX, screenY) => {
+            // Draw syringe icon
+            ctx.fillStyle = '#00FF00';
+            ctx.beginPath();
+            ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(screenX - 1, screenY, 2, 6);
+            ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
+          },
+        },
+        AMMO: {
+          fillColor: '#1E90FF',
+          strokeColor: '#0047AB',
+          lineWidth: 2,
+          drawIcon: (ctx, screenX, screenY) => {
+            // Draw bullet icon (💥 emoji)
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(GAME_CONSTANTS.WEAPONS.REGULAR.icon, screenX, screenY);
+          },
+        },
       },
 
       // AI Behavior
@@ -854,6 +915,19 @@
         const aIndex = a.obstacleType.zIndex || 0;
         const bIndex = b.obstacleType.zIndex || 0;
         return aIndex - bIndex;
+      });
+    };
+
+    /**
+     * Apply accumulated state updates to React state setters (batching helper)
+     * @param {Object} accumulator - Object with state updates
+     * @param {Object} setters - Object mapping state keys to setter functions
+     */
+    const applyStateUpdates = (accumulator, setters) => {
+      Object.entries(setters).forEach(([key, setter]) => {
+        if (accumulator[key] !== undefined) {
+          setter(accumulator[key]);
+        }
       });
     };
 
@@ -2172,7 +2246,7 @@
     };
 
     /**
-     * Draw powerup (health or speed)
+     * Draw powerup (unified config-driven approach)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} powerup - Powerup object
      * @param {number} cameraX - Camera X offset
@@ -2184,102 +2258,47 @@
       const screenX = powerup.x - cameraX;
       const screenY = powerup.y - cameraY;
 
-      if (powerup.type === GAME_CONSTANTS.POWERUPS.HEALTH.id) {
-        ctx.fillStyle = '#ff1744';
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+      // Get powerup config
+      const config = powerup.type === GAME_CONSTANTS.POWERUPS.HEALTH.id
+        ? GAME_CONSTANTS.POWERUPS.HEALTH
+        : GAME_CONSTANTS.POWERUPS.SPEED;
 
-        // Draw cross
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(screenX - 5, screenY);
-        ctx.lineTo(screenX + 5, screenY);
-        ctx.moveTo(screenX, screenY - 5);
-        ctx.lineTo(screenX, screenY + 5);
-        ctx.stroke();
-      } else if (powerup.type === GAME_CONSTANTS.POWERUPS.SPEED.id) {
-        ctx.fillStyle = '#00e5ff';
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Draw lightning bolt
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.moveTo(screenX + 2, screenY - 6);
-        ctx.lineTo(screenX - 2, screenY);
-        ctx.lineTo(screenX + 1, screenY);
-        ctx.lineTo(screenX - 2, screenY + 6);
-        ctx.lineTo(screenX + 2, screenY);
-        ctx.lineTo(screenX - 1, screenY);
-        ctx.closePath();
-        ctx.fill();
-      }
-    };
-
-    /**
-     * Draw tranquilizer depot (green crate with syringe icon)
-     * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} depot - Tranq depot object
-     * @param {number} cameraX - Camera X offset
-     * @param {number} cameraY - Camera Y offset
-     */
-    const drawTranqDepot = (ctx, depot, cameraX, cameraY) => {
-      if (!depot.active) return;
-
-      const screenX = depot.x - cameraX;
-      const screenY = depot.y - cameraY;
-
-      // Draw green crate
-      ctx.fillStyle = '#228B22';
-      ctx.strokeStyle = '#006400';
-      ctx.lineWidth = 2;
-      ctx.fillRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
-      ctx.strokeRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
-
-      // Draw syringe icon
-      ctx.fillStyle = '#00FF00';
+      // Draw base circle
+      ctx.fillStyle = config.fillColor;
+      ctx.strokeStyle = config.strokeColor;
+      ctx.lineWidth = config.lineWidth;
       ctx.beginPath();
-      ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
+      ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#FFF';
-      ctx.fillRect(screenX - 1, screenY, 2, 6);
-      ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
+      ctx.stroke();
+
+      // Draw icon
+      config.drawIcon(ctx, screenX, screenY);
     };
 
     /**
-     * Draw regular ammo depot (blue crate with bullet icon)
+     * Draw depot (unified function for tranq and ammo depots)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} depot - Ammo depot object
+     * @param {Object} depot - Depot object
      * @param {number} cameraX - Camera X offset
      * @param {number} cameraY - Camera Y offset
+     * @param {Object} style - Depot style config (TRANQ or AMMO)
      */
-    const drawAmmoDepot = (ctx, depot, cameraX, cameraY) => {
+    const drawDepot = (ctx, depot, cameraX, cameraY, style) => {
       if (!depot.active) return;
 
       const screenX = depot.x - cameraX;
       const screenY = depot.y - cameraY;
 
-      // Draw blue crate
-      ctx.fillStyle = '#1E90FF';
-      ctx.strokeStyle = '#0047AB';
-      ctx.lineWidth = 2;
+      // Draw crate
+      ctx.fillStyle = style.fillColor;
+      ctx.strokeStyle = style.strokeColor;
+      ctx.lineWidth = style.lineWidth;
       ctx.fillRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
       ctx.strokeRect(screenX - depot.radius, screenY - depot.radius, depot.radius * 2, depot.radius * 2);
 
-      // Draw bullet icon (💥 emoji)
-      ctx.font = '16px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(GAME_CONSTANTS.WEAPONS.REGULAR.icon, screenX, screenY);
+      // Draw icon
+      style.drawIcon(ctx, screenX, screenY);
     };
 
     /**
@@ -4096,13 +4115,15 @@
           updateDinosaurs(game, difficulty, playSound, stateAccumulator);
 
           // Batch apply all state updates (reduces re-renders)
-          if (stateAccumulator.gameState !== undefined) setGameState(stateAccumulator.gameState);
-          if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulator.playerHealth);
-          if (stateAccumulator.playerAmmo !== undefined) setPlayerAmmo(stateAccumulator.playerAmmo);
-          if (stateAccumulator.playerTranqAmmo !== undefined) setPlayerTranqAmmo(stateAccumulator.playerTranqAmmo);
-          if (stateAccumulator.currentWeapon !== undefined) setCurrentWeapon(stateAccumulator.currentWeapon);
-          if (stateAccumulator.speedBoostActive !== undefined) setSpeedBoostActive(stateAccumulator.speedBoostActive);
-          if (stateAccumulator.score !== undefined) setScore(s => s + stateAccumulator.score);
+          applyStateUpdates(stateAccumulator, {
+            gameState: setGameState,
+            playerHealth: setPlayerHealth,
+            playerAmmo: setPlayerAmmo,
+            playerTranqAmmo: setPlayerTranqAmmo,
+            currentWeapon: setCurrentWeapon,
+            speedBoostActive: setSpeedBoostActive,
+            score: (val) => setScore(s => s + val),
+          });
 
           // Stop game loop if game over
           if (stateAccumulator.gameState !== undefined && isTerminalState(stateAccumulator.gameState)) {
@@ -4187,12 +4208,12 @@
 
           // Draw tranquilizer depots
           game.tranqDepots.forEach(depot => {
-            drawTranqDepot(ctx, depot, game.cameraX, game.cameraY);
+            drawDepot(ctx, depot, game.cameraX, game.cameraY, GAME_CONSTANTS.DEPOT_STYLES.TRANQ);
           });
 
           // Draw regular ammo depots
           game.ammoDepots.forEach(depot => {
-            drawAmmoDepot(ctx, depot, game.cameraX, game.cameraY);
+            drawDepot(ctx, depot, game.cameraX, game.cameraY, GAME_CONSTANTS.DEPOT_STYLES.AMMO);
           });
 
           // Draw territories (skull markers at center)
