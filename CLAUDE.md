@@ -31,7 +31,14 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
 - `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
 - `WEAPON_TYPES`: Weapon identifiers with icons (REGULAR/💥, TRANQUILIZER/💉)
-- `OBSTACLE_TYPES`: Environment types (TREE, BUSH, MUSHROOM)
+- `OBSTACLES`: Unified object-based obstacle definitions with full configuration per type:
+  - `OBSTACLES.TREE`: `{ id, blocksMovement, zIndex, colors: {...}, foliageLayers }`
+  - `OBSTACLES.BUSH`: `{ id, blocksMovement, zIndex, colors: {...}, clusters }`
+  - `OBSTACLES.MUSHROOM`: `{ id, blocksMovement, zIndex, colors: {...}, sizes: {...} }`
+  - `OBSTACLES.GRASS`: `{ id, blocksMovement, zIndex, colors: {...}, sizes: {...} }`
+  - Each obstacle type is a full object (not just a string ID)
+  - Entity objects store `obstacleType` field containing reference to constant: `{ x, y, radius, obstacleType: OBSTACLES.TREE }`
+  - All visual properties (colors, sizes) and behavior properties (blocksMovement, zIndex) in one place
 - `POWERUP_TYPES`: Collectible types (HEALTH, SPEED)
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
 - `AI.EXIT_TERRITORY_RADIUS`: 300px radius for exit protection zones
@@ -199,8 +206,13 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
   - Hand-drawn canvas art with facing direction (horizontal flip for left movement)
     - Facing direction stored in `facingLeft` property, only updates when horizontal velocity exceeds 0.3
   - Sleep mechanic: tranquilized dinosaurs become `isSleeping`, don't move or attack, show Z-Z-Z animation
-- **Obstacles**: Types defined in `GAME_CONSTANTS.OBSTACLE_TYPES` - `TREE` and `BUSH` (blocking) with circular collision
-- **Decorations**: `MUSHROOM` (walkable) - visual elements without collision, spawn in colorful patches
+- **Obstacles**: Defined in `GAME_CONSTANTS.OBSTACLES` as full object references
+  - `TREE` and `BUSH`: blocking obstacles (blocksMovement: true, zIndex: 2) with circular collision
+  - Entity objects store reference: `{ x, y, radius, obstacleType: OBSTACLES.TREE }`
+- **Decorations**: Walkable vegetation with visual-only purpose
+  - `MUSHROOM`: non-blocking (blocksMovement: false, zIndex: 1), spawn in colorful patches with shared cap colors
+  - `GRASS`: non-blocking (blocksMovement: false, zIndex: 0), ground layer with individual blade rendering
+  - Entity objects store reference: `{ x, y, radius, obstacleType: OBSTACLES.MUSHROOM }`
 - **Powerups**: Types defined in `GAME_CONSTANTS.POWERUP_TYPES` - `HEALTH` (red cross) and `SPEED` (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
   - Bouncing physics affected by difficulty: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
@@ -295,7 +307,7 @@ Levels defined in `LEVEL_CONFIGS`:
 
 ## Key Implementation Details
 
-- **Collision system**: Player and aggressive dinosaurs collide with obstacles (trees/bushes); decorations (mushrooms) are walkable; dinosaurs don't collide with each other; herbivores don't damage player
+- **Collision system**: Player and aggressive dinosaurs collide with blocking obstacles (trees/bushes with `blocksMovement: true`); decorations (mushrooms/grass with `blocksMovement: false`) are walkable; dinosaurs don't collide with each other; herbivores don't damage player
 - **Environmental hazards**: Two types of hazards affect gameplay:
   - **Tar pits**: Circular hazards (40px radius) that slow entities to 50% speed when inside
     - Dark brown/black visual with 3 bubbles per pit, spawning every 0.5 seconds with 40-frame animation
@@ -376,8 +388,9 @@ Levels defined in `LEVEL_CONFIGS`:
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
   - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
-  - Avoid string literals for types - use type constants (GAME_STATES, AI.STATES, WEAPON_TYPES, etc.)
+  - Avoid string literals for types - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
+  - Pass full object references, not just IDs - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`
   - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`)
   - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, etc.)
-  - Separate concerns: blocking entities (`obstacles`) vs decorative (`decorations`)
+  - Separate concerns: blocking entities (`obstacles` array) vs decorative (`decorations` array), determined by `blocksMovement` property
   - Keep constants at the top of the file before utility functions and components
