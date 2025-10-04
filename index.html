@@ -392,6 +392,12 @@
         LIFETIME_FRAMES: 60, // 1 second at 60fps
         RISE_SPEED: 1,
         FADE_START_FRAME: 30,
+        FONT: 'bold 20px Arial',
+        LINE_WIDTH: 3,
+        SHADOW_COLOR: '#000',
+        SHADOW_BLUR: 4,
+        CULLING_BUFFER: 50, // Pixels beyond viewport to skip rendering
+        ALPHA_OPAQUE: 1.0,
       },
 
       // Environmental Hazards - Unified object-based constants with type-specific properties
@@ -4252,22 +4258,40 @@
             ctx.fill();
           });
 
-          // Draw floating texts
-          game.floatingTexts.forEach(text => {
-            const alpha = text.age < GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME ? 1.0 : 1.0 - ((text.age - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME) / (GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME));
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = text.color;
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
-            ctx.font = 'bold 20px Arial';
+          // Draw floating texts (optimized)
+          if (game.floatingTexts.length > 0) {
+            ctx.font = GAME_CONSTANTS.FLOATING_TEXT.FONT;
             ctx.textAlign = 'center';
-            const screenX = text.x - game.cameraX;
-            const screenY = text.y - game.cameraY;
-            ctx.strokeText(text.text, screenX, screenY);
-            ctx.fillText(text.text, screenX, screenY);
-            ctx.restore();
-          });
+            ctx.lineWidth = GAME_CONSTANTS.FLOATING_TEXT.LINE_WIDTH;
+            ctx.shadowColor = GAME_CONSTANTS.FLOATING_TEXT.SHADOW_COLOR;
+            ctx.shadowBlur = GAME_CONSTANTS.FLOATING_TEXT.SHADOW_BLUR;
+
+            const fadeDuration = GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME;
+            const buffer = GAME_CONSTANTS.FLOATING_TEXT.CULLING_BUFFER;
+
+            game.floatingTexts.forEach(text => {
+              const screenX = text.x - game.cameraX;
+              const screenY = text.y - game.cameraY;
+
+              // Cull off-screen texts
+              if (screenX < -buffer || screenX > canvas.width + buffer || screenY < -buffer || screenY > canvas.height + buffer) {
+                return;
+              }
+
+              // Simplified alpha calculation
+              const alpha = text.age < GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME
+                ? GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE
+                : GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE - (text.age - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME) / fadeDuration;
+
+              ctx.globalAlpha = alpha;
+              ctx.fillStyle = text.color;
+              ctx.fillText(text.text, screenX, screenY);
+            });
+
+            // Reset state once at end
+            ctx.globalAlpha = GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE;
+            ctx.shadowBlur = 0;
+          }
 
           animationId = requestAnimationFrame(gameLoop);
         };
