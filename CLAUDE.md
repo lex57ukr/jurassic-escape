@@ -162,17 +162,19 @@ All factory functions create entity objects and add instance methods where appro
 - `createObstacle()`: Creates tree/bush obstacle with `draw()` instance method
 - `createMushroomPatch()`: Creates mushroom decorations, each with `draw()` instance method
 - `createGrassPatch()`: Creates grass decorations, each with `draw()` instance method
-- `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`: Standard entity factories
+- `createPowerup()`: Creates powerup with `draw()` instance method
+- `createTranqDepot()`: Creates tranquilizer depot with `draw()` instance method (encapsulates TRANQ style)
+- `createAmmoDepot()`: Creates regular ammo depot with `draw()` instance method (encapsulates AMMO style)
+- `createExitTerritory()`: Creates exit protection territory with `draw()` instance method
+- `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`: Entities with `draw()` instance methods
 - `createBullet(fromX, fromY, toX, toY)`: Creates regular bullet projectile
 - `createTranquilizer(fromX, fromY, toX, toY)`: Creates tranquilizer dart projectile
-- `createTranqDepot(mapWidth, mapHeight)`: Creates tranquilizer depot with random position
-- `createAmmoDepot(x, y, amount)`: Creates regular ammo depot with fixed position and amount
-- `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with guard count tracking
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)`: Creates guard dinosaur positioned around exit
 
 **Factory Pattern for Instance Methods:**
 
 Obstacle factories add a `draw(ctx, cameraX, cameraY)` method to each instance:
+
 ```javascript
 obstacle.draw = function(ctx, cameraX, cameraY) {
   const screenX = this.x - cameraX;
@@ -182,6 +184,7 @@ obstacle.draw = function(ctx, cameraX, cameraY) {
 ```
 
 Dinosaur creation (both inline and via `createExitGuard`) adds a `draw(ctx)` method to each instance:
+
 ```javascript
 dino.draw = function(ctx) {
   const scale = this.size / this.type.baseSize;
@@ -190,6 +193,7 @@ dino.draw = function(ctx) {
 ```
 
 Hazard factories add a `draw(ctx, cameraX, cameraY)` method to each instance:
+
 ```javascript
 tarPit.draw = function(ctx, cameraX, cameraY) {
   this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
@@ -200,7 +204,27 @@ fence.draw = function(ctx, cameraX, cameraY) {
 };
 ```
 
-This enables direct method calls: `obstacle.draw(ctx, cameraX, cameraY)`, `dino.draw(ctx)`, `tarPit.draw(ctx, cameraX, cameraY)`, `fence.draw(ctx, cameraX, cameraY)` instead of needing wrapper functions or conditional logic.
+Powerup, depot, and territory factories add a `draw(ctx, cameraX, cameraY)` method to each instance:
+
+```javascript
+powerup.draw = function(ctx, cameraX, cameraY) {
+  drawPowerup(ctx, this, cameraX, cameraY);
+};
+
+tranqDepot.draw = function(ctx, cameraX, cameraY) {
+  drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.DEPOT_STYLES.TRANQ);
+};
+
+ammoDepot.draw = function(ctx, cameraX, cameraY) {
+  drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.DEPOT_STYLES.AMMO);
+};
+
+territory.draw = function(ctx, cameraX, cameraY) {
+  drawTerritory(ctx, this, cameraX, cameraY);
+};
+```
+
+This enables direct method calls: `obstacle.draw(ctx, cameraX, cameraY)`, `dino.draw(ctx)`, `tarPit.draw(ctx, cameraX, cameraY)`, `fence.draw(ctx, cameraX, cameraY)`, `powerup.draw(ctx, cameraX, cameraY)`, `depot.draw(ctx, cameraX, cameraY)`, `territory.draw(ctx, cameraX, cameraY)` instead of needing wrapper functions or conditional logic.
 
 **Weapon System Functions:**
 
