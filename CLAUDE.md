@@ -30,7 +30,18 @@ The codebase follows a **constants-first approach** for type safety and maintain
 
 - `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
 - `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
-- `WEAPON_TYPES`: Weapon identifiers with icons (REGULAR/💥, TRANQUILIZER/💉)
+- `WEAPONS`: Unified weapon configuration with all properties per weapon type:
+  - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius }`
+  - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier }`
+  - Each weapon type is a full object (not just a string ID)
+  - Entities store weapon ID: `bullet.type = WEAPONS.REGULAR.id`
+  - All weapon properties (visual, mechanical, ammo) in one place
+- `DINOSAURS`: Unified dinosaur configuration with all properties per dinosaur type:
+  - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration }`
+  - Similar structure for TYRANNOSAURUS_REX, STEGOSAURUS, PARASAUROLOPHUS, TRICERATOPS, DILOPHOSAURUS
+  - Each dinosaur type is a full object with stats, AI flags, and tranquilizer properties
+  - Entities store dinosaur ID: `dino.type = DINOSAURS.VELOCIRAPTOR.id`
+  - Helper function `getDinosaurConfig(typeId)` maps string ID to config object
 - `OBSTACLES`: Unified object-based obstacle definitions with full configuration per type:
   - `OBSTACLES.TREE`: `{ id, blocksMovement, zIndex, colors: {...}, foliageLayers }`
   - `OBSTACLES.BUSH`: `{ id, blocksMovement, zIndex, colors: {...}, clusters }`
@@ -39,13 +50,19 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - Each obstacle type is a full object (not just a string ID)
   - Entity objects store `obstacleType` field containing reference to constant: `{ x, y, radius, obstacleType: OBSTACLES.TREE }`
   - All visual properties (colors, sizes) and behavior properties (blocksMovement, zIndex) in one place
-- `POWERUP_TYPES`: Collectible types (HEALTH, SPEED)
+- `POWERUPS`: Unified powerup configuration with all properties per powerup type:
+  - `POWERUPS.HEALTH`: `{ id, radius, icon, color }`
+  - `POWERUPS.SPEED`: `{ id, radius, icon, color, durationFrames, multiplier }`
+  - Each powerup type is a full object with visual and functional properties
+  - Entities store powerup ID: `powerup.type = POWERUPS.HEALTH.id`
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
 - `AI.EXIT_TERRITORY_RADIUS`: 300px radius for exit protection zones
 - `AI.EXIT_GUARD_AGGRO_RANGE`: 350px chase range for exit guards
 - `EXIT.LOCK_ICON`: 🔒 emoji for locked exits
 - `EXIT.LOCK_ICON_SIZE`: 32px font size for lock icon
 - `EXIT.LOCK_ICON_OFFSET_Y`: -40px position above exit
+- `VIEWPORTS`: Canvas size presets (small, medium, large) with width/height/label
+- `CANVAS_SIZING`: Responsive canvas layout constants (padding, spacing for desktop/mobile)
 - `SOUNDS`: Unified audio configuration with `id` and `path` for each sound (SHOOT, HIT, DEATH, etc.)
 
 **Utility Functions:**
@@ -65,10 +82,12 @@ The codebase follows a **constants-first approach** for type safety and maintain
 **Benefits:**
 
 - **Type safety**: String literal typos caught at usage sites
-- **Single source of truth**: Constants defined once, used everywhere
-- **Better IDE support**: Autocomplete for all game types
-- **Easier refactoring**: Change constant value in one place
-- **Self-documenting code**: `GAME_CONSTANTS.AI.STATES.TERRITORY_RETURN` is clearer than `'return'`
+- **Single source of truth**: All properties for each entity type in one place (like OBSTACLES pattern)
+- **Better IDE support**: Autocomplete for all entity properties
+- **Easier refactoring**: Change values in one location, no scattered constants
+- **Self-documenting code**: `GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.tranqShots` is clearer than separate constants
+- **Eliminates lookup functions**: Direct property access instead of switch statements (e.g., removed `getSleepDurationForType()`, `getShotsNeededForType()`)
+- **Consistent pattern**: WEAPONS, DINOSAURS, OBSTACLES, and POWERUPS all follow the same unified object structure
 
 ### Game State Management
 
@@ -213,7 +232,7 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
   - `MUSHROOM`: non-blocking (blocksMovement: false, zIndex: 1), spawn in colorful patches with shared cap colors
   - `GRASS`: non-blocking (blocksMovement: false, zIndex: 0), ground layer with individual blade rendering
   - Entity objects store reference: `{ x, y, radius, obstacleType: OBSTACLES.MUSHROOM }`
-- **Powerups**: Types defined in `GAME_CONSTANTS.POWERUP_TYPES` - `HEALTH` (red cross) and `SPEED` (lightning bolt)
+- **Powerups**: Types defined in `GAME_CONSTANTS.POWERUPS` - `HEALTH` (red cross, ❤️ icon) and `SPEED` (lightning bolt, ⚡ icon)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
   - Bouncing physics affected by difficulty: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
   - Controlled by damping, friction, and minimum velocity threshold multipliers in `DIFFICULTY_MODIFIERS`
@@ -282,13 +301,14 @@ Levels defined in `LEVEL_CONFIGS`:
 
 ### Rendering
 
-- **Viewport scaling system**: Configurable canvas resolution via `VIEWPORT_SCALES` constant
+- **Viewport scaling system**: Configurable canvas resolution via `GAME_CONSTANTS.VIEWPORTS`
   - Small: 800x600 (default)
   - Medium: 1000x750
   - Large: 1200x900
   - All scales maintain 4:3 aspect ratio
   - Game world size varies per level (Level 1: 2400x1800, Level 2: 3600x2700, Level 3: 4800x3600)
   - Viewport size is independent of world size - larger viewports show more of the current level at once
+  - Canvas sizing constants in `GAME_CONSTANTS.CANVAS_SIZING` handle responsive layout
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
@@ -326,19 +346,19 @@ Levels defined in `LEVEL_CONFIGS`:
     - Randomly rotated for varied placement
     - Spawn with collision avoidance (obstacles, other fences, tar pits)
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; also bypasses electric fences; visual feedback with shadow
-- **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
-- **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
+- **Speed boost**: Multiplies player speed by `GAME_CONSTANTS.POWERUPS.SPEED.multiplier` (1.8x) for `GAME_CONSTANTS.POWERUPS.SPEED.durationFrames` (300 frames = 5 seconds at 60fps)
+- **Ammo economy**: Start with 10 regular ammo (`GAME_CONSTANTS.PLAYER.START_AMMO`), tranquilizer ammo from `GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo` (15); dinosaurs drop regular ammo equal to their max health when killed
   - Ammo pickups use physics-based bouncing animation with difficulty scaling
   - **Easy difficulty**: 40% longer bouncing (damping: -0.8, friction: 0.90, threshold: 0.035)
   - **Normal difficulty**: Baseline bouncing (damping: -0.7, friction: 0.85, threshold: 0.05)
   - **Hard difficulty**: 20% shorter bouncing (damping: -0.6, friction: 0.8, threshold: 0.07)
   - Bounces continuously with decreasing amplitude until motion stops
   - No fixed bounce count or lifetime limit
-- **Tranquilizer mechanic**: Multi-shot system based on dinosaur size
-  - Raptor/Para: 1 shot, Dilo/Stego/Trike: 2 shots, T-Rex: 3 shots
+- **Tranquilizer mechanic**: Multi-shot system based on dinosaur size (properties stored in `GAME_CONSTANTS.DINOSAURS`)
+  - Raptor/Para: 1 shot (`tranqShots: 1`), Dilo/Stego/Trike: 2 shots, T-Rex: 3 shots
   - Shows hit counter as floating text (1/2, 2/3, etc.)
-  - Awards 50% of kill points when dinosaur is put to sleep
-  - Sleep duration: Raptor 8s, Para 7s, Dilo/Stego/Trike 6s, T-Rex 4s
+  - Awards `GAME_CONSTANTS.WEAPONS.TRANQUILIZER.scoreMultiplier` (50%) of kill points when dinosaur is put to sleep
+  - Sleep duration stored per dinosaur: Raptor 480 frames (8s), Para 420 (7s), Dilo/Stego/Trike 360 (6s), T-Rex 240 (4s)
   - Sleeping dinosaurs don't move or attack, display Z-Z-Z animation
   - Tranq hit counter resets when dinosaur wakes up
 - **Territory system**: Territorial dinosaurs defend specific zones
@@ -387,9 +407,14 @@ Levels defined in `LEVEL_CONFIGS`:
 - Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
+  - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS pattern - each entity type is a full object with all properties
+    - Store full config object reference (e.g., `obstacleType: OBSTACLES.TREE`) OR store ID string and use lookup helper
+    - All properties (visual, behavioral, mechanical) defined in one place
+    - Direct property access: `weapon.bulletColor`, `dino.tranqShots`, `powerup.durationFrames`
   - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
   - Avoid string literals for types - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
-  - Pass full object references, not just IDs - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`
+  - Pass full object references when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`
+  - Eliminate lookup/helper functions when consolidating - replace switch statements with direct property access
   - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`)
   - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, etc.)
   - Separate concerns: blocking entities (`obstacles` array) vs decorative (`decorations` array), determined by `blocksMovement` property
