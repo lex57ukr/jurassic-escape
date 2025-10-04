@@ -322,10 +322,23 @@ Levels defined in `LEVEL_CONFIGS`:
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
-- Layered drawing order: background → exit → tar pits → electric fences → obstacles → decorations → powerups → tranq depots → ammo depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
-- Health bars drawn above dinosaurs
-- Sleeping Z-Z-Z animation drawn above sleeping dinosaurs (3 "Z"s of increasing size with bobbing animation)
-- Floating text system: score popups (+N), tranq hit counters (1/2, 2/3), ammo pickups with fade-out over 1 second
+- Layered drawing order: background → exit → tar pits → electric fences → obstacles → decorations → powerups → tranq depots → ammo depots → territories → dinosaurs → sleeping Z-Z-Z → player → bullets → spit projectiles → ammo pickups → floating texts
+- Health bars drawn above dinosaurs (constants in `HEALTH_BAR`)
+- **Sleeping Z-Z-Z animation**: Batched rendering after dinosaur loop (3 "Z"s of increasing size with bobbing animation)
+  - Optimized with batched canvas state, viewport culling, shadowBlur instead of strokeText
+  - 50% fewer draw calls (3 fillText vs 6 strokeText+fillText per sleeping dino)
+  - Visual constants in `Z_ANIMATION` (fonts, colors, offsets, animation params)
+- **Floating text system**: Batched rendering with optimization (score popups, tranq hit counters, ammo pickups)
+  - Viewport culling with 50px buffer skips off-screen texts
+  - Batched canvas state setup (font, shadow set once before loop)
+  - shadowBlur replaces strokeText for 50% fewer draw calls
+  - Visual constants in `FLOATING_TEXT`
+- **Canvas rendering performance patterns**:
+  - Batch canvas state changes (set once before loop, reset once after)
+  - Use viewport culling to skip off-screen entities
+  - Prefer shadowBlur over strokeText+fillText (50% fewer draw calls)
+  - Extract magic numbers to constants for maintainability
+  - Exit visual constants in `EXIT`, spit projectile colors in `DILOPHOSAURUS.spitAttack`, ammo pickup color in `AMMO_PICKUP`
 - Jump shadow drawn below player when airborne
 - Speed boost glow effect (cyan aura) around player
 - Invincibility flashing effect (semi-transparent on alternating frames)
