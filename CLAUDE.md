@@ -56,20 +56,28 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - `bulletFactory` references (`createBullet`, `createTranquilizer`) assigned after functions are defined
   - Unified `fireWeapon()` helper uses weapon config for all shooting logic (no weapon-specific conditionals)
 - `DINOSAURS`: Unified dinosaur configuration with all properties per dinosaur type:
-  - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration, spitAttack }`
+  - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration, spitAttack, drawFunction }`
   - Similar structure for TYRANNOSAURUS_REX, STEGOSAURUS, PARASAUROLOPHUS, TRICERATOPS, DILOPHOSAURUS
   - Each dinosaur type is a full object with stats, AI flags, tranquilizer properties, and capabilities
   - Entities store full dinosaur object: `dino.type = GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR`
-  - Direct property access: `dino.type.tranqShots`, `dino.type.sleepDuration`, `dino.type.baseSize`
+  - Direct property access: `dino.type.tranqShots`, `dino.type.sleepDuration`, `dino.type.baseSize`, `dino.type.drawFunction`
   - Capability system: `spitAttack` is null for non-spitting dinos, object with properties for spitters
+  - `drawFunction` references rendering function (signature: `drawFunction(ctx, scale, dino)`), assigned after draw functions are defined
+  - **Instance method pattern**: Each dinosaur has `draw(ctx)` method added by factory functions (`createExitGuard`, inline dinosaur creation)
+  - Instance method handles scale calculation and calls type's drawFunction with self reference
 - `OBSTACLES`: Unified object-based obstacle definitions with full configuration per type:
-  - `OBSTACLES.TREE`: `{ id, blocksMovement, zIndex, colors: {...}, foliageLayers }`
-  - `OBSTACLES.BUSH`: `{ id, blocksMovement, zIndex, colors: {...}, clusters }`
-  - `OBSTACLES.MUSHROOM`: `{ id, blocksMovement, zIndex, colors: {...}, sizes: {...} }`
-  - `OBSTACLES.GRASS`: `{ id, blocksMovement, zIndex, colors: {...}, sizes: {...} }`
+  - `OBSTACLES.TREE`: `{ id, blocksMovement, zIndex, colors: {...}, foliageLayers, drawFunction }`
+  - `OBSTACLES.BUSH`: `{ id, blocksMovement, zIndex, colors: {...}, clusters, drawFunction }`
+  - `OBSTACLES.MUSHROOM`: `{ id, blocksMovement, zIndex, colors: {...}, sizes: {...}, drawFunction }`
+  - `OBSTACLES.GRASS`: `{ id, blocksMovement, zIndex, colors: {...}, sizes: {...}, drawFunction }`
   - Each obstacle type is a full object (not just a string ID)
-  - Entity objects store `obstacleType` field containing reference to constant: `{ x, y, radius, obstacleType: OBSTACLES.TREE }`
+  - Entity objects store `obstacleType` field containing reference to constant: `{ x, y, radius, obstacleType: OBSTACLES.TREE, draw }`
   - All visual properties (colors, sizes) and behavior properties (blocksMovement, zIndex) in one place
+  - `drawFunction` references type-specific rendering function, assigned after draw functions are defined
+  - **Instance method pattern**: Each obstacle instance has a `draw(ctx, cameraX, cameraY)` method added by factory functions
+    - Method delegates to `obstacleType.drawFunction(ctx, screenX, screenY, radius, obstacle)`
+    - Eliminates need for wrapper functions or type checking at render time
+    - Perfect encapsulation - each obstacle knows how to draw itself
 - `POWERUPS`: Unified powerup configuration with all properties per powerup type:
   - `POWERUPS.HEALTH`: `{ id, radius, icon, color, fillColor, strokeColor, lineWidth, drawIcon }`
   - `POWERUPS.SPEED`: `{ id, radius, icon, color, durationFrames, multiplier, fillColor, strokeColor, lineWidth, drawIcon }`
@@ -77,11 +85,14 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - Entities store full powerup object: `powerup.powerupType = POWERUPS.HEALTH`
   - Direct property access: `powerup.powerupType.fillColor`, `powerup.powerupType.durationFrames`
 - `HAZARDS`: Unified hazard configuration with all properties per hazard type:
-  - `HAZARDS.TAR_PIT`: `{ id, baseRadius, sizeVariance, slowMultiplier, minSpacing, colors: {...}, rimWidth, bubble: {...} }`
-  - `HAZARDS.ELECTRIC_FENCE`: `{ id, width, height, damage, damageCooldown, pushbackForce, stunDurationMultiplier, minSpacing, obstacleClearance, colors: {...}, wireWidth, spark: {...}, zap: {...}, memory: {...} }`
+  - `HAZARDS.TAR_PIT`: `{ id, baseRadius, sizeVariance, slowMultiplier, minSpacing, colors: {...}, rimWidth, bubble: {...}, drawFunction }`
+  - `HAZARDS.ELECTRIC_FENCE`: `{ id, width, height, damage, damageCooldown, pushbackForce, stunDurationMultiplier, minSpacing, obstacleClearance, colors: {...}, wireWidth, spark: {...}, zap: {...}, memory: {...}, drawFunction }`
   - Each hazard type is a full object with visual, mechanical, and behavioral properties
   - Entities store full hazard object: `tarPit.hazardType = GAME_CONSTANTS.HAZARDS.TAR_PIT`, `fence.hazardType = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE`
-  - Direct property access: `tarPit.hazardType.slowMultiplier`, `fence.hazardType.zap.duration`, `fence.hazardType.colors.wire`
+  - Direct property access: `tarPit.hazardType.slowMultiplier`, `fence.hazardType.zap.duration`, `fence.hazardType.colors.wire`, `tarPit.hazardType.drawFunction`
+  - `drawFunction` references rendering function (signature: `drawFunction(ctx, cameraX, cameraY, hazard)`), assigned after draw functions are defined
+  - **Instance method pattern**: Each hazard has `draw(ctx, cameraX, cameraY)` method added by factory functions (`createTarPit`, `createElectricFence`)
+  - Instance method calls type's drawFunction with self reference
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
 - `AI.EXIT_TERRITORY_RADIUS`: 300px radius for exit protection zones
 - `AI.EXIT_GUARD_AGGRO_RANGE`: 350px chase range for exit guards
@@ -92,10 +103,52 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `CANVAS_SIZING`: Responsive canvas layout constants (padding, spacing for desktop/mobile)
 - `SOUNDS`: Unified audio configuration with `id` and `path` for each sound (SHOOT, HIT, DEATH, etc.)
 
+**File Structure & Organization:**
+
+The codebase follows a strict organizational pattern to separate concerns:
+
+1. **Constants Section** (lines ~39-778)
+   - `GAME_CONSTANTS` - All game configuration
+   - `DIFFICULTY_MODIFIERS` - Difficulty scaling
+   - `LEVEL_CONFIGS` - Level definitions
+   - `SOUNDS` - Audio file paths
+
+2. **Static Data Bindings** (lines ~780-795)
+   - Binds static data references (sounds) to constants
+   - Weapon sound effects bound to WEAPONS types
+   - Game state sound effects bound to GAME_STATES
+   - **Rule**: Only data bindings here, NO function assignments
+
+3. **Utility Functions** (lines ~797+)
+   - Generic helper functions used throughout codebase
+   - Math utilities, collision detection, canvas helpers
+
+4. **Factory Functions** (later in file)
+   - Entity creation functions (bullets, obstacles, powerups, etc.)
+   - Each factory adds instance methods where appropriate
+
+5. **Rendering Functions** (later in file)
+   - Type-specific draw functions (drawTree, drawBush, drawDinosaur, etc.)
+   - All accept consistent parameters
+
+6. **Function Bindings** (after all game functions, before React components, ~line 3327)
+   - Consolidated section for ALL function assignments
+   - Bullet factory functions bound to WEAPONS types
+   - Draw functions bound to DINOSAURS and OBSTACLES types
+   - **Rule**: All function bindings together in ONE place, right before React components
+   - Clear boundary between game engine and UI layer
+
 **Utility Functions:**
 
 - `randomCentered(range)`: Generates random values centered around zero (±range/2) using RANDOM_CENTER constant
 - `randomizeBubbleOffset()`: Returns randomized {offsetX, offsetY} for tar pit bubble positioning using `randomCentered()`
+- `applyCanvasStyles(ctx, styles)`: Batch apply canvas rendering styles (fillStyle, strokeStyle, lineWidth, etc.)
+  - Reduces repetitive canvas state setup code
+  - Accepts style object with optional properties
+  - Usage: `applyCanvasStyles(ctx, { fillStyle: '#fff', lineWidth: 2, shadowBlur: 5 })`
+- `toScreenCoords(worldX, worldY, cameraX, cameraY)`: Convert world coordinates to screen coordinates
+  - Returns `{ x, y }` object with screen positions
+  - Centralizes coordinate conversion logic
 - `transitionToState(newState, playSound, stateAccumulator, setGameState)`: Unified state transition handler
   - Automatically sets new game state via stateAccumulator (game loop) or setGameState (event handlers)
   - Automatically plays associated sound effect if state has one
@@ -104,14 +157,50 @@ The codebase follows a **constants-first approach** for type safety and maintain
 
 **Entity Factory Functions:**
 
-- `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, `createMushroomPatch()`, etc.
+All factory functions create entity objects and add instance methods where appropriate:
+
+- `createObstacle()`: Creates tree/bush obstacle with `draw()` instance method
+- `createMushroomPatch()`: Creates mushroom decorations, each with `draw()` instance method
+- `createGrassPatch()`: Creates grass decorations, each with `draw()` instance method
+- `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`: Standard entity factories
 - `createBullet(fromX, fromY, toX, toY)`: Creates regular bullet projectile
 - `createTranquilizer(fromX, fromY, toX, toY)`: Creates tranquilizer dart projectile
 - `createTranqDepot(mapWidth, mapHeight)`: Creates tranquilizer depot with random position
 - `createAmmoDepot(x, y, amount)`: Creates regular ammo depot with fixed position and amount
 - `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with guard count tracking
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)`: Creates guard dinosaur positioned around exit
-- Encapsulate entity creation logic and use constants throughout
+
+**Factory Pattern for Instance Methods:**
+
+Obstacle factories add a `draw(ctx, cameraX, cameraY)` method to each instance:
+```javascript
+obstacle.draw = function(ctx, cameraX, cameraY) {
+  const screenX = this.x - cameraX;
+  const screenY = this.y - cameraY;
+  this.obstacleType.drawFunction(ctx, screenX, screenY, this.radius, this);
+};
+```
+
+Dinosaur creation (both inline and via `createExitGuard`) adds a `draw(ctx)` method to each instance:
+```javascript
+dino.draw = function(ctx) {
+  const scale = this.size / this.type.baseSize;
+  this.type.drawFunction(ctx, scale, this);
+};
+```
+
+Hazard factories add a `draw(ctx, cameraX, cameraY)` method to each instance:
+```javascript
+tarPit.draw = function(ctx, cameraX, cameraY) {
+  this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+};
+
+fence.draw = function(ctx, cameraX, cameraY) {
+  this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+};
+```
+
+This enables direct method calls: `obstacle.draw(ctx, cameraX, cameraY)`, `dino.draw(ctx)`, `tarPit.draw(ctx, cameraX, cameraY)`, `fence.draw(ctx, cameraX, cameraY)` instead of needing wrapper functions or conditional logic.
 
 **Weapon System Functions:**
 
@@ -483,18 +572,31 @@ Levels defined in `LEVEL_CONFIGS`:
 - Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
+  - **File structure organization**:
+    - Constants section → Static data bindings → Utility functions → Factory functions → Rendering functions → Function bindings
+    - **Static data bindings** (sounds, constant references) come immediately after SOUNDS definition, before utility functions
+    - **Function bindings** (bulletFactory, drawFunction) consolidated in ONE section after all functions are defined
+    - NEVER initialize function properties to `null` early - only assign once when functions exist
+    - Separation keeps data bindings near constants, function bindings together at bottom
   - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS/HAZARDS/GAME_STATES pattern - each entity/state type is a full object with all properties
     - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `weaponType: WEAPONS.REGULAR`, `dino.type: DINOSAURS.VELOCIRAPTOR`, `powerupType: POWERUPS.HEALTH`, `hazardType: HAZARDS.TAR_PIT`, `gameState: GAME_STATES.PLAYING`
     - All entity and state types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS, GAME_STATES) store full object references
-    - All properties (visual, behavioral, mechanical, functional) defined in one place
-    - Direct property access: `bullet.weaponType.bulletColor`, `dino.type.tranqShots`, `powerup.powerupType.durationFrames`, `obstacle.obstacleType.colors`, `fence.hazardType.zap.duration`, `gameState.isTerminal`
+    - All properties (visual, behavioral, mechanical, functional, rendering) defined in one place
+    - Direct property access: `bullet.weaponType.bulletColor`, `dino.type.drawFunction`, `powerup.powerupType.durationFrames`, `obstacle.obstacleType.drawFunction`, `gameState.isTerminal`
     - Capability system: Use nullable objects (e.g., `spitAttack: null` vs `spitAttack: { ... }`) for optional features
+  - **Instance method pattern**: Entities encapsulate their own behavior through instance methods
+    - Obstacle factories add `draw()` method to each instance
+    - Method delegates to type's `drawFunction` with appropriate parameters
+    - Eliminates need for wrapper functions or switch statements
+    - Usage: `obstacle.draw(ctx, cameraX, cameraY)` - simple, direct, OOP
+  - **NO switch statements on types**: All type-specific behavior accessed via properties or instance methods
+    - Use `entity.type.drawFunction()` or `entity.draw()`, not `switch(entity.type) { case TREE: drawTree() }`
+    - Use `gameState.isTerminal`, not `switch(gameState) { case LOST: case WON: ... }`
   - **Separate generic spawn constants from type-specific properties**: Generic spawn logic (e.g., `DEFAULT_ENTITY_CLEARANCE`, `HAZARD_SPAWN_MAX_ATTEMPTS`) belongs in `SPAWN` namespace, not in type definitions
-  - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
-  - Avoid string literals for types - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
-  - Pass full object references when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`; state stores `gameState: GAME_STATES.PLAYING`, code accesses `gameState.runsGameLoop`
-  - Eliminate lookup/helper functions when consolidating - replace switch statements with direct property access (e.g., removed `isTerminalState()` in favor of `gameState.isTerminal`)
-  - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`, `transitionToState()`)
-  - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, `createTarPit()`, `createElectricFence()`, etc.)
-  - Separate concerns: blocking entities (`obstacles` array) vs decorative (`decorations` array), determined by `blocksMovement` property
-  - Keep constants at the top of the file before utility functions and components
+  - **Avoid magic numbers** - extract to `GAME_CONSTANTS` with descriptive names
+  - **Avoid string literals for types** - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
+  - **Pass full object references** when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`; state stores `gameState: GAME_STATES.PLAYING`, code accesses `gameState.runsGameLoop`
+  - **Eliminate lookup/helper functions** when consolidating - replace switch statements with direct property access (e.g., removed `isTerminalState()` in favor of `gameState.isTerminal`)
+  - **Extract repeated patterns** into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`, `transitionToState()`, `applyCanvasStyles()`, `toScreenCoords()`)
+  - **Use factory functions** for entity creation (see `createObstacle()`, `createPowerup()`, `createTarPit()`, `createElectricFence()`, etc.)
+  - **Separate concerns**: blocking entities (`obstacles` array) vs decorative (`decorations` array), determined by `blocksMovement` property
