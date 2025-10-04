@@ -359,6 +359,9 @@
         playerTranqAmmoMultiplier: 1.5,   // 22 tranq (15 * 1.5)
         enemySpeedMultiplier: 0.8,        // 20% slower
         invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
+        ammoDampingMultiplier: 1.14,      // 40% longer bouncing (-0.7 * 1.14 = -0.8)
+        ammoFrictionMultiplier: 1.06,     // Less horizontal slowdown (0.85 * 1.06 = 0.90)
+        ammoMinVelocityMultiplier: 0.7,   // Lower threshold (0.05 * 0.7 = 0.035)
       },
       normal: {
         label: 'Normal',
@@ -367,6 +370,9 @@
         playerTranqAmmoMultiplier: 1.0,   // 15 tranq
         enemySpeedMultiplier: 1.0,        // Normal speed
         invincibilityMultiplier: 1.0,     // 60 frames
+        ammoDampingMultiplier: 1.0,       // Baseline bouncing
+        ammoFrictionMultiplier: 1.0,      // Baseline friction
+        ammoMinVelocityMultiplier: 1.0,   // Baseline threshold
       },
       hard: {
         label: 'Hard',
@@ -375,6 +381,9 @@
         playerTranqAmmoMultiplier: 0.7,   // 10 tranq (15 * 0.7)
         enemySpeedMultiplier: 1.3,        // 30% faster
         invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
+        ammoDampingMultiplier: 0.86,      // 20% shorter bouncing (-0.7 * 0.86 = -0.6)
+        ammoFrictionMultiplier: 0.94,     // More horizontal slowdown (0.85 * 0.94 = 0.8)
+        ammoMinVelocityMultiplier: 1.4,   // Higher threshold (0.05 * 1.4 = 0.07)
       },
     };
 
@@ -2222,10 +2231,11 @@
     /**
      * Update powerups and collectibles
      * @param {Object} game - Game reference object
+     * @param {string} difficulty - Current difficulty level
      * @param {Function} playSound - Sound playing function
      * @param {Object} stateAccumulator - Accumulates state changes
      */
-    const updateCollectibles = (game, playSound, stateAccumulator) => {
+    const updateCollectibles = (game, difficulty, playSound, stateAccumulator) => {
       // Check powerup collection
       game.powerups.forEach(powerup => {
         if (!powerup.active) return;
@@ -2274,6 +2284,11 @@
       });
 
       // Update ammo pickups
+      const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+      const adjustedDamping = GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
+      const adjustedFriction = GAME_CONSTANTS.PHYSICS.AMMO_FRICTION * diffMod.ammoFrictionMultiplier;
+      const adjustedMinVelocity = GAME_CONSTANTS.AMMO_PICKUP.MIN_BOUNCE_VELOCITY * diffMod.ammoMinVelocityMultiplier;
+
       game.ammoPickups = game.ammoPickups.filter(pickup => {
         pickup.x += pickup.vx;
         pickup.y += pickup.vy;
@@ -2281,8 +2296,8 @@
 
         if (pickup.y >= pickup.startY && pickup.vy > 0) {
           pickup.y = pickup.startY;
-          pickup.vy *= GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING;
-          pickup.vx *= GAME_CONSTANTS.PHYSICS.AMMO_FRICTION;
+          pickup.vy *= adjustedDamping;
+          pickup.vx *= adjustedFriction;
         }
 
         if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
@@ -2293,7 +2308,7 @@
         }
 
         // Remove ammo when motion stops
-        return Math.abs(pickup.vy) > GAME_CONSTANTS.AMMO_PICKUP.MIN_BOUNCE_VELOCITY || Math.abs(pickup.vx) > GAME_CONSTANTS.AMMO_PICKUP.MIN_BOUNCE_VELOCITY;
+        return Math.abs(pickup.vy) > adjustedMinVelocity || Math.abs(pickup.vx) > adjustedMinVelocity;
       });
     };
 
@@ -3613,7 +3628,7 @@
           }
 
           // Update collectibles
-          updateCollectibles(game, playSound, stateAccumulator);
+          updateCollectibles(game, difficulty, playSound, stateAccumulator);
 
           // Update bullets
           updateBullets(game, playSound, stateAccumulator);

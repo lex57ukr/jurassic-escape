@@ -20,7 +20,7 @@ The entire game exists in one HTML file with embedded JavaScript using Babel sta
 - External dependencies loaded via CDN (React 18, Babel standalone, Tailwind CSS)
 - Canvas-based rendering with 2D context
 - **Game constants** defined in `GAME_CONSTANTS` object - all magic numbers extracted into documented constants (player stats, physics values, combat parameters, spawning rules, AI behavior, etc.)
-- **Difficulty modifiers** in `DIFFICULTY_MODIFIERS` object - multipliers that adjust gameplay balance (player health/ammo, enemy speed, invincibility duration)
+- **Difficulty modifiers** in `DIFFICULTY_MODIFIERS` object - multipliers that adjust gameplay balance (player health/ammo, enemy speed, invincibility duration, ammo bouncing physics)
 
 ### Constants Architecture
 
@@ -202,6 +202,8 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
 - **Obstacles**: Types defined in `GAME_CONSTANTS.OBSTACLE_TYPES` - `TREE` and `BUSH` with circular collision
 - **Powerups**: Types defined in `GAME_CONSTANTS.POWERUP_TYPES` - `HEALTH` (red cross) and `SPEED` (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
+  - Bouncing physics affected by difficulty: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
+  - Controlled by damping, friction, and minimum velocity threshold multipliers in `DIFFICULTY_MODIFIERS`
 - **Tranquilizer depots**: Green crates with syringe icons (💉), provide 5 tranq ammo each, randomly placed
 - **Regular ammo depots**: Blue crates with bullet icons (💥), provide minimal regular ammo to prevent softlocks
   - 2 depots per level at fixed positions: one near spawn (250, 150), one in far corner
@@ -313,9 +315,11 @@ Levels defined in `LEVEL_CONFIGS`:
 - **Jump mechanic**: Helps escape stuck spawn positions between bushes; also bypasses electric fences; visual feedback with shadow
 - **Speed boost**: Multiplies player speed by 1.8x for 300 frames (5 seconds at 60fps)
 - **Ammo economy**: Start with 10 regular, 15 tranquilizer; dinosaurs drop regular ammo equal to their max health when killed
-  - Ammo pickups use physics-based bouncing animation
-  - Bounces continuously with decreasing amplitude (damping: -0.7, friction: 0.85)
-  - Disappears when velocity drops below minimum threshold (0.05)
+  - Ammo pickups use physics-based bouncing animation with difficulty scaling
+  - **Easy difficulty**: 40% longer bouncing (damping: -0.8, friction: 0.90, threshold: 0.035)
+  - **Normal difficulty**: Baseline bouncing (damping: -0.7, friction: 0.85, threshold: 0.05)
+  - **Hard difficulty**: 20% shorter bouncing (damping: -0.6, friction: 0.8, threshold: 0.07)
+  - Bounces continuously with decreasing amplitude until motion stops
   - No fixed bounce count or lifetime limit
 - **Tranquilizer mechanic**: Multi-shot system based on dinosaur size
   - Raptor/Para: 1 shot, Dilo/Stego/Trike: 2 shots, T-Rex: 3 shots
