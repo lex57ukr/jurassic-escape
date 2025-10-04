@@ -908,6 +908,20 @@
     };
 
     /**
+     * Batch render entity arrays using instance method pattern
+     * Renders multiple entity arrays in order, each calling entity.draw(ctx, cameraX, cameraY)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     * @param {...Array} entityArrays - Variable number of entity arrays to render
+     */
+    const drawEntities = (ctx, cameraX, cameraY, ...entityArrays) => {
+      entityArrays.forEach(arr => {
+        arr.forEach(entity => entity.draw(ctx, cameraX, cameraY));
+      });
+    };
+
+    /**
      * Check if circle collides with rotated rectangle (for electric fences)
      */
     const circleRectCollision = (circleX, circleY, radius, rectX, rectY, rectWidth, rectHeight, rotation) => {
@@ -1385,6 +1399,69 @@
      * @param {number} exitY - Exit Y position
      * @param {number} totalGuards - Total number of guards protecting this exit
      */
+    /**
+     * Create a territory for a regular territorial dinosaur
+     * @param {Object} dino - Dinosaur object being assigned the territory
+     * @param {Object} spawnPos - Position {x, y} where dinosaur spawned
+     * @param {Object} game - Game state object
+     * @returns {Object} Territory object with draw() instance method, or null if spawn failed
+     */
+    const createTerritoryForDino = (dino, spawnPos, game) => {
+      const dinoType = dino.type;
+      let territoryX = spawnPos.x;
+      let territoryY = spawnPos.y;
+      let attempts = 0;
+      const maxAttempts = GAME_CONSTANTS.AI.TERRITORY_SPAWN_MAX_ATTEMPTS;
+      const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * GAME_CONSTANTS.AI.TERRITORY_SPACING_MULTIPLIER;
+
+      while (attempts < maxAttempts) {
+        let overlapping = false;
+
+        // Check against existing territories
+        for (const existingTerritory of game.territories) {
+          const dist = distance(territoryX, territoryY, existingTerritory.x, existingTerritory.y);
+          if (dist < minTerritorySpacing) {
+            overlapping = true;
+            break;
+          }
+        }
+
+        // Check territory center is not too close to obstacles
+        if (!overlapping) {
+          for (const obstacle of game.obstacles) {
+            const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
+            if (dist < obstacle.radius + dinoType.baseSize + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
+              overlapping = true;
+              break;
+            }
+          }
+        }
+
+        if (!overlapping) {
+          break; // Found a valid position
+        }
+
+        // Try a new random position
+        territoryX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X * 2);
+        territoryY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y * 2);
+        attempts++;
+      }
+
+      const territory = {
+        x: territoryX,
+        y: territoryY,
+        radius: GAME_CONSTANTS.AI.TERRITORY_RADIUS,
+        dinoIndex: game.dinosaurs.length // Track which dino owns this territory
+      };
+
+      // Add instance method for drawing
+      territory.draw = function(ctx, cameraX, cameraY) {
+        drawTerritory(ctx, this, cameraX, cameraY);
+      };
+
+      return territory;
+    };
+
     const createExitTerritory = (exitX, exitY, totalGuards) => {
       const territory = {
         x: exitX,
@@ -4103,63 +4180,18 @@
               this.type.drawFunction(ctx, scale, this);
             };
 
-            // Create territory for territorial dinosaurs
+            // Create territory for territorial dinosaurs using factory function
             if (dinoConfig.type.territorial) {
-              // Find a non-overlapping territory position that avoids obstacles
-              let territoryX = spawnPos.x;
-              let territoryY = spawnPos.y;
-              let attempts = 0;
-              const maxAttempts = GAME_CONSTANTS.AI.TERRITORY_SPAWN_MAX_ATTEMPTS;
-              const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * GAME_CONSTANTS.AI.TERRITORY_SPACING_MULTIPLIER;
-
-              while (attempts < maxAttempts) {
-                let overlapping = false;
-
-                // Check against existing territories
-                for (const existingTerritory of game.territories) {
-                  const dist = distance(territoryX, territoryY, existingTerritory.x, existingTerritory.y);
-                  if (dist < minTerritorySpacing) {
-                    overlapping = true;
-                    break;
-                  }
-                }
-
-                // Check territory center is not too close to obstacles
-                if (!overlapping) {
-                  for (const obstacle of game.obstacles) {
-                    const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
-                    if (dist < obstacle.radius + dinoConfig.type.baseSize + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
-                      overlapping = true;
-                      break;
-                    }
-                  }
-                }
-
-                if (!overlapping) {
-                  break; // Found a valid position
-                }
-
-                // Try a new random position
-                territoryX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X * 2);
-                territoryY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y * 2);
-                attempts++;
-              }
-
-              const territory = {
-                x: territoryX,
-                y: territoryY,
-                radius: GAME_CONSTANTS.AI.TERRITORY_RADIUS,
-                dinoIndex: game.dinosaurs.length // Track which dino owns this territory
-              };
+              const territory = createTerritoryForDino(dino, spawnPos, game);
               game.territories.push(territory);
-              dino.territoryX = territoryX;
-              dino.territoryY = territoryY;
-              dino.territoryRadius = GAME_CONSTANTS.AI.TERRITORY_RADIUS;
+              dino.territoryX = territory.x;
+              dino.territoryY = territory.y;
+              dino.territoryRadius = territory.radius;
               dino.territoryIndex = game.territories.length - 1; // Link dino to its territory
 
               // Reposition dino to territory center to ensure it spawns in its zone
-              dino.x = territoryX;
-              dino.y = territoryY;
+              dino.x = territory.x;
+              dino.y = territory.y;
             }
 
             game.dinosaurs.push(dino);
@@ -4397,45 +4429,17 @@
             );
           }
 
-          // Draw tar pits
-          game.tarPits.forEach(tarPit => {
-            tarPit.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw electric fences
-          game.electricFences.forEach(fence => {
-            fence.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw decorations (walkable: sorted with grass first, mushrooms last)
-          game.decorations.forEach(decoration => {
-            decoration.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw obstacles (blocking: trees and bushes)
-          game.obstacles.forEach(obs => {
-            obs.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw powerups
-          game.powerups.forEach(powerup => {
-            powerup.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw tranquilizer depots
-          game.tranqDepots.forEach(depot => {
-            depot.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw regular ammo depots
-          game.ammoDepots.forEach(depot => {
-            depot.draw(ctx, game.cameraX, game.cameraY);
-          });
-
-          // Draw territories (skull markers at center)
-          game.territories.forEach(territory => {
-            territory.draw(ctx, game.cameraX, game.cameraY);
-          });
+          // Draw entities using batch utility (maintains z-index layering via argument order)
+          drawEntities(ctx, game.cameraX, game.cameraY,
+            game.tarPits,           // Layer 1: Tar pits (ground hazards)
+            game.electricFences,    // Layer 2: Electric fences
+            game.decorations,       // Layer 3: Walkable decorations (grass, mushrooms)
+            game.obstacles,         // Layer 4: Blocking obstacles (trees, bushes)
+            game.powerups,          // Layer 5: Collectible powerups
+            game.tranqDepots,       // Layer 6: Tranquilizer depots
+            game.ammoDepots,        // Layer 7: Regular ammo depots
+            game.territories        // Layer 8: Territory markers
+          );
 
           // Draw dinosaurs
           game.dinosaurs.forEach(dino => {

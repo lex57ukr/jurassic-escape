@@ -149,6 +149,11 @@ The codebase follows a strict organizational pattern to separate concerns:
 - `toScreenCoords(worldX, worldY, cameraX, cameraY)`: Convert world coordinates to screen coordinates
   - Returns `{ x, y }` object with screen positions
   - Centralizes coordinate conversion logic
+- `drawEntities(ctx, cameraX, cameraY, ...entityArrays)`: Batch render multiple entity arrays using instance method pattern
+  - Renders entity arrays in order (argument order = z-index layering)
+  - Each entity must have `draw(ctx, cameraX, cameraY)` instance method
+  - Reduces repetitive forEach loops in render phase
+  - Usage: `drawEntities(ctx, cameraX, cameraY, game.tarPits, game.obstacles, game.powerups)`
 - `transitionToState(newState, playSound, stateAccumulator, setGameState)`: Unified state transition handler
   - Automatically sets new game state via stateAccumulator (game loop) or setGameState (event handlers)
   - Automatically plays associated sound effect if state has one
@@ -165,7 +170,11 @@ All factory functions create entity objects and add instance methods where appro
 - `createPowerup()`: Creates powerup with `draw()` instance method
 - `createTranqDepot()`: Creates tranquilizer depot with `draw()` instance method (encapsulates TRANQ style)
 - `createAmmoDepot()`: Creates regular ammo depot with `draw()` instance method (encapsulates AMMO style)
-- `createExitTerritory()`: Creates exit protection territory with `draw()` instance method
+- `createTerritoryForDino(dino, spawnPos, game)`: Creates territory for regular territorial dinosaurs with `draw()` instance method
+  - Handles collision avoidance (obstacles, other territories)
+  - Repositions territory if overlapping detected
+  - Ensures all territories have consistent draw behavior
+- `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with `draw()` instance method
 - `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`: Entities with `draw()` instance methods
 - `createBullet(fromX, fromY, toX, toY)`: Creates regular bullet projectile
 - `createTranquilizer(fromX, fromY, toX, toY)`: Creates tranquilizer dart projectile
