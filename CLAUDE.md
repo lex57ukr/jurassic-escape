@@ -56,6 +56,12 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - `POWERUPS.SPEED`: `{ id, radius, icon, color, durationFrames, multiplier }`
   - Each powerup type is a full object with visual and functional properties
   - Entities store powerup ID: `powerup.type = POWERUPS.HEALTH.id`
+- `HAZARDS`: Unified hazard configuration with all properties per hazard type:
+  - `HAZARDS.TAR_PIT`: `{ id, baseRadius, sizeVariance, slowMultiplier, minSpacing, colors: {...}, rimWidth, bubble: {...} }`
+  - `HAZARDS.ELECTRIC_FENCE`: `{ id, width, height, damage, damageCooldown, pushbackForce, stunDurationMultiplier, minSpacing, obstacleClearance, colors: {...}, wireWidth, spark: {...}, zap: {...}, memory: {...} }`
+  - Each hazard type is a full object with visual, mechanical, and behavioral properties
+  - Entities store full hazard object: `tarPit.hazardType = GAME_CONSTANTS.HAZARDS.TAR_PIT`, `fence.hazardType = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE`
+  - Direct property access: `tarPit.hazardType.slowMultiplier`, `fence.hazardType.zap.duration`, `fence.hazardType.colors.wire`
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
 - `AI.EXIT_TERRITORY_RADIUS`: 300px radius for exit protection zones
 - `AI.EXIT_GUARD_AGGRO_RANGE`: 350px chase range for exit guards
@@ -88,7 +94,7 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - **Easier refactoring**: Change values in one location, no scattered constants
 - **Self-documenting code**: `GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.tranqShots` is clearer than separate constants
 - **Eliminates lookup functions**: Direct property access instead of switch statements (e.g., removed `getSleepDurationForType()`, `getShotsNeededForType()`)
-- **Consistent pattern**: WEAPONS, DINOSAURS, OBSTACLES, and POWERUPS all follow the same unified object structure
+- **Consistent pattern**: WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, and HAZARDS all follow the same unified object structure
 
 ### Game State Management
 
@@ -411,17 +417,18 @@ Levels defined in `LEVEL_CONFIGS`:
 - Keep in mind reusability and separation of concerns. Look out for opportunities to write and use more expressive functions
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
-  - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS pattern - each entity type is a full object with all properties
-    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `dino.type: DINOSAURS.VELOCIRAPTOR`
-    - DINOSAURS and OBSTACLES store full objects; WEAPONS and POWERUPS store ID strings for flexibility
+  - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS/HAZARDS pattern - each entity type is a full object with all properties
+    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `dino.type: DINOSAURS.VELOCIRAPTOR`, `tarPit.hazardType: HAZARDS.TAR_PIT`
+    - DINOSAURS, OBSTACLES, and HAZARDS store full objects; WEAPONS and POWERUPS store ID strings for flexibility
     - All properties (visual, behavioral, mechanical) defined in one place
-    - Direct property access: `weapon.bulletColor`, `dino.type.tranqShots`, `powerup.durationFrames`, `obstacle.obstacleType.colors`
+    - Direct property access: `weapon.bulletColor`, `dino.type.tranqShots`, `powerup.durationFrames`, `obstacle.obstacleType.colors`, `fence.hazardType.zap.duration`
     - Capability system: Use nullable objects (e.g., `spitAttack: null` vs `spitAttack: { ... }`) for optional features
+  - **Separate generic spawn constants from type-specific properties**: Generic spawn logic (e.g., `DEFAULT_ENTITY_CLEARANCE`, `HAZARD_SPAWN_MAX_ATTEMPTS`) belongs in `SPAWN` namespace, not in type definitions
   - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
   - Avoid string literals for types - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
   - Pass full object references when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`
   - Eliminate lookup/helper functions when consolidating - replace switch statements with direct property access
   - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`)
-  - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, etc.)
+  - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, `createTarPit()`, `createElectricFence()`, etc.)
   - Separate concerns: blocking entities (`obstacles` array) vs decorative (`decorations` array), determined by `blocksMovement` property
   - Keep constants at the top of the file before utility functions and components
