@@ -942,7 +942,7 @@
         vx: dx * speed,
         vy: dy * speed,
         radius: GAME_CONSTANTS.BULLET.RADIUS,
-        type: GAME_CONSTANTS.WEAPONS.REGULAR.id
+        weaponType: GAME_CONSTANTS.WEAPONS.REGULAR
       };
     };
 
@@ -957,7 +957,7 @@
         vx: dx * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.speed,
         vy: dy * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.speed,
         radius: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.radius,
-        type: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id
+        weaponType: GAME_CONSTANTS.WEAPONS.TRANQUILIZER
       };
     };
 
@@ -1088,12 +1088,12 @@
      * Create a powerup object
      */
     const createPowerup = (mapWidth, mapHeight) => {
-      const type = Math.random() > 0.5 ? GAME_CONSTANTS.POWERUPS.HEALTH.id : GAME_CONSTANTS.POWERUPS.SPEED.id;
+      const powerupType = Math.random() > 0.5 ? GAME_CONSTANTS.POWERUPS.HEALTH : GAME_CONSTANTS.POWERUPS.SPEED;
       return {
         x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        type,
-        radius: GAME_CONSTANTS.POWERUPS.HEALTH.radius,
+        powerupType,
+        radius: powerupType.radius,
         active: true
       };
     };
@@ -2258,22 +2258,17 @@
       const screenX = powerup.x - cameraX;
       const screenY = powerup.y - cameraY;
 
-      // Get powerup config
-      const config = powerup.type === GAME_CONSTANTS.POWERUPS.HEALTH.id
-        ? GAME_CONSTANTS.POWERUPS.HEALTH
-        : GAME_CONSTANTS.POWERUPS.SPEED;
-
       // Draw base circle
-      ctx.fillStyle = config.fillColor;
-      ctx.strokeStyle = config.strokeColor;
-      ctx.lineWidth = config.lineWidth;
+      ctx.fillStyle = powerup.powerupType.fillColor;
+      ctx.strokeStyle = powerup.powerupType.strokeColor;
+      ctx.lineWidth = powerup.powerupType.lineWidth;
       ctx.beginPath();
       ctx.arc(screenX, screenY, powerup.radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       // Draw icon
-      config.drawIcon(ctx, screenX, screenY);
+      powerup.powerupType.drawIcon(ctx, screenX, screenY);
     };
 
     /**
@@ -2711,14 +2706,14 @@
         if (circleCollision(game.player.x, game.player.y, game.player.radius, powerup.x, powerup.y, powerup.radius)) {
           powerup.active = false;
 
-          if (powerup.type === GAME_CONSTANTS.POWERUPS.HEALTH.id) {
+          if (powerup.powerupType === GAME_CONSTANTS.POWERUPS.HEALTH) {
             if (game.player.health < game.player.maxHealth) {
               game.player.health++;
               stateAccumulator.playerHealth = game.player.health;
             }
             playSound(SOUNDS.PICKUP_HEALTH);
-          } else if (powerup.type === GAME_CONSTANTS.POWERUPS.SPEED.id) {
-            game.speedBoostTimer = GAME_CONSTANTS.POWERUPS.SPEED.durationFrames;
+          } else if (powerup.powerupType === GAME_CONSTANTS.POWERUPS.SPEED) {
+            game.speedBoostTimer = powerup.powerupType.durationFrames;
             stateAccumulator.speedBoostActive = true;
             playSound(SOUNDS.PICKUP_SPEED);
           }
@@ -2801,7 +2796,7 @@
           const dino = game.dinosaurs[i];
 
           if (circleCollision(bullet.x, bullet.y, bullet.radius, dino.x, dino.y, dino.size)) {
-            if (bullet.type === GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id) {
+            if (bullet.weaponType === GAME_CONSTANTS.WEAPONS.TRANQUILIZER) {
               // Tranquilizer dart
               if (!dino.isSleeping) {
                 dino.tranqHits++;
@@ -2814,7 +2809,7 @@
                   dino.isSleeping = true;
                   dino.sleepTimer = dino.type.sleepDuration;
 
-                  const tranqPoints = Math.round(dino.points * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.scoreMultiplier);
+                  const tranqPoints = Math.round(dino.points * bullet.weaponType.scoreMultiplier);
                   stateAccumulator.score = (stateAccumulator.score || 0) + tranqPoints;
                   game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size - 20, `+${tranqPoints} SLEEP`, '#00E5FF'));
                 }
@@ -3226,11 +3221,11 @@
               <span key={i}>{i < health ? '❤️' : '🖤'}</span>
             ))}
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id ? 'bg-yellow-600' : 'bg-gray-700'}`}>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
             <span>{GAME_CONSTANTS.WEAPONS.REGULAR.icon}</span>
             <span className="text-xl font-bold">{ammo}</span>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id ? 'bg-green-600' : 'bg-gray-700'}`}>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
             <span>{GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon}</span>
             <span className="text-xl font-bold">{tranqAmmo}</span>
           </div>
@@ -3309,8 +3304,8 @@
             style={{ touchAction: 'none' }}
             onTouchStart={onWeaponSwitch}
           >
-            <div className={`w-full h-full rounded-full ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
-              {currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id ? GAME_CONSTANTS.WEAPONS.REGULAR.icon : GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon}
+            <div className={`w-full h-full rounded-full ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
+              {currentWeapon.icon}
             </div>
           </div>
 
@@ -3537,7 +3532,7 @@
       const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.PLAYER.MAX_HEALTH);
       const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.PLAYER.START_AMMO);
       const [playerTranqAmmo, setPlayerTranqAmmo] = useState(GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo);
-      const [currentWeapon, setCurrentWeapon] = useState(GAME_CONSTANTS.WEAPONS.REGULAR.id);
+      const [currentWeapon, setCurrentWeapon] = useState(GAME_CONSTANTS.WEAPONS.REGULAR);
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
@@ -3663,7 +3658,7 @@
           maxHealth: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
           ammo: GAME_CONSTANTS.PLAYER.START_AMMO,
           tranqAmmo: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo,
-          currentWeapon: GAME_CONSTANTS.WEAPONS.REGULAR.id,
+          currentWeapon: GAME_CONSTANTS.WEAPONS.REGULAR,
           speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           radius: GAME_CONSTANTS.PLAYER.RADIUS,
@@ -3721,7 +3716,7 @@
           maxHealth: playerMaxHealth,
           ammo: playerStartAmmo,
           tranqAmmo: playerStartTranqAmmo,
-          currentWeapon: GAME_CONSTANTS.WEAPONS.REGULAR.id,
+          currentWeapon: GAME_CONSTANTS.WEAPONS.REGULAR,
           speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
           radius: GAME_CONSTANTS.PLAYER.RADIUS,
@@ -3760,7 +3755,7 @@
         setPlayerHealth(playerMaxHealth);
         setPlayerAmmo(playerStartAmmo);
         setPlayerTranqAmmo(playerStartTranqAmmo);
-        setCurrentWeapon(GAME_CONSTANTS.WEAPONS.REGULAR.id);
+        setCurrentWeapon(GAME_CONSTANTS.WEAPONS.REGULAR);
         setSpeedBoostActive(false);
 
         // Create tar pits first (so obstacles can avoid them)
@@ -4076,7 +4071,7 @@
 
           // Handle touch weapon switching
           if (game.touch.switchWeapon) {
-            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id : GAME_CONSTANTS.WEAPONS.REGULAR.id;
+            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.WEAPONS.REGULAR;
             stateAccumulator.currentWeapon = game.player.currentWeapon;
             game.touch.switchWeapon = false;
           }
@@ -4087,13 +4082,13 @@
             const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
             const targetY = nearestDino ? nearestDino.y : game.player.y;
 
-            if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id && game.player.ammo > 0) {
+            if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR && game.player.ammo > 0) {
               game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
               game.player.ammo--;
               stateAccumulator.playerAmmo = game.player.ammo;
               playSound(SOUNDS.SHOOT);
               game.touch.shoot = false;
-            } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id && game.player.tranqAmmo > 0) {
+            } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER && game.player.tranqAmmo > 0) {
               game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
               game.player.tranqAmmo--;
               stateAccumulator.playerTranqAmmo = game.player.tranqAmmo;
@@ -4310,7 +4305,7 @@
 
           // Draw bullets
           game.bullets.forEach(bullet => {
-            ctx.fillStyle = bullet.type === GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletColor : GAME_CONSTANTS.WEAPONS.REGULAR.bulletColor;
+            ctx.fillStyle = bullet.weaponType.bulletColor;
             ctx.beginPath();
             ctx.arc(bullet.x - game.cameraX, bullet.y - game.cameraY, bullet.radius, 0, Math.PI * 2);
             ctx.fill();
@@ -4427,7 +4422,7 @@
 
         // Handle weapon switching with Q key
         if (key === 'q') {
-          game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id : GAME_CONSTANTS.WEAPONS.REGULAR.id;
+          game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.WEAPONS.REGULAR;
           setCurrentWeapon(game.player.currentWeapon);
         }
       }, [playSound]);
@@ -4465,14 +4460,14 @@
           }
         }
 
-        if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR.id) {
+        if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR) {
           if (game.player.ammo > 0) {
             game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
             game.player.ammo--;
             setPlayerAmmo(game.player.ammo);
             playSound(SOUNDS.SHOOT);
           }
-        } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER.id) {
+        } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER) {
           if (game.player.tranqAmmo > 0) {
             game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
             game.player.tranqAmmo--;

@@ -34,7 +34,8 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius }`
   - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier }`
   - Each weapon type is a full object (not just a string ID)
-  - Entities store weapon ID: `bullet.type = WEAPONS.REGULAR.id`
+  - Entities store full weapon object: `bullet.weaponType = WEAPONS.REGULAR`, `player.currentWeapon = WEAPONS.REGULAR`
+  - Direct property access: `bullet.weaponType.bulletColor`, `player.currentWeapon.icon`
   - All weapon properties (visual, mechanical, ammo) in one place
 - `DINOSAURS`: Unified dinosaur configuration with all properties per dinosaur type:
   - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration, spitAttack }`
@@ -52,10 +53,11 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - Entity objects store `obstacleType` field containing reference to constant: `{ x, y, radius, obstacleType: OBSTACLES.TREE }`
   - All visual properties (colors, sizes) and behavior properties (blocksMovement, zIndex) in one place
 - `POWERUPS`: Unified powerup configuration with all properties per powerup type:
-  - `POWERUPS.HEALTH`: `{ id, radius, icon, color }`
-  - `POWERUPS.SPEED`: `{ id, radius, icon, color, durationFrames, multiplier }`
+  - `POWERUPS.HEALTH`: `{ id, radius, icon, color, fillColor, strokeColor, lineWidth, drawIcon }`
+  - `POWERUPS.SPEED`: `{ id, radius, icon, color, durationFrames, multiplier, fillColor, strokeColor, lineWidth, drawIcon }`
   - Each powerup type is a full object with visual and functional properties
-  - Entities store powerup ID: `powerup.type = POWERUPS.HEALTH.id`
+  - Entities store full powerup object: `powerup.powerupType = POWERUPS.HEALTH`
+  - Direct property access: `powerup.powerupType.fillColor`, `powerup.powerupType.durationFrames`
 - `HAZARDS`: Unified hazard configuration with all properties per hazard type:
   - `HAZARDS.TAR_PIT`: `{ id, baseRadius, sizeVariance, slowMultiplier, minSpacing, colors: {...}, rimWidth, bubble: {...} }`
   - `HAZARDS.ELECTRIC_FENCE`: `{ id, width, height, damage, damageCooldown, pushbackForce, stunDurationMultiplier, minSpacing, obstacleClearance, colors: {...}, wireWidth, spark: {...}, zap: {...}, memory: {...} }`
@@ -94,7 +96,7 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - **Easier refactoring**: Change values in one location, no scattered constants
 - **Self-documenting code**: `GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.tranqShots` is clearer than separate constants
 - **Eliminates lookup functions**: Direct property access instead of switch statements (e.g., removed `getSleepDurationForType()`, `getShotsNeededForType()`)
-- **Consistent pattern**: WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, and HAZARDS all follow the same unified object structure
+- **Consistent pattern**: All entity types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS) follow the same unified object pattern - store full object references, access properties directly
 
 ### Game State Management
 
@@ -431,10 +433,10 @@ Levels defined in `LEVEL_CONFIGS`:
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
   - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS/HAZARDS pattern - each entity type is a full object with all properties
-    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `dino.type: DINOSAURS.VELOCIRAPTOR`, `tarPit.hazardType: HAZARDS.TAR_PIT`
-    - DINOSAURS, OBSTACLES, and HAZARDS store full objects; WEAPONS and POWERUPS store ID strings for flexibility
+    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `weaponType: WEAPONS.REGULAR`, `dino.type: DINOSAURS.VELOCIRAPTOR`, `powerupType: POWERUPS.HEALTH`, `hazardType: HAZARDS.TAR_PIT`
+    - All entity types (WEAPONS, DINOSAURS, OBSTACLES, POWERUPS, HAZARDS) store full object references
     - All properties (visual, behavioral, mechanical) defined in one place
-    - Direct property access: `weapon.bulletColor`, `dino.type.tranqShots`, `powerup.durationFrames`, `obstacle.obstacleType.colors`, `fence.hazardType.zap.duration`
+    - Direct property access: `bullet.weaponType.bulletColor`, `dino.type.tranqShots`, `powerup.powerupType.durationFrames`, `obstacle.obstacleType.colors`, `fence.hazardType.zap.duration`
     - Capability system: Use nullable objects (e.g., `spitAttack: null` vs `spitAttack: { ... }`) for optional features
   - **Separate generic spawn constants from type-specific properties**: Generic spawn logic (e.g., `DEFAULT_ENTITY_CLEARANCE`, `HAZARD_SPAWN_MAX_ATTEMPTS`) belongs in `SPAWN` namespace, not in type definitions
   - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
