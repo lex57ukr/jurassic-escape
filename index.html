@@ -650,26 +650,6 @@
       },
     };
 
-    /**
-     * Apply difficulty modifiers to base game constants
-     */
-    const getAdjustedConstants = (difficulty) => {
-      const modifier = DIFFICULTY_MODIFIERS[difficulty];
-      return {
-        ...GAME_CONSTANTS,
-        PLAYER: {
-          ...GAME_CONSTANTS.PLAYER,
-          MAX_HEALTH: Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * modifier.playerHealthMultiplier),
-          START_AMMO: Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * modifier.playerAmmoMultiplier),
-        },
-        COMBAT: {
-          ...GAME_CONSTANTS.COMBAT,
-          INVINCIBILITY_FRAMES: Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * modifier.invincibilityMultiplier),
-        },
-        _difficultyModifier: modifier, // Store for enemy speed adjustments
-      };
-    };
-
     // ============================================================================
     // LEVEL CONFIGURATION
     // ============================================================================
@@ -973,39 +953,6 @@
         }
       }
       return false;
-    };
-
-    /**
-     * Clamp entity position to map boundaries
-     */
-    const clampToBounds = (entity, size, mapWidth, mapHeight) => {
-      entity.x = clamp(entity.x, size, mapWidth - size);
-      entity.y = clamp(entity.y, size, mapHeight - size);
-    };
-
-    /**
-     * Sort decorations by rendering z-index (grass first, mushrooms last)
-     * @param {Array} decorations - Array of decoration objects
-     */
-    const sortDecorationsByZIndex = (decorations) => {
-      decorations.sort((a, b) => {
-        const aIndex = a.obstacleType.zIndex || 0;
-        const bIndex = b.obstacleType.zIndex || 0;
-        return aIndex - bIndex;
-      });
-    };
-
-    /**
-     * Apply accumulated state updates to React state setters (batching helper)
-     * @param {Object} accumulator - Object with state updates
-     * @param {Object} setters - Object mapping state keys to setter functions
-     */
-    const applyStateUpdates = (accumulator, setters) => {
-      Object.entries(setters).forEach(([key, setter]) => {
-        if (accumulator[key] !== undefined) {
-          setter(accumulator[key]);
-        }
-      });
     };
 
     /**
@@ -2964,15 +2911,6 @@
     };
 
     /**
-     * Update entity's invincibility timer
-     */
-    const updateInvincibility = (entity) => {
-      if (entity.invincibilityTimer > 0) {
-        entity.invincibilityTimer--;
-      }
-    };
-
-    /**
      * Handle collision damage between two entities
      * Returns true if damage was applied
      */
@@ -3599,7 +3537,8 @@
         }
 
         // Clamp to bounds
-        clampToBounds(dino, dino.size, game.mapWidth, game.mapHeight);
+        dino.x = clamp(dino.x, dino.size, game.mapWidth - dino.size);
+        dino.y = clamp(dino.y, dino.size, game.mapHeight - dino.size);
 
         // Check collision with player (only aggressive dinosaurs and not sleeping)
         if (dino.aggressive && !dino.isSleeping) {
@@ -3622,7 +3561,9 @@
       }
 
       // Update player invincibility
-      updateInvincibility(game.player);
+      if (game.player.invincibilityTimer > 0) {
+        game.player.invincibilityTimer--;
+      }
 
       // Update floating texts (using instance method)
       game.floatingTexts = game.floatingTexts.filter(text => text.update());
@@ -4290,8 +4231,12 @@
           game.decorations.push(...cluster);
         }
 
-        // Sort decorations by z-index for proper rendering order
-        sortDecorationsByZIndex(game.decorations);
+        // Sort decorations by z-index for proper rendering order (grass first, mushrooms last)
+        game.decorations.sort((a, b) => {
+          const aIndex = a.obstacleType.zIndex || 0;
+          const bIndex = b.obstacleType.zIndex || 0;
+          return aIndex - bIndex;
+        });
 
         // Create dinosaurs
         let dinoIndex = 0;
@@ -4534,7 +4479,7 @@
           updateDinosaurs(game, difficulty, playSound, stateAccumulator);
 
           // Batch apply all state updates (reduces re-renders)
-          applyStateUpdates(stateAccumulator, {
+          const setters = {
             gameState: setGameState,
             playerHealth: setPlayerHealth,
             playerAmmo: setPlayerAmmo,
@@ -4542,6 +4487,11 @@
             currentWeapon: setCurrentWeapon,
             speedBoostActive: setSpeedBoostActive,
             score: (val) => setScore(s => s + val),
+          };
+          Object.entries(setters).forEach(([key, setter]) => {
+            if (stateAccumulator[key] !== undefined) {
+              setter(stateAccumulator[key]);
+            }
           });
 
           // Stop game loop if game over
