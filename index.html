@@ -1139,7 +1139,7 @@
      * Create a floating text object
      */
     const createFloatingText = (x, y, text, color = '#FFD700') => {
-      return {
+      const floatingText = {
         x,
         y,
         startY: y,
@@ -1148,6 +1148,38 @@
         lifetime: GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES,
         age: 0
       };
+
+      // Add instance method for physics update
+      floatingText.update = function() {
+        this.age++;
+        this.y -= GAME_CONSTANTS.FLOATING_TEXT.RISE_SPEED;
+        return this.age < this.lifetime; // Return false when expired
+      };
+
+      // Add instance method for rendering
+      floatingText.draw = function(ctx, cameraX, cameraY) {
+        const screenX = this.x - cameraX;
+        const screenY = this.y - cameraY;
+
+        // Culling
+        const buffer = GAME_CONSTANTS.FLOATING_TEXT.CULLING_BUFFER;
+        const canvas = ctx.canvas;
+        if (screenX < -buffer || screenX > canvas.width + buffer || screenY < -buffer || screenY > canvas.height + buffer) {
+          return;
+        }
+
+        // Calculate alpha (fade out in final frames)
+        const fadeDuration = GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME;
+        const alpha = this.age < GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME
+          ? GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE
+          : GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE - (this.age - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME) / fadeDuration;
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color;
+        ctx.fillText(this.text, screenX, screenY);
+      };
+
+      return floatingText;
     };
 
     /**
@@ -1357,7 +1389,7 @@
      * @param {number} ammoAmount - Number of ammo this pickup restores
      */
     const createAmmoPickup = (x, y, startY, ammoAmount) => {
-      return {
+      const pickup = {
         x,
         y,
         startY,
@@ -1368,6 +1400,64 @@
         hasBounced: false,
         bounceCount: 0
       };
+
+      // Add instance method for physics update and collection
+      pickup.update = function(player, difficulty, playSound, stateAccumulator, createFloatingText) {
+        // Vertical-only movement
+        this.y += this.vy;
+        this.vy += GAME_CONSTANTS.PHYSICS.AMMO_GRAVITY;
+
+        // Bounce when hitting the ground
+        if (this.y >= this.startY && this.vy > 0) {
+          this.y = this.startY;
+          this.bounceCount++;
+
+          // Apply damping with progressive fade
+          const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+          const adjustedDamping = GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
+          const maxBounces = GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
+          const bounceProgress = this.bounceCount / maxBounces;
+          const progressiveDamping = adjustedDamping * (1 - bounceProgress * GAME_CONSTANTS.AMMO_PICKUP.PROGRESSIVE_DAMPING_FACTOR);
+
+          this.vy *= progressiveDamping;
+          this.hasBounced = true;
+        }
+
+        // Check collection (only after first bounce)
+        if (this.hasBounced) {
+          if (circleCollision(this.x, this.y, this.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, player.x, player.y, player.radius)) {
+            player.ammo += this.ammoAmount;
+            stateAccumulator.playerAmmo = player.ammo;
+            playSound(SOUNDS.PICKUP_AMMO);
+            stateAccumulator.floatingTexts = stateAccumulator.floatingTexts || [];
+            stateAccumulator.floatingTexts.push(createFloatingText(this.x, this.y, `+${this.ammoAmount}`, '#FFD700'));
+            return false; // Remove pickup
+          }
+        }
+
+        // Keep pickup until max bounces reached
+        return this.bounceCount < GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
+      };
+
+      // Add instance method for rendering
+      pickup.draw = function(ctx, cameraX, cameraY) {
+        const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
+
+        // Draw the ammo ball
+        ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
+        ctx.beginPath();
+        ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw the ammo amount badge
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`×${this.ammoAmount}`, screenPos.x, screenPos.y);
+      };
+
+      return pickup;
     };
 
     /**
@@ -3122,44 +3212,15 @@
         }
       });
 
-      // Update ammo pickups
-      const diffMod = DIFFICULTY_MODIFIERS[difficulty];
-      const adjustedDamping = GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
+      // Update ammo pickups (using instance method)
+      game.ammoPickups = game.ammoPickups.filter(pickup =>
+        pickup.update(game.player, difficulty, playSound, stateAccumulator, createFloatingText)
+      );
 
-      game.ammoPickups = game.ammoPickups.filter(pickup => {
-        // Vertical-only movement (no horizontal)
-        pickup.y += pickup.vy;
-        pickup.vy += GAME_CONSTANTS.PHYSICS.AMMO_GRAVITY;
-
-        // Bounce when hitting the ground
-        if (pickup.y >= pickup.startY && pickup.vy > 0) {
-          pickup.y = pickup.startY;
-          pickup.bounceCount++;
-
-          // Apply damping with progressive fade - each bounce loses more energy
-          // Formula: damping factor decreases as bounces increase to ensure it settles by MAX_BOUNCES
-          const maxBounces = GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
-          const bounceProgress = pickup.bounceCount / maxBounces;
-          const progressiveDamping = adjustedDamping * (1 - bounceProgress * GAME_CONSTANTS.AMMO_PICKUP.PROGRESSIVE_DAMPING_FACTOR);
-
-          pickup.vy *= progressiveDamping;
-          pickup.hasBounced = true; // Mark as bounced when first hitting ground
-        }
-
-        // Check collection (only after first bounce)
-        if (pickup.hasBounced) {
-          if (circleCollision(pickup.x, pickup.y, pickup.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, game.player.x, game.player.y, game.player.radius)) {
-            game.player.ammo += pickup.ammoAmount;
-            stateAccumulator.playerAmmo = game.player.ammo;
-            playSound(SOUNDS.PICKUP_AMMO);
-            game.floatingTexts.push(createFloatingText(pickup.x, pickup.y, `+${pickup.ammoAmount}`, '#FFD700'));
-            return false;
-          }
-        }
-
-        // Keep pickup until max bounces reached
-        return pickup.bounceCount < GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
-      });
+      // Apply accumulated floating texts
+      if (stateAccumulator.floatingTexts) {
+        game.floatingTexts.push(...stateAccumulator.floatingTexts);
+      }
     };
 
     /**
@@ -3563,12 +3624,8 @@
       // Update player invincibility
       updateInvincibility(game.player);
 
-      // Update floating texts
-      game.floatingTexts = game.floatingTexts.filter(text => {
-        text.age++;
-        text.y -= GAME_CONSTANTS.FLOATING_TEXT.RISE_SPEED;
-        return text.age < text.lifetime;
-      });
+      // Update floating texts (using instance method)
+      game.floatingTexts = game.floatingTexts.filter(text => text.update());
 
       return false; // Not game over
     };
@@ -4608,26 +4665,11 @@
             game.spit      // Layer 2: Spit projectiles
           );
 
-          // Draw ammo pickups with amount badge
-          game.ammoPickups.forEach(pickup => {
-            const screenPos = toScreenCoords(pickup.x, pickup.y, game.cameraX, game.cameraY);
-            // Draw the ammo ball
-            ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
-            ctx.beginPath();
-            ctx.arc(screenPos.x, screenPos.y, pickup.radius, 0, Math.PI * 2);
-            ctx.fill();
+          // Draw ammo pickups (using instance methods)
+          game.ammoPickups.forEach(pickup => pickup.draw(ctx, game.cameraX, game.cameraY));
 
-            // Draw the ammo amount badge
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 10px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`×${pickup.ammoAmount}`, screenPos.x, screenPos.y);
-          });
-
-          // Draw floating texts (optimized)
+          // Draw floating texts (using instance methods with batch canvas styles)
           if (game.floatingTexts.length > 0) {
-            // Batch canvas styles for floating text
             applyCanvasStyles(ctx, {
               font: GAME_CONSTANTS.FLOATING_TEXT.FONT,
               textAlign: 'center',
@@ -4636,29 +4678,9 @@
               shadowBlur: GAME_CONSTANTS.FLOATING_TEXT.SHADOW_BLUR
             });
 
-            const fadeDuration = GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME;
-            const buffer = GAME_CONSTANTS.FLOATING_TEXT.CULLING_BUFFER;
+            game.floatingTexts.forEach(text => text.draw(ctx, game.cameraX, game.cameraY));
 
-            game.floatingTexts.forEach(text => {
-              const screenX = text.x - game.cameraX;
-              const screenY = text.y - game.cameraY;
-
-              // Cull off-screen texts
-              if (screenX < -buffer || screenX > canvas.width + buffer || screenY < -buffer || screenY > canvas.height + buffer) {
-                return;
-              }
-
-              // Simplified alpha calculation
-              const alpha = text.age < GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME
-                ? GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE
-                : GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE - (text.age - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME) / fadeDuration;
-
-              ctx.globalAlpha = alpha;
-              ctx.fillStyle = text.color;
-              ctx.fillText(text.text, screenX, screenY);
-            });
-
-            // Reset state once at end
+            // Reset canvas state
             ctx.globalAlpha = GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE;
             ctx.shadowBlur = 0;
           }
