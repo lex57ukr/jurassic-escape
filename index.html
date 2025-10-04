@@ -30,7 +30,7 @@
 <body class="bg-gray-900">
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
     // ============================================================================
     // GAME CONSTANTS
@@ -91,6 +91,10 @@
           bulletColor: '#ff0',
           speed: 8, // From BULLET.SPEED
           radius: 4, // From BULLET.RADIUS
+          ammoProperty: 'ammo',
+          stateAmmoKey: 'playerAmmo',
+          soundEffect: 'SHOOT',
+          bulletFactory: null, // Set after createBullet is defined
         },
         TRANQUILIZER: {
           id: 'tranquilizer',
@@ -100,6 +104,10 @@
           radius: 5,
           startAmmo: 15,
           scoreMultiplier: 0.5, // 50% of kill points
+          ammoProperty: 'tranqAmmo',
+          stateAmmoKey: 'playerTranqAmmo',
+          soundEffect: 'TRANQ_SHOOT',
+          bulletFactory: null, // Set after createTranquilizer is defined
         },
       },
 
@@ -959,6 +967,49 @@
         radius: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.radius,
         weaponType: GAME_CONSTANTS.WEAPONS.TRANQUILIZER
       };
+    };
+
+    // Assign bullet factory functions to weapon configs
+    GAME_CONSTANTS.WEAPONS.REGULAR.bulletFactory = createBullet;
+    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
+
+    /**
+     * Unified weapon firing logic
+     * @param {Object} weapon - Weapon type from GAME_CONSTANTS.WEAPONS
+     * @param {Object} player - Player object
+     * @param {number} targetX - Target X coordinate
+     * @param {number} targetY - Target Y coordinate
+     * @param {Object} game - Game state object
+     * @param {Function} playSound - Sound playing function
+     * @param {Object|null} stateAccumulator - State accumulator for batched updates (game loop), or null for direct setState
+     * @param {Object|null} setters - Object mapping ammo keys to setter functions { playerAmmo: setPlayerAmmo, playerTranqAmmo: setPlayerTranqAmmo }
+     * @returns {boolean} - True if weapon was fired, false if no ammo
+     */
+    const fireWeapon = (weapon, player, targetX, targetY, game, playSound, stateAccumulator = null, setters = null) => {
+      const ammoCount = player[weapon.ammoProperty];
+
+      if (ammoCount <= 0) {
+        return false;
+      }
+
+      // Create bullet using weapon's factory function
+      const bullet = weapon.bulletFactory(player.x, player.y, targetX, targetY);
+
+      game.bullets.push(bullet);
+      player[weapon.ammoProperty]--;
+
+      // Update state (either batch accumulator or direct setState)
+      if (stateAccumulator) {
+        stateAccumulator[weapon.stateAmmoKey] = player[weapon.ammoProperty];
+      } else if (setters) {
+        const setter = setters[weapon.stateAmmoKey];
+        if (setter) {
+          setter(player[weapon.ammoProperty]);
+        }
+      }
+
+      playSound(SOUNDS[weapon.soundEffect]);
+      return true;
     };
 
     /**
@@ -4082,18 +4133,20 @@
             const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
             const targetY = nearestDino ? nearestDino.y : game.player.y;
 
-            if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR && game.player.ammo > 0) {
-              game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
-              game.player.ammo--;
-              stateAccumulator.playerAmmo = game.player.ammo;
-              playSound(SOUNDS.SHOOT);
-              game.touch.shoot = false;
-            } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER && game.player.tranqAmmo > 0) {
-              game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
-              game.player.tranqAmmo--;
-              stateAccumulator.playerTranqAmmo = game.player.tranqAmmo;
-              playSound(SOUNDS.TRANQ_SHOOT);
-              game.touch.shoot = false;
+            // Fire weapon using unified logic
+            const fired = fireWeapon(
+              game.player.currentWeapon,
+              game.player,
+              targetX,
+              targetY,
+              game,
+              playSound,
+              stateAccumulator, // Use state accumulator for batched updates
+              null
+            );
+
+            if (fired) {
+              game.touch.shoot = false; // Reset touch shoot flag after firing
             }
           }
 
@@ -4400,6 +4453,12 @@
         setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
       }, [currentLevel, initGame]);
 
+      // Ammo setters mapping for fireWeapon function
+      const ammoSetters = useMemo(() => ({
+        playerAmmo: setPlayerAmmo,
+        playerTranqAmmo: setPlayerTranqAmmo
+      }), []);
+
       // Desktop Input Handlers
       const handleKeyDown = useCallback((e) => {
         const game = gameRef.current;
@@ -4460,22 +4519,18 @@
           }
         }
 
-        if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR) {
-          if (game.player.ammo > 0) {
-            game.bullets.push(createBullet(game.player.x, game.player.y, targetX, targetY));
-            game.player.ammo--;
-            setPlayerAmmo(game.player.ammo);
-            playSound(SOUNDS.SHOOT);
-          }
-        } else if (game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER) {
-          if (game.player.tranqAmmo > 0) {
-            game.bullets.push(createTranquilizer(game.player.x, game.player.y, targetX, targetY));
-            game.player.tranqAmmo--;
-            setPlayerTranqAmmo(game.player.tranqAmmo);
-            playSound(SOUNDS.TRANQ_SHOOT);
-          }
-        }
-      }, [autoAim, playSound]);
+        // Fire weapon using unified logic
+        fireWeapon(
+          game.player.currentWeapon,
+          game.player,
+          targetX,
+          targetY,
+          game,
+          playSound,
+          null, // No state accumulator (direct setState)
+          ammoSetters
+        );
+      }, [autoAim, playSound, ammoSetters]);
 
       // Mobile Touch Handlers
       const handleJoystickStart = useCallback((e) => {
