@@ -332,6 +332,8 @@
         TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
         AMMO_DEPOT_COUNT_PER_LEVEL: 2, // Number of regular ammo depots per level
         AMMO_DEPOT_RADIUS: 15, // Same size as tranq depot
+        DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types during spawn
+        HAZARD_SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
       },
 
       // Ammo Pickup
@@ -392,49 +394,63 @@
         FADE_START_FRAME: 30,
       },
 
-      // Environmental Hazards
+      // Environmental Hazards - Unified object-based constants with type-specific properties
       HAZARDS: {
-        // General Entity Spacing
-        DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types
-
-        // Tar Pits
-        TAR_PIT_BASE_RADIUS: 40,
-        TAR_PIT_SIZE_VARIANCE: 1.50, // Max variance: 150% (radius ranges from 50% to 200% of base)
-        TAR_PIT_SLOW_MULTIPLIER: 0.5, // Reduces speed to 50%
-        TAR_PIT_MIN_SPACING: 200, // Minimum distance between tar pits
-        TAR_PIT_SPAWN_MAX_ATTEMPTS: 100,
-        TAR_PIT_BUBBLE_FREQUENCY: 30, // Frames between bubble spawns (0.5 seconds)
-        TAR_PIT_BUBBLE_DURATION: 40, // Duration of bubble animation in frames
-        TAR_PIT_BUBBLE_BASE_RADIUS: 2, // Starting bubble radius
-        TAR_PIT_BUBBLE_GROWTH: 4, // Bubble radius growth
-        TAR_PIT_BUBBLE_COUNT: 3, // Number of bubbles per pit
-        TAR_PIT_BUBBLE_SPREAD: 20, // Random spread radius for bubble positions
-        TAR_PIT_RIM_WIDTH: 4, // Width of tar pit rim stroke
-
-        // Electric Fences
-        FENCE_WIDTH: 80,
-        FENCE_HEIGHT: 10,
-        FENCE_DAMAGE: 1,
-        FENCE_DAMAGE_COOLDOWN: 60, // Frames between damage ticks (1 second)
-        FENCE_STUN_DURATION_MULTIPLIER: 0.5, // Dinosaurs stunned for half of tranq sleep duration
-        FENCE_PUSHBACK_FORCE: 50, // Bounce back force (MUST be > FENCE_AVOIDANCE_BUFFER to prevent stuck dinos)
-        FENCE_MIN_SPACING: 150, // Minimum distance between fences
-        FENCE_OBSTACLE_CLEARANCE: 60, // Clearance from obstacles (extra 10px vs DEFAULT_ENTITY_CLEARANCE for safety)
-        FENCE_SPAWN_MAX_ATTEMPTS: 100,
-        FENCE_SPARK_FREQUENCY: 30, // Frames between spark animations (0.5 seconds)
-        FENCE_SPARK_DURATION: 10, // Duration of spark animation in frames
-        FENCE_SPARK_RADIUS: 3, // Radius of spark particles
-        FENCE_WIRE_WIDTH: 2, // Width of electric wires
-        ZAP_EFFECT_DURATION: 30, // Duration of zap animation on dinosaurs (0.5 seconds)
-        ZAP_AURA_ALPHA: 0.3, // Opacity of yellow zap aura
-        ZAP_AURA_RADIUS: 5, // Extra radius for zap aura
-        ZAP_BOLT_LENGTH: 10, // Length of lightning bolts
-        ZAP_BOLT_COUNT: 4, // Number of lightning bolts
-        ZAP_BOLT_WIDTH: 2, // Width of lightning bolts
-        ZAP_BOLT_ROTATION_SPEED: 50, // Milliseconds divisor for bolt rotation speed
-        ZAP_SOUND_MAX_DISTANCE: 400, // Maximum distance from player to hear zap sound
-        FENCE_MEMORY_DURATION: 600, // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
-        FENCE_AVOIDANCE_BUFFER: 30, // Safety margin dinosaurs maintain from remembered fences (MUST be < FENCE_PUSHBACK_FORCE)
+        TAR_PIT: {
+          id: 'tar_pit',
+          baseRadius: 40,
+          sizeVariance: 1.50, // Max variance: 150% (radius ranges from 50% to 200% of base)
+          slowMultiplier: 0.5, // Reduces speed to 50%
+          minSpacing: 200, // Minimum distance between tar pits
+          colors: {
+            base: '#1a0a00',     // Dark tar pit base
+            rim: '#3d2817',      // Lighter brown rim
+          },
+          rimWidth: 4,
+          bubble: {
+            frequency: 30,     // Frames between bubble spawns (0.5 seconds)
+            duration: 40,      // Duration of bubble animation in frames
+            baseRadius: 2,     // Starting bubble radius
+            growth: 4,         // Bubble radius growth
+            count: 3,          // Number of bubbles per pit
+            spread: 20,        // Random spread radius for bubble positions
+          },
+        },
+        ELECTRIC_FENCE: {
+          id: 'electric_fence',
+          width: 80,
+          height: 10,
+          damage: 1,
+          damageCooldown: 60, // Frames between damage ticks (1 second)
+          stunDurationMultiplier: 0.5, // Dinosaurs stunned for half of tranq sleep duration
+          pushbackForce: 50, // Bounce back force (MUST be > memory.avoidanceBuffer to prevent stuck dinos)
+          minSpacing: 150, // Minimum distance between fences
+          obstacleClearance: 60, // Clearance from obstacles (extra 10px for safety)
+          colors: {
+            base: '#2a2a2a',   // Dark gray/black base
+            wire: '#FFD700',   // Yellow electric wires
+          },
+          wireWidth: 2,
+          spark: {
+            frequency: 30,     // Frames between spark animations (0.5 seconds)
+            duration: 10,      // Duration of spark animation in frames
+            radius: 3,         // Radius of spark particles
+          },
+          zap: {
+            duration: 30,            // Duration of zap animation on dinosaurs (0.5 seconds)
+            auraAlpha: 0.3,          // Opacity of yellow zap aura
+            auraRadius: 5,           // Extra radius for zap aura
+            boltLength: 10,          // Length of lightning bolts
+            boltCount: 4,            // Number of lightning bolts
+            boltWidth: 2,            // Width of lightning bolts
+            boltRotationSpeed: 50,   // Milliseconds divisor for bolt rotation speed
+            soundMaxDistance: 400,   // Maximum distance from player to hear zap sound
+          },
+          memory: {
+            duration: 600,           // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
+            avoidanceBuffer: 30,     // Safety margin dinosaurs maintain from remembered fences (MUST be < pushbackForce)
+          },
+        },
       },
 
       // Audio
@@ -650,8 +666,8 @@
      * @returns {Object} Object with offsetX and offsetY properties
      */
     const randomizeBubbleOffset = () => ({
-      offsetX: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD),
-      offsetY: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_SPREAD)
+      offsetX: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT.bubble.spread),
+      offsetY: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT.bubble.spread)
     });
 
     /**
@@ -663,7 +679,7 @@
      * @param {number} clearance - Extra clearance distance (default: DEFAULT_ENTITY_CLEARANCE)
      * @returns {boolean} True if position is valid (no overlaps)
      */
-    const isValidPosition = (x, y, radius, game, clearance = GAME_CONSTANTS.HAZARDS.DEFAULT_ENTITY_CLEARANCE) => {
+    const isValidPosition = (x, y, radius, game, clearance = GAME_CONSTANTS.SPAWN.DEFAULT_ENTITY_CLEARANCE) => {
       // Check against tar pits
       for (const tarPit of game.tarPits) {
         const dist = distance(x, y, tarPit.x, tarPit.y);
@@ -1026,16 +1042,18 @@
      * Create a tar pit object with bubbles
      */
     const createTarPit = (x, y) => {
+      const type = GAME_CONSTANTS.HAZARDS.TAR_PIT;
       // Generate random size: variance from 50% to 200% of base radius
-      const sizeMultiplier = 0.5 + (Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_SIZE_VARIANCE);
-      const radius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BASE_RADIUS * sizeMultiplier;
+      const sizeMultiplier = 0.5 + (Math.random() * type.sizeVariance);
+      const radius = type.baseRadius * sizeMultiplier;
 
       return {
         x,
         y,
         radius,
-        bubbles: Array.from({ length: GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_COUNT }, () => ({
-          timer: Math.random() * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY,
+        hazardType: type,
+        bubbles: Array.from({ length: type.bubble.count }, () => ({
+          timer: Math.random() * type.bubble.frequency,
           ...randomizeBubbleOffset()
         }))
       };
@@ -1045,13 +1063,13 @@
      * Create an electric fence object
      */
     const createElectricFence = (x, y, rotation) => {
+      const type = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE;
       return {
         x,
         y,
-        width: GAME_CONSTANTS.HAZARDS.FENCE_WIDTH,
-        height: GAME_CONSTANTS.HAZARDS.FENCE_HEIGHT,
         rotation,
-        sparkTimer: Math.random() * GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY,
+        hazardType: type,
+        sparkTimer: Math.random() * type.spark.frequency,
         playerDamageCooldown: 0
       };
     };
@@ -1747,23 +1765,24 @@
     const drawZapEffect = (ctx, screenX, screenY, size, zapTimer) => {
       if (zapTimer <= 0) return;
 
-      const zapAlpha = zapTimer / GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
+      const zap = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE.zap;
+      const zapAlpha = zapTimer / zap.duration;
 
       // Electric aura
-      ctx.fillStyle = `rgba(255, 255, 0, ${zapAlpha * GAME_CONSTANTS.HAZARDS.ZAP_AURA_ALPHA})`;
+      ctx.fillStyle = `rgba(255, 255, 0, ${zapAlpha * zap.auraAlpha})`;
       ctx.beginPath();
-      ctx.arc(screenX, screenY, size + GAME_CONSTANTS.HAZARDS.ZAP_AURA_RADIUS, 0, Math.PI * 2);
+      ctx.arc(screenX, screenY, size + zap.auraRadius, 0, Math.PI * 2);
       ctx.fill();
 
       // Lightning bolts around the entity
       ctx.strokeStyle = `rgba(255, 255, 100, ${zapAlpha})`;
-      ctx.lineWidth = GAME_CONSTANTS.HAZARDS.ZAP_BOLT_WIDTH;
-      for (let i = 0; i < GAME_CONSTANTS.HAZARDS.ZAP_BOLT_COUNT; i++) {
-        const angle = (Date.now() / GAME_CONSTANTS.HAZARDS.ZAP_BOLT_ROTATION_SPEED + i * Math.PI / 2) % (Math.PI * 2);
+      ctx.lineWidth = zap.boltWidth;
+      for (let i = 0; i < zap.boltCount; i++) {
+        const angle = (Date.now() / zap.boltRotationSpeed + i * Math.PI / 2) % (Math.PI * 2);
         const startX = screenX + Math.cos(angle) * size;
         const startY = screenY + Math.sin(angle) * size;
-        const endX = screenX + Math.cos(angle) * (size + GAME_CONSTANTS.HAZARDS.ZAP_BOLT_LENGTH);
-        const endY = screenY + Math.sin(angle) * (size + GAME_CONSTANTS.HAZARDS.ZAP_BOLT_LENGTH);
+        const endX = screenX + Math.cos(angle) * (size + zap.boltLength);
+        const endY = screenY + Math.sin(angle) * (size + zap.boltLength);
 
         ctx.beginPath();
         ctx.moveTo(startX, startY);
@@ -1782,31 +1801,32 @@
     const drawTarPit = (ctx, tarPit, cameraX, cameraY) => {
       const screenX = tarPit.x - cameraX;
       const screenY = tarPit.y - cameraY;
+      const type = tarPit.hazardType;
 
       // Dark tar pit
-      ctx.fillStyle = '#1a0a00';
+      ctx.fillStyle = type.colors.base;
       ctx.beginPath();
       ctx.arc(screenX, screenY, tarPit.radius, 0, Math.PI * 2);
       ctx.fill();
 
       // Lighter brown rim
-      ctx.strokeStyle = '#3d2817';
-      ctx.lineWidth = GAME_CONSTANTS.HAZARDS.TAR_PIT_RIM_WIDTH;
+      ctx.strokeStyle = type.colors.rim;
+      ctx.lineWidth = type.rimWidth;
       ctx.stroke();
 
       // Update and draw multiple bubbles
       tarPit.bubbles.forEach(bubble => {
         bubble.timer++;
-        if (bubble.timer >= GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_FREQUENCY) {
+        if (bubble.timer >= type.bubble.frequency) {
           bubble.timer = 0;
           // Randomize position for next cycle
           Object.assign(bubble, randomizeBubbleOffset());
         }
 
         // Draw bubble during active phase
-        if (bubble.timer < GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION) {
-          const bubbleProgress = bubble.timer / GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_DURATION;
-          const bubbleRadius = GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_BASE_RADIUS + bubbleProgress * GAME_CONSTANTS.HAZARDS.TAR_PIT_BUBBLE_GROWTH;
+        if (bubble.timer < type.bubble.duration) {
+          const bubbleProgress = bubble.timer / type.bubble.duration;
+          const bubbleRadius = type.bubble.baseRadius + bubbleProgress * type.bubble.growth;
           const bubbleAlpha = 1 - bubbleProgress;
 
           ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
@@ -1827,39 +1847,40 @@
     const drawElectricFence = (ctx, fence, cameraX, cameraY) => {
       const screenX = fence.x - cameraX;
       const screenY = fence.y - cameraY;
+      const type = fence.hazardType;
 
       ctx.save();
       ctx.translate(screenX, screenY);
       ctx.rotate(fence.rotation);
 
       // Fence base (dark gray/black)
-      ctx.fillStyle = '#2a2a2a';
-      ctx.fillRect(-fence.width / 2, -fence.height / 2, fence.width, fence.height);
+      ctx.fillStyle = type.colors.base;
+      ctx.fillRect(-type.width / 2, -type.height / 2, type.width, type.height);
 
       // Electric wires (yellow)
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth = GAME_CONSTANTS.HAZARDS.FENCE_WIRE_WIDTH;
+      ctx.strokeStyle = type.colors.wire;
+      ctx.lineWidth = type.wireWidth;
       ctx.beginPath();
-      ctx.moveTo(-fence.width / 2, -fence.height / 4);
-      ctx.lineTo(fence.width / 2, -fence.height / 4);
-      ctx.moveTo(-fence.width / 2, fence.height / 4);
-      ctx.lineTo(fence.width / 2, fence.height / 4);
+      ctx.moveTo(-type.width / 2, -type.height / 4);
+      ctx.lineTo(type.width / 2, -type.height / 4);
+      ctx.moveTo(-type.width / 2, type.height / 4);
+      ctx.lineTo(type.width / 2, type.height / 4);
       ctx.stroke();
 
       // Update spark animation
       fence.sparkTimer++;
-      if (fence.sparkTimer >= GAME_CONSTANTS.HAZARDS.FENCE_SPARK_FREQUENCY) {
+      if (fence.sparkTimer >= type.spark.frequency) {
         fence.sparkTimer = 0;
       }
 
       // Draw sparks at intervals
-      if (fence.sparkTimer < GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION) {
-        const sparkProgress = fence.sparkTimer / GAME_CONSTANTS.HAZARDS.FENCE_SPARK_DURATION;
+      if (fence.sparkTimer < type.spark.duration) {
+        const sparkProgress = fence.sparkTimer / type.spark.duration;
         const sparkAlpha = 1 - sparkProgress;
 
         ctx.fillStyle = `rgba(255, 255, 100, ${sparkAlpha})`;
         ctx.beginPath();
-        ctx.arc(Math.random() * fence.width - fence.width / 2, 0, GAME_CONSTANTS.HAZARDS.FENCE_SPARK_RADIUS, 0, Math.PI * 2);
+        ctx.arc(Math.random() * type.width - type.width / 2, 0, type.spark.radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -2544,7 +2565,7 @@
 
       // Apply tar pit slow effect
       if (game.player.inTarPit) {
-        speedMultiplier *= GAME_CONSTANTS.HAZARDS.TAR_PIT_SLOW_MULTIPLIER;
+        speedMultiplier *= GAME_CONSTANTS.HAZARDS.TAR_PIT.slowMultiplier;
       }
 
       game.player.speed = game.player.baseSpeed * speedMultiplier;
@@ -2562,17 +2583,18 @@
       // Check electric fence collision with player (can jump over if high enough)
       if (game.player.jumpHeight < GAME_CONSTANTS.PLAYER.JUMP_CLEAR_HEIGHT) {
         for (const fence of game.electricFences) {
-          if (circleRectCollision(game.player.x, game.player.y, game.player.radius, fence.x, fence.y, fence.width, fence.height, fence.rotation)) {
+          const fenceType = fence.hazardType;
+          if (circleRectCollision(game.player.x, game.player.y, game.player.radius, fence.x, fence.y, fenceType.width, fenceType.height, fence.rotation)) {
             // Damage player with cooldown
             if (fence.playerDamageCooldown <= 0 && game.player.invincibilityTimer <= 0) {
               const diffMod = DIFFICULTY_MODIFIERS[difficulty];
               const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
 
-              game.player.health -= GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE;
+              game.player.health -= fenceType.damage;
               stateAccumulator.playerHealth = game.player.health;
               game.player.invincibilityTimer = invincibilityFrames;
-              game.player.zapTimer = GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
-              fence.playerDamageCooldown = GAME_CONSTANTS.HAZARDS.FENCE_DAMAGE_COOLDOWN;
+              game.player.zapTimer = fenceType.zap.duration;
+              fence.playerDamageCooldown = fenceType.damageCooldown;
               playSound(SOUNDS.ELECTRIC_SHOCK);
 
               // Push player back from fence
@@ -2580,8 +2602,8 @@
               const dy = game.player.y - fence.y;
               const pushDist = distance(0, 0, dx, dy);
               if (pushDist > 0) {
-                game.player.x += (dx / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
-                game.player.y += (dy / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+                game.player.x += (dx / pushDist) * fenceType.pushbackForce;
+                game.player.y += (dy / pushDist) * fenceType.pushbackForce;
               }
 
               // Check if player died
@@ -2964,8 +2986,8 @@
         let effectiveVx = dino.vx;
         let effectiveVy = dino.vy;
         if (dinoInTarPit) {
-          effectiveVx *= GAME_CONSTANTS.HAZARDS.TAR_PIT_SLOW_MULTIPLIER;
-          effectiveVy *= GAME_CONSTANTS.HAZARDS.TAR_PIT_SLOW_MULTIPLIER;
+          effectiveVx *= GAME_CONSTANTS.HAZARDS.TAR_PIT.slowMultiplier;
+          effectiveVy *= GAME_CONSTANTS.HAZARDS.TAR_PIT.slowMultiplier;
         }
 
         // Calculate new position
@@ -3016,43 +3038,44 @@
 
         // Electric fence avoidance and collision
         for (const fence of game.electricFences) {
+          const fenceType = fence.hazardType;
           // Check if dinosaur remembers this fence
           const rememberedFence = dino.avoidFences.find(af => af.fence === fence);
 
           if (rememberedFence) {
             // Steer away from remembered fence
             const fenceDist = distance(newDinoX, newDinoY, fence.x, fence.y);
-            if (fenceDist < GAME_CONSTANTS.HAZARDS.FENCE_WIDTH + GAME_CONSTANTS.HAZARDS.FENCE_AVOIDANCE_BUFFER) {
+            if (fenceDist < fenceType.width + fenceType.memory.avoidanceBuffer) {
               const { dx, dy } = normalize(newDinoX - fence.x, newDinoY - fence.y);
-              newDinoX += dx * GAME_CONSTANTS.HAZARDS.FENCE_AVOIDANCE_BUFFER;
-              newDinoY += dy * GAME_CONSTANTS.HAZARDS.FENCE_AVOIDANCE_BUFFER;
+              newDinoX += dx * fenceType.memory.avoidanceBuffer;
+              newDinoY += dy * fenceType.memory.avoidanceBuffer;
             }
           }
 
           // Check collision
-          if (circleRectCollision(newDinoX, newDinoY, dino.size, fence.x, fence.y, fence.width, fence.height, fence.rotation)) {
+          if (circleRectCollision(newDinoX, newDinoY, dino.size, fence.x, fence.y, fenceType.width, fenceType.height, fence.rotation)) {
             // Bounce back - apply position directly
             const dx = newDinoX - fence.x;
             const dy = newDinoY - fence.y;
             const pushDist = distance(0, 0, dx, dy);
             if (pushDist > 0) {
-              dino.x = dino.x + (dx / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
-              dino.y = dino.y + (dy / pushDist) * GAME_CONSTANTS.HAZARDS.FENCE_PUSHBACK_FORCE;
+              dino.x = dino.x + (dx / pushDist) * fenceType.pushbackForce;
+              dino.y = dino.y + (dy / pushDist) * fenceType.pushbackForce;
             }
 
             // Stun dinosaur
             dino.isSleeping = true;
-            dino.sleepTimer = Math.round(dino.type.sleepDuration * GAME_CONSTANTS.HAZARDS.FENCE_STUN_DURATION_MULTIPLIER);
-            dino.zapTimer = GAME_CONSTANTS.HAZARDS.ZAP_EFFECT_DURATION;
+            dino.sleepTimer = Math.round(dino.type.sleepDuration * fenceType.stunDurationMultiplier);
+            dino.zapTimer = fenceType.zap.duration;
 
             // Remember to avoid this fence
             dino.avoidFences.push({
               fence: fence,
-              timer: GAME_CONSTANTS.HAZARDS.FENCE_MEMORY_DURATION
+              timer: fenceType.memory.duration
             });
 
             // Play sound if near player
-            if (distance(dino.x, dino.y, game.player.x, game.player.y) < GAME_CONSTANTS.HAZARDS.ZAP_SOUND_MAX_DISTANCE) {
+            if (distance(dino.x, dino.y, game.player.x, game.player.y) < fenceType.zap.soundMaxDistance) {
               playSound(SOUNDS.ELECTRIC_SHOCK);
             }
 
@@ -3673,7 +3696,7 @@
         for (let i = 0; i < config.tarPits; i++) {
           let tarX, tarY;
           let attempts = 0;
-          const maxAttempts = GAME_CONSTANTS.HAZARDS.TAR_PIT_SPAWN_MAX_ATTEMPTS;
+          const maxAttempts = GAME_CONSTANTS.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
 
           while (attempts < maxAttempts) {
             tarX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
@@ -3684,7 +3707,7 @@
             // Check against other tar pits
             for (const existingTar of game.tarPits) {
               const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
-              if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_MIN_SPACING) {
+              if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT.minSpacing) {
                 overlapping = true;
                 break;
               }
@@ -3913,8 +3936,9 @@
         for (let i = 0; i < config.electricFences; i++) {
           let fenceX, fenceY, fenceRotation;
           let attempts = 0;
-          const maxAttempts = GAME_CONSTANTS.HAZARDS.FENCE_SPAWN_MAX_ATTEMPTS;
-          const fenceRadius = GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2;
+          const fenceType = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE;
+          const maxAttempts = GAME_CONSTANTS.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+          const fenceRadius = fenceType.width / 2;
 
           while (attempts < maxAttempts) {
             fenceX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
@@ -3926,7 +3950,7 @@
             // Check against other fences (minimum spacing)
             for (const existingFence of game.electricFences) {
               const dist = distance(fenceX, fenceY, existingFence.x, existingFence.y);
-              if (dist < GAME_CONSTANTS.HAZARDS.FENCE_MIN_SPACING) {
+              if (dist < fenceType.minSpacing) {
                 valid = false;
                 break;
               }
@@ -3934,7 +3958,7 @@
 
             // Check against all other entities using centralized collision checker
             if (valid) {
-              valid = isValidPosition(fenceX, fenceY, fenceRadius, game, GAME_CONSTANTS.HAZARDS.FENCE_OBSTACLE_CLEARANCE);
+              valid = isValidPosition(fenceX, fenceY, fenceRadius, game, fenceType.obstacleClearance);
             }
 
             if (valid) break;
