@@ -205,10 +205,17 @@
         TREE: 'tree',
         BUSH: 'bush',
         MUSHROOM: 'mushroom',
+        GRASS: 'grass',
       },
 
       // Vegetation Visual Constants
       VEGETATION: {
+        // Rendering z-index mapping (lower renders first/behind)
+        // Keys must match OBSTACLE_TYPES values
+        Z_INDEX: {
+          grass: 0,      // OBSTACLE_TYPES.GRASS - ground layer
+          mushroom: 1,   // OBSTACLE_TYPES.MUSHROOM - above grass
+        },
         TREE_TRUNK_COLOR: '#5C4033',
         TREE_TRUNK_HIGHLIGHT: '#8B6F47',
         TREE_TRUNK_SHADOW: '#3E2723',
@@ -238,6 +245,13 @@
         MUSHROOM_CAP_HEIGHT_RATIO: 0.6,   // Cap height ratio for ellipse perspective
         MUSHROOM_SPOT_DISTANCE_RATIO: 0.4, // Spot distance from center
         MUSHROOM_SPOT_RADIUS_RATIO: 0.15, // Spot size relative to radius
+        GRASS_BASE_COLOR: '#4A7C4A',      // Brighter medium green
+        GRASS_DARK_COLOR: '#2F5F2F',      // Medium-dark green for depth
+        GRASS_LIGHT_COLOR: '#5FA05F',     // Lighter green highlights
+        GRASS_BLADE_COUNT: 20,            // Number of grass blades per patch
+        GRASS_BLADE_WIDTH: 2,             // Pixel width of each blade
+        GRASS_BLADE_MIN_HEIGHT: 10,       // Minimum blade height
+        GRASS_BLADE_MAX_HEIGHT: 20,       // Maximum blade height
         FOLIAGE_LAYERS: 3, // Number of foliage layers for trees
         BUSH_CLUSTERS: 5, // Number of overlapping circles for bushes
       },
@@ -261,6 +275,11 @@
         MUSHROOM_PATCH_SIZE: 5,       // Number of mushrooms per patch
         MUSHROOM_PATCH_SPREAD: 80,    // Spread radius for patch members
         MUSHROOM_PATCH_PERCENTAGE: 0.2, // 20% of obstacles spawn as mushroom patches
+        GRASS_MIN_RADIUS: 12,         // Minimum grass patch radius
+        GRASS_MAX_RADIUS: 20,         // Maximum grass patch radius
+        GRASS_PATCH_SIZE: 8,          // Number of grass patches per cluster
+        GRASS_PATCH_SPREAD: 100,      // Spread radius for grass cluster members
+        GRASS_PATCH_PERCENTAGE: 0.3,  // 30% of obstacles spawn as grass patch clusters
         DINOSAUR_GRID_START_X: 300,
         DINOSAUR_GRID_START_Y: 200,
         DINOSAUR_GRID_SPACING_X: 250,
@@ -693,6 +712,18 @@
     };
 
     /**
+     * Sort decorations by rendering z-index (grass first, mushrooms last)
+     * @param {Array} decorations - Array of decoration objects
+     */
+    const sortDecorationsByZIndex = (decorations) => {
+      decorations.sort((a, b) => {
+        const aIndex = GAME_CONSTANTS.VEGETATION.Z_INDEX[a.type] || 0;
+        const bIndex = GAME_CONSTANTS.VEGETATION.Z_INDEX[b.type] || 0;
+        return aIndex - bIndex;
+      });
+    };
+
+    /**
      * Create a bullet object
      */
     const createBullet = (fromX, fromY, toX, toY, speed = GAME_CONSTANTS.BULLET.SPEED) => {
@@ -803,6 +834,35 @@
       }
 
       return mushrooms;
+    };
+
+    /**
+     * Create a grass patch cluster (multiple small grass patches)
+     * @param {number} centerX - Cluster center X position
+     * @param {number} centerY - Cluster center Y position
+     * @returns {Array} Array of grass patch objects
+     */
+    const createGrassPatch = (centerX, centerY) => {
+      const patches = [];
+      const patchSize = GAME_CONSTANTS.SPAWN.GRASS_PATCH_SIZE;
+      const spread = GAME_CONSTANTS.SPAWN.GRASS_PATCH_SPREAD;
+
+      for (let i = 0; i < patchSize; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * spread;
+        const x = centerX + Math.cos(angle) * dist;
+        const y = centerY + Math.sin(angle) * dist;
+        const radius = GAME_CONSTANTS.SPAWN.GRASS_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.GRASS_MAX_RADIUS - GAME_CONSTANTS.SPAWN.GRASS_MIN_RADIUS);
+
+        patches.push({
+          x,
+          y,
+          radius,
+          type: GAME_CONSTANTS.OBSTACLE_TYPES.GRASS
+        });
+      }
+
+      return patches;
     };
 
     /**
@@ -1950,7 +2010,52 @@
     };
 
     /**
-     * Draw obstacle (delegates to tree, bush, or mushroom renderer)
+     * Draw grass patch with individual blades
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} radius - Grass patch radius
+     */
+    const drawGrass = (ctx, screenX, screenY, radius, obstacle) => {
+      const bladeCount = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_COUNT;
+      const bladeWidth = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_WIDTH;
+      const minHeight = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_MIN_HEIGHT;
+      const maxHeight = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_MAX_HEIGHT;
+
+      // Draw individual grass blades in fixed positions (using obstacle world coordinates as seed)
+      for (let i = 0; i < bladeCount; i++) {
+        // Use obstacle position as seed for consistent blade placement
+        const angle = (i / bladeCount) * Math.PI * 2;
+        const distSeed = ((obstacle.x + obstacle.y + i * 37) % 100) / 100; // Pseudo-random but deterministic
+        const dist = distSeed * radius * 0.8;
+        const bladeX = screenX + Math.cos(angle) * dist;
+        const bladeY = screenY + Math.sin(angle) * dist;
+
+        // Height based on obstacle position for consistency
+        const heightSeed = ((obstacle.x + obstacle.y + i * 73) % 100) / 100;
+        const bladeHeight = minHeight + heightSeed * (maxHeight - minHeight);
+
+        // Alternate between base, light, and dark colors for variety
+        if (i % 3 === 0) {
+          ctx.fillStyle = GAME_CONSTANTS.VEGETATION.GRASS_BASE_COLOR;
+        } else if (i % 3 === 1) {
+          ctx.fillStyle = GAME_CONSTANTS.VEGETATION.GRASS_LIGHT_COLOR;
+        } else {
+          ctx.fillStyle = GAME_CONSTANTS.VEGETATION.GRASS_DARK_COLOR;
+        }
+
+        // Draw blade as simple vertical line (thin triangle)
+        ctx.beginPath();
+        ctx.moveTo(bladeX - bladeWidth / 2, bladeY);
+        ctx.lineTo(bladeX + bladeWidth / 2, bladeY);
+        ctx.lineTo(bladeX, bladeY - bladeHeight);
+        ctx.closePath();
+        ctx.fill();
+      }
+    };
+
+    /**
+     * Draw obstacle (delegates to tree, bush, mushroom, or grass renderer)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} obstacle - Obstacle object
      * @param {number} cameraX - Camera X offset
@@ -1969,6 +2074,9 @@
           break;
         case GAME_CONSTANTS.OBSTACLE_TYPES.MUSHROOM:
           drawMushroom(ctx, screenX, screenY, obstacle.radius, obstacle.colorIndex || 0);
+          break;
+        case GAME_CONSTANTS.OBSTACLE_TYPES.GRASS:
+          drawGrass(ctx, screenX, screenY, obstacle.radius, obstacle);
           break;
       }
     };
@@ -3550,9 +3658,11 @@
           game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y));
         }
 
-        // Create decorations (walkable: mushroom patches)
+        // Create decorations (walkable: mushroom patches and grass patches)
         const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_PERCENTAGE);
+        const grassPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.SPAWN.GRASS_PATCH_PERCENTAGE);
 
+        // Spawn mushroom patches
         for (let patchIndex = 0; patchIndex < mushroomPatchCount; patchIndex++) {
           // Pick patch center location
           const patchCenterX = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
@@ -3571,6 +3681,26 @@
           const patch = createMushroomPatch(patchCenterX, patchCenterY, patchColorIndex);
           game.decorations.push(...patch);
         }
+
+        // Spawn grass patches
+        for (let patchIndex = 0; patchIndex < grassPatchCount; patchIndex++) {
+          // Pick patch center location
+          const patchCenterX = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
+          const patchCenterY = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
+
+          // Check clearance from player spawn (visual cleanliness, not collision)
+          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y);
+          if (distFromPlayer < GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE) {
+            continue; // Skip this patch if too close to player
+          }
+
+          // Create and add all grass patches in cluster
+          const cluster = createGrassPatch(patchCenterX, patchCenterY);
+          game.decorations.push(...cluster);
+        }
+
+        // Sort decorations by z-index for proper rendering order
+        sortDecorationsByZIndex(game.decorations);
 
         // Create dinosaurs
         let dinoIndex = 0;
@@ -3987,14 +4117,14 @@
             drawElectricFence(ctx, fence, game.cameraX, game.cameraY);
           });
 
-          // Draw obstacles (blocking)
-          game.obstacles.forEach(obs => {
-            drawObstacle(ctx, obs, game.cameraX, game.cameraY);
-          });
-
-          // Draw decorations (walkable)
+          // Draw decorations (walkable: sorted with grass first, mushrooms last)
           game.decorations.forEach(decoration => {
             drawObstacle(ctx, decoration, game.cameraX, game.cameraY);
+          });
+
+          // Draw obstacles (blocking: trees and bushes)
+          game.obstacles.forEach(obs => {
+            drawObstacle(ctx, obs, game.cameraX, game.cameraY);
           });
 
           // Draw powerups
