@@ -206,6 +206,24 @@
         BUSH: 'bush',
       },
 
+      // Vegetation Visual Constants
+      VEGETATION: {
+        TREE_TRUNK_COLOR: '#5C4033',
+        TREE_TRUNK_HIGHLIGHT: '#8B6F47',
+        TREE_TRUNK_SHADOW: '#3E2723',
+        TREE_FOLIAGE_DARK: '#1A5F1A',     // Rich dark green
+        TREE_FOLIAGE_BASE: '#2D8B2D',     // Vibrant medium green
+        TREE_FOLIAGE_LIGHT: '#3D9A3D',    // Muted leafy green
+        TREE_FOLIAGE_HIGHLIGHT: '#5BA85B', // Softer light green
+        TREE_GROUND_SHADOW: 'rgba(0, 0, 0, 0.2)', // Semi-transparent black shadow
+        BUSH_BASE: '#2F4F2F',
+        BUSH_DARK: '#1C3D1C',
+        BUSH_LIGHT: '#4A6F4A',
+        BUSH_HIGHLIGHT: '#5C825C',
+        FOLIAGE_LAYERS: 3, // Number of foliage layers for trees
+        BUSH_CLUSTERS: 5, // Number of overlapping circles for bushes
+      },
+
       // Powerup Types
       POWERUP_TYPES: {
         HEALTH: 'health',
@@ -1725,7 +1743,114 @@
     };
 
     /**
-     * Draw obstacle (tree or bush)
+     * Draw tree with textured trunk and layered foliage
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} radius - Tree foliage radius
+     */
+    const drawTree = (ctx, screenX, screenY, radius) => {
+      // Draw ground shadow (ellipse under tree)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_GROUND_SHADOW;
+      ctx.beginPath();
+      ctx.ellipse(screenX, screenY + radius * 0.3, radius * 0.6, radius * 0.25, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw tree trunk with texture
+      const trunkWidth = 12;
+      const trunkHeight = radius * 0.8;
+
+      // Trunk shadow (left side)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_TRUNK_SHADOW;
+      ctx.fillRect(screenX - trunkWidth / 2, screenY - trunkHeight / 2, trunkWidth / 3, trunkHeight);
+
+      // Trunk base color
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_TRUNK_COLOR;
+      ctx.fillRect(screenX - trunkWidth / 2, screenY - trunkHeight / 2, trunkWidth, trunkHeight);
+
+      // Trunk highlight (right side)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_TRUNK_HIGHLIGHT;
+      ctx.fillRect(screenX + trunkWidth / 6, screenY - trunkHeight / 2, trunkWidth / 4, trunkHeight);
+
+      // Draw layered foliage crown
+      const foliageY = screenY - trunkHeight;
+
+      // Back layer (darkest)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_DARK;
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.3, foliageY - radius * 0.2, radius * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Middle layer (base green)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_BASE;
+      ctx.beginPath();
+      ctx.arc(screenX, foliageY, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Front layer (lighter green)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_LIGHT;
+      ctx.beginPath();
+      ctx.arc(screenX + radius * 0.3, foliageY + radius * 0.1, radius * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Highlights (brightest spots)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_HIGHLIGHT;
+      ctx.beginPath();
+      ctx.arc(screenX + radius * 0.4, foliageY - radius * 0.3, radius * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    /**
+     * Draw bush with multiple overlapping clusters
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} radius - Bush radius
+     */
+    const drawBush = (ctx, screenX, screenY, radius) => {
+      const clusterCount = GAME_CONSTANTS.VEGETATION.BUSH_CLUSTERS;
+      const angleStep = (Math.PI * 2) / clusterCount;
+
+      // Base dark layer (shadow)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_DARK;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Main bush clusters
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_BASE;
+      for (let i = 0; i < clusterCount; i++) {
+        const angle = i * angleStep;
+        const offsetX = Math.cos(angle) * radius * 0.3;
+        const offsetY = Math.sin(angle) * radius * 0.3;
+        ctx.beginPath();
+        ctx.arc(screenX + offsetX, screenY + offsetY, radius * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Light clusters (mid-tone)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_LIGHT;
+      for (let i = 0; i < clusterCount; i++) {
+        const angle = i * angleStep + angleStep / 2;
+        const offsetX = Math.cos(angle) * radius * 0.45;
+        const offsetY = Math.sin(angle) * radius * 0.45;
+        ctx.beginPath();
+        ctx.arc(screenX + offsetX, screenY + offsetY, radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Highlight spots (brightest)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_HIGHLIGHT;
+      ctx.beginPath();
+      ctx.arc(screenX + radius * 0.3, screenY - radius * 0.3, radius * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.2, screenY + radius * 0.2, radius * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    /**
+     * Draw obstacle (delegates to tree or bush renderer)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} obstacle - Obstacle object
      * @param {number} cameraX - Camera X offset
@@ -1735,18 +1860,13 @@
       const screenX = obstacle.x - cameraX;
       const screenY = obstacle.y - cameraY;
 
-      if (obstacle.type === GAME_CONSTANTS.OBSTACLE_TYPES.TREE) {
-        ctx.fillStyle = '#654321';
-        ctx.fillRect(screenX - 5, screenY - 5, 10, 15);
-        ctx.fillStyle = '#228B22';
-        ctx.beginPath();
-        ctx.arc(screenX, screenY - 10, obstacle.radius, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = '#2F4F2F';
-        ctx.beginPath();
-        ctx.arc(screenX, screenY, obstacle.radius, 0, Math.PI * 2);
-        ctx.fill();
+      switch (obstacle.type) {
+        case GAME_CONSTANTS.OBSTACLE_TYPES.TREE:
+          drawTree(ctx, screenX, screenY, obstacle.radius);
+          break;
+        case GAME_CONSTANTS.OBSTACLE_TYPES.BUSH:
+          drawBush(ctx, screenX, screenY, obstacle.radius);
+          break;
       }
     };
 
