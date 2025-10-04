@@ -200,60 +200,78 @@
         LOCK_ICON_OFFSET_Y: -40, // Position above exit
       },
 
-      // Obstacle Types
-      OBSTACLE_TYPES: {
-        TREE: 'tree',
-        BUSH: 'bush',
-        MUSHROOM: 'mushroom',
-        GRASS: 'grass',
-      },
-
-      // Vegetation Visual Constants
-      VEGETATION: {
-        // Rendering z-index mapping (lower renders first/behind)
-        // Keys must match OBSTACLE_TYPES values
-        Z_INDEX: {
-          grass: 0,      // OBSTACLE_TYPES.GRASS - ground layer
-          mushroom: 1,   // OBSTACLE_TYPES.MUSHROOM - above grass
+      // Obstacles - Unified object-based constants with visual properties
+      OBSTACLES: {
+        TREE: {
+          id: 'tree',
+          blocksMovement: true,
+          zIndex: 2,
+          colors: {
+            trunkBase: '#5C4033',
+            trunkHighlight: '#8B6F47',
+            trunkShadow: '#3E2723',
+            foliageDark: '#1A5F1A',     // Rich dark green
+            foliageBase: '#2D8B2D',     // Vibrant medium green
+            foliageLight: '#3D9A3D',    // Muted leafy green
+            foliageHighlight: '#5BA85B', // Softer light green
+            groundShadow: 'rgba(0, 0, 0, 0.2)', // Semi-transparent black shadow
+          },
+          foliageLayers: 3, // Number of foliage layers
         },
-        TREE_TRUNK_COLOR: '#5C4033',
-        TREE_TRUNK_HIGHLIGHT: '#8B6F47',
-        TREE_TRUNK_SHADOW: '#3E2723',
-        TREE_FOLIAGE_DARK: '#1A5F1A',     // Rich dark green
-        TREE_FOLIAGE_BASE: '#2D8B2D',     // Vibrant medium green
-        TREE_FOLIAGE_LIGHT: '#3D9A3D',    // Muted leafy green
-        TREE_FOLIAGE_HIGHLIGHT: '#5BA85B', // Softer light green
-        TREE_GROUND_SHADOW: 'rgba(0, 0, 0, 0.2)', // Semi-transparent black shadow
-        BUSH_BASE: '#2F4F2F',
-        BUSH_DARK: '#1C3D1C',
-        BUSH_LIGHT: '#4A6F4A',
-        BUSH_HIGHLIGHT: '#5C825C',
-        MUSHROOM_STEM_BASE: '#9A8A7A',    // Muted tan stem
-        MUSHROOM_STEM_SHADOW: '#6B5A47',  // Dark brown stem edge
-        MUSHROOM_CAP_COLORS: [            // Array of dark earthy cap colors
-          '#5C3317', // Dark brown
-          '#654321', // Dark wood brown
-          '#6B4423', // Deep chestnut
-          '#7A5230', // Dark earth brown
-          '#8B6914', // Dark goldenrod brown
-        ],
-        MUSHROOM_SPOTS_COLOR: '#C0C0C0',  // Muted gray spots
-        MUSHROOM_SPOTS_COUNT: 3,          // Number of spots per mushroom
-        MUSHROOM_STEM_WIDTH_RATIO: 0.4,   // Stem width relative to radius
-        MUSHROOM_STEM_HEIGHT_RATIO: 0.8,  // Stem height relative to radius
-        MUSHROOM_CAP_RADIUS_RATIO: 0.7,   // Cap radius relative to radius
-        MUSHROOM_CAP_HEIGHT_RATIO: 0.6,   // Cap height ratio for ellipse perspective
-        MUSHROOM_SPOT_DISTANCE_RATIO: 0.4, // Spot distance from center
-        MUSHROOM_SPOT_RADIUS_RATIO: 0.15, // Spot size relative to radius
-        GRASS_BASE_COLOR: '#4A7C4A',      // Brighter medium green
-        GRASS_DARK_COLOR: '#2F5F2F',      // Medium-dark green for depth
-        GRASS_LIGHT_COLOR: '#5FA05F',     // Lighter green highlights
-        GRASS_BLADE_COUNT: 20,            // Number of grass blades per patch
-        GRASS_BLADE_WIDTH: 2,             // Pixel width of each blade
-        GRASS_BLADE_MIN_HEIGHT: 10,       // Minimum blade height
-        GRASS_BLADE_MAX_HEIGHT: 20,       // Maximum blade height
-        FOLIAGE_LAYERS: 3, // Number of foliage layers for trees
-        BUSH_CLUSTERS: 5, // Number of overlapping circles for bushes
+        BUSH: {
+          id: 'bush',
+          blocksMovement: true,
+          zIndex: 2,
+          colors: {
+            base: '#2F4F2F',
+            dark: '#1C3D1C',
+            light: '#4A6F4A',
+            highlight: '#5C825C',
+          },
+          clusters: 5, // Number of overlapping circles
+        },
+        MUSHROOM: {
+          id: 'mushroom',
+          blocksMovement: false,
+          zIndex: 1,
+          colors: {
+            stemBase: '#9A8A7A',    // Muted tan stem
+            stemShadow: '#6B5A47',  // Dark brown stem edge
+            capColors: [            // Array of dark earthy cap colors
+              '#5C3317', // Dark brown
+              '#654321', // Dark wood brown
+              '#6B4423', // Deep chestnut
+              '#7A5230', // Dark earth brown
+              '#8B6914', // Dark goldenrod brown
+            ],
+            spotsColor: '#C0C0C0',  // Muted gray spots
+          },
+          sizes: {
+            spotsCount: 3,              // Number of spots per mushroom
+            stemWidthRatio: 0.4,        // Stem width relative to radius
+            stemHeightRatio: 0.8,       // Stem height relative to radius
+            capRadiusRatio: 0.7,        // Cap radius relative to radius
+            capHeightRatio: 0.6,        // Cap height ratio for ellipse perspective
+            spotDistanceRatio: 0.4,     // Spot distance from center
+            spotRadiusRatio: 0.15,      // Spot size relative to radius
+          },
+        },
+        GRASS: {
+          id: 'grass',
+          blocksMovement: false,
+          zIndex: 0,
+          colors: {
+            base: '#4A7C4A',      // Brighter medium green
+            dark: '#2F5F2F',      // Medium-dark green for depth
+            light: '#5FA05F',     // Lighter green highlights
+          },
+          sizes: {
+            bladeCount: 20,       // Number of grass blades per patch
+            bladeWidth: 2,        // Pixel width of each blade
+            minHeight: 10,        // Minimum blade height
+            maxHeight: 20,        // Maximum blade height
+          },
+        },
       },
 
       // Powerup Types
@@ -717,8 +735,8 @@
      */
     const sortDecorationsByZIndex = (decorations) => {
       decorations.sort((a, b) => {
-        const aIndex = GAME_CONSTANTS.VEGETATION.Z_INDEX[a.type] || 0;
-        const bIndex = GAME_CONSTANTS.VEGETATION.Z_INDEX[b.type] || 0;
+        const aIndex = a.obstacleType.zIndex || 0;
+        const bIndex = b.obstacleType.zIndex || 0;
         return aIndex - bIndex;
       });
     };
@@ -801,7 +819,7 @@
         x,
         y,
         radius,
-        type: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLE_TYPES.TREE : GAME_CONSTANTS.OBSTACLE_TYPES.BUSH
+        obstacleType: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLES.TREE : GAME_CONSTANTS.OBSTACLES.BUSH
       };
     };
 
@@ -828,7 +846,7 @@
           x,
           y,
           radius,
-          type: GAME_CONSTANTS.OBSTACLE_TYPES.MUSHROOM,
+          obstacleType: GAME_CONSTANTS.OBSTACLES.MUSHROOM,
           colorIndex
         });
       }
@@ -858,7 +876,7 @@
           x,
           y,
           radius,
-          type: GAME_CONSTANTS.OBSTACLE_TYPES.GRASS
+          obstacleType: GAME_CONSTANTS.OBSTACLES.GRASS
         });
       }
 
@@ -1864,8 +1882,10 @@
      * @param {number} radius - Tree foliage radius
      */
     const drawTree = (ctx, screenX, screenY, radius) => {
+      const colors = GAME_CONSTANTS.OBSTACLES.TREE.colors;
+
       // Draw ground shadow (ellipse under tree)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_GROUND_SHADOW;
+      ctx.fillStyle = colors.groundShadow;
       ctx.beginPath();
       ctx.ellipse(screenX, screenY + radius * 0.3, radius * 0.6, radius * 0.25, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -1875,40 +1895,40 @@
       const trunkHeight = radius * 0.8;
 
       // Trunk shadow (left side)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_TRUNK_SHADOW;
+      ctx.fillStyle = colors.trunkShadow;
       ctx.fillRect(screenX - trunkWidth / 2, screenY - trunkHeight / 2, trunkWidth / 3, trunkHeight);
 
       // Trunk base color
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_TRUNK_COLOR;
+      ctx.fillStyle = colors.trunkBase;
       ctx.fillRect(screenX - trunkWidth / 2, screenY - trunkHeight / 2, trunkWidth, trunkHeight);
 
       // Trunk highlight (right side)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_TRUNK_HIGHLIGHT;
+      ctx.fillStyle = colors.trunkHighlight;
       ctx.fillRect(screenX + trunkWidth / 6, screenY - trunkHeight / 2, trunkWidth / 4, trunkHeight);
 
       // Draw layered foliage crown
       const foliageY = screenY - trunkHeight;
 
       // Back layer (darkest)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_DARK;
+      ctx.fillStyle = colors.foliageDark;
       ctx.beginPath();
       ctx.arc(screenX - radius * 0.3, foliageY - radius * 0.2, radius * 0.85, 0, Math.PI * 2);
       ctx.fill();
 
       // Middle layer (base green)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_BASE;
+      ctx.fillStyle = colors.foliageBase;
       ctx.beginPath();
       ctx.arc(screenX, foliageY, radius, 0, Math.PI * 2);
       ctx.fill();
 
       // Front layer (lighter green)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_LIGHT;
+      ctx.fillStyle = colors.foliageLight;
       ctx.beginPath();
       ctx.arc(screenX + radius * 0.3, foliageY + radius * 0.1, radius * 0.8, 0, Math.PI * 2);
       ctx.fill();
 
       // Highlights (brightest spots)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.TREE_FOLIAGE_HIGHLIGHT;
+      ctx.fillStyle = colors.foliageHighlight;
       ctx.beginPath();
       ctx.arc(screenX + radius * 0.4, foliageY - radius * 0.3, radius * 0.35, 0, Math.PI * 2);
       ctx.fill();
@@ -1922,17 +1942,18 @@
      * @param {number} radius - Bush radius
      */
     const drawBush = (ctx, screenX, screenY, radius) => {
-      const clusterCount = GAME_CONSTANTS.VEGETATION.BUSH_CLUSTERS;
+      const colors = GAME_CONSTANTS.OBSTACLES.BUSH.colors;
+      const clusterCount = GAME_CONSTANTS.OBSTACLES.BUSH.clusters;
       const angleStep = (Math.PI * 2) / clusterCount;
 
       // Base dark layer (shadow)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_DARK;
+      ctx.fillStyle = colors.dark;
       ctx.beginPath();
       ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
       ctx.fill();
 
       // Main bush clusters
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_BASE;
+      ctx.fillStyle = colors.base;
       for (let i = 0; i < clusterCount; i++) {
         const angle = i * angleStep;
         const offsetX = Math.cos(angle) * radius * 0.3;
@@ -1943,7 +1964,7 @@
       }
 
       // Light clusters (mid-tone)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_LIGHT;
+      ctx.fillStyle = colors.light;
       for (let i = 0; i < clusterCount; i++) {
         const angle = i * angleStep + angleStep / 2;
         const offsetX = Math.cos(angle) * radius * 0.45;
@@ -1954,7 +1975,7 @@
       }
 
       // Highlight spots (brightest)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.BUSH_HIGHLIGHT;
+      ctx.fillStyle = colors.highlight;
       ctx.beginPath();
       ctx.arc(screenX + radius * 0.3, screenY - radius * 0.3, radius * 0.25, 0, Math.PI * 2);
       ctx.fill();
@@ -1972,36 +1993,39 @@
      * @param {number} colorIndex - Index into cap colors array
      */
     const drawMushroom = (ctx, screenX, screenY, radius, colorIndex) => {
-      const stemWidth = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_WIDTH_RATIO;
-      const stemHeight = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_HEIGHT_RATIO;
-      const capRadius = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_RADIUS_RATIO;
+      const colors = GAME_CONSTANTS.OBSTACLES.MUSHROOM.colors;
+      const sizes = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes;
+
+      const stemWidth = radius * sizes.stemWidthRatio;
+      const stemHeight = radius * sizes.stemHeightRatio;
+      const capRadius = radius * sizes.capRadiusRatio;
 
       // Draw stem shadow (left side)
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_SHADOW;
+      ctx.fillStyle = colors.stemShadow;
       ctx.fillRect(screenX - stemWidth / 2, screenY - stemHeight / 2, stemWidth / 3, stemHeight);
 
       // Draw stem
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_BASE;
+      ctx.fillStyle = colors.stemBase;
       ctx.fillRect(screenX - stemWidth / 2, screenY - stemHeight / 2, stemWidth, stemHeight);
 
       // Draw mushroom cap (ellipse for perspective)
-      const capY = screenY - stemHeight * GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_HEIGHT_RATIO;
-      const capColors = GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_COLORS;
+      const capY = screenY - stemHeight * sizes.stemHeightRatio;
+      const capColors = colors.capColors;
       ctx.fillStyle = capColors[colorIndex % capColors.length];
 
       ctx.beginPath();
-      ctx.ellipse(screenX, capY, capRadius, capRadius * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_HEIGHT_RATIO, 0, 0, Math.PI * 2);
+      ctx.ellipse(screenX, capY, capRadius, capRadius * sizes.capHeightRatio, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Draw spots on cap
-      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOTS_COLOR;
-      const spotCount = GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOTS_COUNT;
+      ctx.fillStyle = colors.spotsColor;
+      const spotCount = sizes.spotsCount;
       for (let i = 0; i < spotCount; i++) {
         const angle = (i / spotCount) * Math.PI * 2;
-        const spotDist = capRadius * GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOT_DISTANCE_RATIO;
+        const spotDist = capRadius * sizes.spotDistanceRatio;
         const spotX = screenX + Math.cos(angle) * spotDist;
-        const spotY = capY + Math.sin(angle) * spotDist * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_HEIGHT_RATIO;
-        const spotRadius = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOT_RADIUS_RATIO;
+        const spotY = capY + Math.sin(angle) * spotDist * sizes.capHeightRatio;
+        const spotRadius = radius * sizes.spotRadiusRatio;
 
         ctx.beginPath();
         ctx.arc(spotX, spotY, spotRadius, 0, Math.PI * 2);
@@ -2017,10 +2041,13 @@
      * @param {number} radius - Grass patch radius
      */
     const drawGrass = (ctx, screenX, screenY, radius, obstacle) => {
-      const bladeCount = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_COUNT;
-      const bladeWidth = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_WIDTH;
-      const minHeight = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_MIN_HEIGHT;
-      const maxHeight = GAME_CONSTANTS.VEGETATION.GRASS_BLADE_MAX_HEIGHT;
+      const colors = GAME_CONSTANTS.OBSTACLES.GRASS.colors;
+      const sizes = GAME_CONSTANTS.OBSTACLES.GRASS.sizes;
+
+      const bladeCount = sizes.bladeCount;
+      const bladeWidth = sizes.bladeWidth;
+      const minHeight = sizes.minHeight;
+      const maxHeight = sizes.maxHeight;
 
       // Draw individual grass blades in fixed positions (using obstacle world coordinates as seed)
       for (let i = 0; i < bladeCount; i++) {
@@ -2037,11 +2064,11 @@
 
         // Alternate between base, light, and dark colors for variety
         if (i % 3 === 0) {
-          ctx.fillStyle = GAME_CONSTANTS.VEGETATION.GRASS_BASE_COLOR;
+          ctx.fillStyle = colors.base;
         } else if (i % 3 === 1) {
-          ctx.fillStyle = GAME_CONSTANTS.VEGETATION.GRASS_LIGHT_COLOR;
+          ctx.fillStyle = colors.light;
         } else {
-          ctx.fillStyle = GAME_CONSTANTS.VEGETATION.GRASS_DARK_COLOR;
+          ctx.fillStyle = colors.dark;
         }
 
         // Draw blade as simple vertical line (thin triangle)
@@ -2065,17 +2092,17 @@
       const screenX = obstacle.x - cameraX;
       const screenY = obstacle.y - cameraY;
 
-      switch (obstacle.type) {
-        case GAME_CONSTANTS.OBSTACLE_TYPES.TREE:
+      switch (obstacle.obstacleType) {
+        case GAME_CONSTANTS.OBSTACLES.TREE:
           drawTree(ctx, screenX, screenY, obstacle.radius);
           break;
-        case GAME_CONSTANTS.OBSTACLE_TYPES.BUSH:
+        case GAME_CONSTANTS.OBSTACLES.BUSH:
           drawBush(ctx, screenX, screenY, obstacle.radius);
           break;
-        case GAME_CONSTANTS.OBSTACLE_TYPES.MUSHROOM:
+        case GAME_CONSTANTS.OBSTACLES.MUSHROOM:
           drawMushroom(ctx, screenX, screenY, obstacle.radius, obstacle.colorIndex || 0);
           break;
-        case GAME_CONSTANTS.OBSTACLE_TYPES.GRASS:
+        case GAME_CONSTANTS.OBSTACLES.GRASS:
           drawGrass(ctx, screenX, screenY, obstacle.radius, obstacle);
           break;
       }
@@ -3675,7 +3702,7 @@
           }
 
           // Pick a color for this patch (all mushrooms in patch share color)
-          const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_COLORS.length);
+          const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.OBSTACLES.MUSHROOM.colors.capColors.length);
 
           // Create and add all mushrooms in patch
           const patch = createMushroomPatch(patchCenterX, patchCenterY, patchColorIndex);
