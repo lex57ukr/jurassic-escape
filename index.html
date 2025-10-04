@@ -778,6 +778,22 @@
     };
 
     // ============================================================================
+    // STATIC DATA BINDINGS
+    // Bind static data references (sounds, constants) - NOT functions
+    // Function bindings are consolidated later after all functions are defined
+    // ============================================================================
+
+    // Sound effects for weapon types
+    GAME_CONSTANTS.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
+    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
+
+    // Sound effects for game state transitions
+    GAME_CONSTANTS.GAME_STATES.PLAYING.soundEffect = SOUNDS.GAME_START;
+    GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE.soundEffect = SOUNDS.LEVEL_COMPLETE;
+    GAME_CONSTANTS.GAME_STATES.WON.soundEffect = SOUNDS.VICTORY;
+    GAME_CONSTANTS.GAME_STATES.LOST.soundEffect = SOUNDS.GAME_OVER;
+
+    // ============================================================================
     // UTILITY FUNCTIONS
     // ============================================================================
 
@@ -872,6 +888,23 @@
      */
     const circleCollision = (x1, y1, r1, x2, y2, r2) => {
       return distance(x1, y1, x2, y2) < r1 + r2;
+    };
+
+    /**
+     * Apply canvas rendering styles in batch
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {Object} styles - Style object with optional fillStyle, strokeStyle, lineWidth, font, textAlign, textBaseline
+     */
+    const applyCanvasStyles = (ctx, styles) => {
+      if (styles.fillStyle !== undefined) ctx.fillStyle = styles.fillStyle;
+      if (styles.strokeStyle !== undefined) ctx.strokeStyle = styles.strokeStyle;
+      if (styles.lineWidth !== undefined) ctx.lineWidth = styles.lineWidth;
+      if (styles.font !== undefined) ctx.font = styles.font;
+      if (styles.textAlign !== undefined) ctx.textAlign = styles.textAlign;
+      if (styles.textBaseline !== undefined) ctx.textBaseline = styles.textBaseline;
+      if (styles.shadowColor !== undefined) ctx.shadowColor = styles.shadowColor;
+      if (styles.shadowBlur !== undefined) ctx.shadowBlur = styles.shadowBlur;
+      if (styles.globalAlpha !== undefined) ctx.globalAlpha = styles.globalAlpha;
     };
 
     /**
@@ -980,18 +1013,6 @@
         weaponType: GAME_CONSTANTS.WEAPONS.TRANQUILIZER
       };
     };
-
-    // Assign bullet factory functions and sound effects to weapon configs
-    GAME_CONSTANTS.WEAPONS.REGULAR.bulletFactory = createBullet;
-    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
-    GAME_CONSTANTS.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
-    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
-
-    // Assign sound effects to game state configs
-    GAME_CONSTANTS.GAME_STATES.PLAYING.soundEffect = SOUNDS.GAME_START;
-    GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE.soundEffect = SOUNDS.LEVEL_COMPLETE;
-    GAME_CONSTANTS.GAME_STATES.WON.soundEffect = SOUNDS.VICTORY;
-    GAME_CONSTANTS.GAME_STATES.LOST.soundEffect = SOUNDS.GAME_OVER;
 
     /**
      * Transition to a new game state with automatic sound effect handling
@@ -1105,12 +1126,21 @@
         if (valid) break;
       } while (attempts < GAME_CONSTANTS.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
 
-      return {
+      const obstacle = {
         x,
         y,
         radius,
         obstacleType: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLES.TREE : GAME_CONSTANTS.OBSTACLES.BUSH
       };
+
+      // Add instance draw method
+      obstacle.draw = function(ctx, cameraX, cameraY) {
+        const screenX = this.x - cameraX;
+        const screenY = this.y - cameraY;
+        this.obstacleType.drawFunction(ctx, screenX, screenY, this.radius, this);
+      };
+
+      return obstacle;
     };
 
     /**
@@ -1134,14 +1164,23 @@
         const spotOptions = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes.spotsCountOptions;
         const spotCount = spotOptions[Math.floor(Math.random() * spotOptions.length)];
 
-        mushrooms.push({
+        const mushroom = {
           x,
           y,
           radius,
           obstacleType: GAME_CONSTANTS.OBSTACLES.MUSHROOM,
           colorIndex,
           spotCount
-        });
+        };
+
+        // Add instance draw method
+        mushroom.draw = function(ctx, cameraX, cameraY) {
+          const screenX = this.x - cameraX;
+          const screenY = this.y - cameraY;
+          this.obstacleType.drawFunction(ctx, screenX, screenY, this.radius, this);
+        };
+
+        mushrooms.push(mushroom);
       }
 
       return mushrooms;
@@ -1165,12 +1204,21 @@
         const y = centerY + Math.sin(angle) * dist;
         const radius = GAME_CONSTANTS.SPAWN.GRASS_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.GRASS_MAX_RADIUS - GAME_CONSTANTS.SPAWN.GRASS_MIN_RADIUS);
 
-        patches.push({
+        const patch = {
           x,
           y,
           radius,
           obstacleType: GAME_CONSTANTS.OBSTACLES.GRASS
-        });
+        };
+
+        // Add instance draw method
+        patch.draw = function(ctx, cameraX, cameraY) {
+          const screenX = this.x - cameraX;
+          const screenY = this.y - cameraY;
+          this.obstacleType.drawFunction(ctx, screenX, screenY, this.radius, this);
+        };
+
+        patches.push(patch);
       }
 
       return patches;
@@ -1269,7 +1317,7 @@
       const sizeMultiplier = 0.5 + (Math.random() * type.sizeVariance);
       const radius = type.baseRadius * sizeMultiplier;
 
-      return {
+      const tarPit = {
         x,
         y,
         radius,
@@ -1279,6 +1327,13 @@
           ...randomizeBubbleOffset()
         }))
       };
+
+      // Add instance method for rendering
+      tarPit.draw = function(ctx, cameraX, cameraY) {
+        this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+      };
+
+      return tarPit;
     };
 
     /**
@@ -1286,7 +1341,7 @@
      */
     const createElectricFence = (x, y, rotation) => {
       const type = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE;
-      return {
+      const fence = {
         x,
         y,
         rotation,
@@ -1294,6 +1349,13 @@
         sparkTimer: Math.random() * type.spark.frequency,
         playerDamageCooldown: 0
       };
+
+      // Add instance method for rendering
+      fence.draw = function(ctx, cameraX, cameraY) {
+        this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+      };
+
+      return fence;
     };
 
     /**
@@ -1334,7 +1396,7 @@
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
       const adjustedSpeed = dinoType.speed * diffMod.enemySpeedMultiplier;
 
-      return {
+      const guard = {
         type: dinoType,
         x,
         y,
@@ -1364,6 +1426,14 @@
         zapTimer: 0,
         avoidFences: []
       };
+
+      // Add instance method for rendering
+      guard.draw = function(ctx) {
+        const scale = this.size / this.type.baseSize;
+        this.type.drawFunction(ctx, scale, this);
+      };
+
+      return guard;
     };
 
     /**
@@ -1388,8 +1458,9 @@
      * Draw Tyrannosaurus Rex - massive head, tiny arms, powerful build
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} scale - Scale factor for drawing
+     * @param {Object} dino - Dinosaur object
      */
-    const drawTyrannosaurusRex = (ctx, scale) => {
+    const drawTyrannosaurusRex = (ctx, scale, dino) => {
       // Tail (thick and powerful)
       ctx.fillStyle = '#2E7D32';
       ctx.beginPath();
@@ -1507,8 +1578,9 @@
      * Draw Velociraptor - lean, aggressive predator stance
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} scale - Scale factor for drawing
+     * @param {Object} dino - Dinosaur object
      */
-    const drawVelociraptor = (ctx, scale) => {
+    const drawVelociraptor = (ctx, scale, dino) => {
       // Tail (long and curved upward)
       ctx.fillStyle = '#CD7F32';
       ctx.beginPath();
@@ -1602,8 +1674,9 @@
      * Draw Stegosaurus - distinctive plates and spiked tail
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} scale - Scale factor for drawing
+     * @param {Object} dino - Dinosaur object
      */
-    const drawStegosaurus = (ctx, scale) => {
+    const drawStegosaurus = (ctx, scale, dino) => {
       // Tail with spikes
       ctx.fillStyle = '#7B1FA2';
       ctx.beginPath();
@@ -1722,8 +1795,9 @@
      * Draw Parasaurolophus - duck-billed herbivore with distinctive head crest
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} scale - Scale factor for drawing
+     * @param {Object} dino - Dinosaur object
      */
-    const drawParasaurolophus = (ctx, scale) => {
+    const drawParasaurolophus = (ctx, scale, dino) => {
       // Tail
       ctx.fillStyle = '#D2691E';
       ctx.beginPath();
@@ -1793,8 +1867,9 @@
      * Draw Triceratops - three-horned herbivore with frill
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} scale - Scale factor for drawing
+     * @param {Object} dino - Dinosaur object
      */
-    const drawTriceratops = (ctx, scale) => {
+    const drawTriceratops = (ctx, scale, dino) => {
       // Tail
       ctx.fillStyle = '#A0826D';
       ctx.beginPath();
@@ -1891,9 +1966,10 @@
      * Draw Dilophosaurus - spitting territorial predator with expandable neck frill
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} scale - Scale factor for drawing
-     * @param {string} aiState - AI state ('chase' causes frill to expand)
+     * @param {Object} dino - Dinosaur object (aiState accessed from dino.state)
      */
-    const drawDilophosaurus = (ctx, scale, aiState) => {
+    const drawDilophosaurus = (ctx, scale, dino) => {
+      const aiState = dino.state;
       // Tail
       ctx.fillStyle = '#7FFF00';
       ctx.beginPath();
@@ -2016,11 +2092,11 @@
     /**
      * Draw tar pit with bubble animation
      * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} tarPit - Tar pit object
      * @param {number} cameraX - Camera X offset
      * @param {number} cameraY - Camera Y offset
+     * @param {Object} tarPit - Tar pit object
      */
-    const drawTarPit = (ctx, tarPit, cameraX, cameraY) => {
+    const drawTarPit = (ctx, cameraX, cameraY, tarPit) => {
       const screenX = tarPit.x - cameraX;
       const screenY = tarPit.y - cameraY;
       const type = tarPit.hazardType;
@@ -2062,11 +2138,11 @@
     /**
      * Draw electric fence with spark animation
      * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} fence - Electric fence object
      * @param {number} cameraX - Camera X offset
      * @param {number} cameraY - Camera Y offset
+     * @param {Object} fence - Electric fence object
      */
-    const drawElectricFence = (ctx, fence, cameraX, cameraY) => {
+    const drawElectricFence = (ctx, cameraX, cameraY, fence) => {
       const screenX = fence.x - cameraX;
       const screenY = fence.y - cameraY;
       const type = fence.hazardType;
@@ -2115,8 +2191,9 @@
      * @param {number} screenX - Screen X position
      * @param {number} screenY - Screen Y position
      * @param {number} radius - Tree foliage radius
+     * @param {Object} obstacle - Obstacle object (unused for tree, but required for consistent interface)
      */
-    const drawTree = (ctx, screenX, screenY, radius) => {
+    const drawTree = (ctx, screenX, screenY, radius, obstacle) => {
       const colors = GAME_CONSTANTS.OBSTACLES.TREE.colors;
 
       // Draw ground shadow (ellipse under tree)
@@ -2175,8 +2252,9 @@
      * @param {number} screenX - Screen X position
      * @param {number} screenY - Screen Y position
      * @param {number} radius - Bush radius
+     * @param {Object} obstacle - Obstacle object (unused for bush, but required for consistent interface)
      */
-    const drawBush = (ctx, screenX, screenY, radius) => {
+    const drawBush = (ctx, screenX, screenY, radius, obstacle) => {
       const colors = GAME_CONSTANTS.OBSTACLES.BUSH.colors;
       const clusterCount = GAME_CONSTANTS.OBSTACLES.BUSH.clusters;
       const angleStep = (Math.PI * 2) / clusterCount;
@@ -2225,10 +2303,9 @@
      * @param {number} screenX - Screen X position
      * @param {number} screenY - Screen Y position
      * @param {number} radius - Mushroom radius
-     * @param {number} colorIndex - Index into cap colors array
-     * @param {Object} mushroom - Mushroom object (optional, for spotCount)
+     * @param {Object} obstacle - Obstacle object (used for colorIndex and spotCount)
      */
-    const drawMushroom = (ctx, screenX, screenY, radius, colorIndex, mushroom) => {
+    const drawMushroom = (ctx, screenX, screenY, radius, obstacle) => {
       const colors = GAME_CONSTANTS.OBSTACLES.MUSHROOM.colors;
       const sizes = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes;
 
@@ -2247,6 +2324,7 @@
       // Draw mushroom cap (ellipse for perspective)
       const capY = screenY - stemHeight * sizes.stemHeightRatio;
       const capColors = colors.capColors;
+      const colorIndex = obstacle.colorIndex || 0;
       ctx.fillStyle = capColors[colorIndex % capColors.length];
 
       ctx.beginPath();
@@ -2255,7 +2333,7 @@
 
       // Draw spots on cap
       ctx.fillStyle = colors.spotsColor;
-      const spotCount = mushroom?.spotCount ?? sizes.spotsCount;
+      const spotCount = obstacle?.spotCount ?? sizes.spotsCount;
       for (let i = 0; i < spotCount; i++) {
         const angle = (i / spotCount) * Math.PI * 2;
         const spotDist = capRadius * sizes.spotDistanceRatio;
@@ -2314,33 +2392,6 @@
         ctx.lineTo(bladeX, bladeY - bladeHeight);
         ctx.closePath();
         ctx.fill();
-      }
-    };
-
-    /**
-     * Draw obstacle (delegates to tree, bush, mushroom, or grass renderer)
-     * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} obstacle - Obstacle object
-     * @param {number} cameraX - Camera X offset
-     * @param {number} cameraY - Camera Y offset
-     */
-    const drawObstacle = (ctx, obstacle, cameraX, cameraY) => {
-      const screenX = obstacle.x - cameraX;
-      const screenY = obstacle.y - cameraY;
-
-      switch (obstacle.obstacleType) {
-        case GAME_CONSTANTS.OBSTACLES.TREE:
-          drawTree(ctx, screenX, screenY, obstacle.radius);
-          break;
-        case GAME_CONSTANTS.OBSTACLES.BUSH:
-          drawBush(ctx, screenX, screenY, obstacle.radius);
-          break;
-        case GAME_CONSTANTS.OBSTACLES.MUSHROOM:
-          drawMushroom(ctx, screenX, screenY, obstacle.radius, obstacle.colorIndex || 0, obstacle);
-          break;
-        case GAME_CONSTANTS.OBSTACLES.GRASS:
-          drawGrass(ctx, screenX, screenY, obstacle.radius, obstacle);
-          break;
       }
     };
 
@@ -3302,6 +3353,33 @@
     };
 
     // ============================================================================
+    // FUNCTION BINDINGS
+    // All function assignments consolidated here (after all functions are defined)
+    // ============================================================================
+
+    // Weapon bullet factory functions
+    GAME_CONSTANTS.WEAPONS.REGULAR.bulletFactory = createBullet;
+    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
+
+    // Dinosaur draw functions
+    GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.drawFunction = drawVelociraptor;
+    GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX.drawFunction = drawTyrannosaurusRex;
+    GAME_CONSTANTS.DINOSAURS.STEGOSAURUS.drawFunction = drawStegosaurus;
+    GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS.drawFunction = drawParasaurolophus;
+    GAME_CONSTANTS.DINOSAURS.TRICERATOPS.drawFunction = drawTriceratops;
+    GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.drawFunction = drawDilophosaurus;
+
+    // Obstacle draw functions
+    GAME_CONSTANTS.OBSTACLES.TREE.drawFunction = drawTree;
+    GAME_CONSTANTS.OBSTACLES.BUSH.drawFunction = drawBush;
+    GAME_CONSTANTS.OBSTACLES.MUSHROOM.drawFunction = drawMushroom;
+    GAME_CONSTANTS.OBSTACLES.GRASS.drawFunction = drawGrass;
+
+    // Hazard draw functions
+    GAME_CONSTANTS.HAZARDS.TAR_PIT.drawFunction = drawTarPit;
+    GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE.drawFunction = drawElectricFence;
+
+    // ============================================================================
     // REACT SUB-COMPONENTS (Memoized for performance)
     // ============================================================================
 
@@ -3991,6 +4069,12 @@
               avoidFences: [] // Array of {fence, timer} objects for learned fence avoidance
             };
 
+            // Add instance method for rendering
+            dino.draw = function(ctx) {
+              const scale = this.size / this.type.baseSize;
+              this.type.drawFunction(ctx, scale, this);
+            };
+
             // Create territory for territorial dinosaurs
             if (dinoConfig.type.territorial) {
               // Find a non-overlapping territory position that avoids obstacles
@@ -4287,22 +4371,22 @@
 
           // Draw tar pits
           game.tarPits.forEach(tarPit => {
-            drawTarPit(ctx, tarPit, game.cameraX, game.cameraY);
+            tarPit.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw electric fences
           game.electricFences.forEach(fence => {
-            drawElectricFence(ctx, fence, game.cameraX, game.cameraY);
+            fence.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw decorations (walkable: sorted with grass first, mushrooms last)
           game.decorations.forEach(decoration => {
-            drawObstacle(ctx, decoration, game.cameraX, game.cameraY);
+            decoration.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw obstacles (blocking: trees and bushes)
           game.obstacles.forEach(obs => {
-            drawObstacle(ctx, obs, game.cameraX, game.cameraY);
+            obs.draw(ctx, game.cameraX, game.cameraY);
           });
 
           // Draw powerups
@@ -4338,26 +4422,8 @@
               ctx.scale(-1, 1);
             }
 
-            switch (dino.type) {
-              case GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR:
-                drawVelociraptor(ctx, dino.size / dino.type.baseSize);
-                break;
-              case GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX:
-                drawTyrannosaurusRex(ctx, dino.size / dino.type.baseSize);
-                break;
-              case GAME_CONSTANTS.DINOSAURS.STEGOSAURUS:
-                drawStegosaurus(ctx, dino.size / dino.type.baseSize);
-                break;
-              case GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS:
-                drawParasaurolophus(ctx, dino.size / dino.type.baseSize);
-                break;
-              case GAME_CONSTANTS.DINOSAURS.TRICERATOPS:
-                drawTriceratops(ctx, dino.size / dino.type.baseSize);
-                break;
-              case GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS:
-                drawDilophosaurus(ctx, dino.size / dino.type.baseSize, dino.aiState);
-                break;
-            }
+            // Use instance method pattern - dinosaur draws itself
+            dino.draw(ctx);
 
             ctx.restore();
 
@@ -4379,10 +4445,13 @@
           // Draw sleeping Z-Z-Z (batched, optimized)
           const sleepingDinos = game.dinosaurs.filter(dino => dino.isSleeping);
           if (sleepingDinos.length > 0) {
-            ctx.fillStyle = GAME_CONSTANTS.Z_ANIMATION.FILL_COLOR;
-            ctx.textAlign = GAME_CONSTANTS.Z_ANIMATION.TEXT_ALIGN;
-            ctx.shadowColor = GAME_CONSTANTS.Z_ANIMATION.SHADOW_COLOR;
-            ctx.shadowBlur = GAME_CONSTANTS.Z_ANIMATION.SHADOW_BLUR;
+            // Batch canvas styles for Z animation
+            applyCanvasStyles(ctx, {
+              fillStyle: GAME_CONSTANTS.Z_ANIMATION.FILL_COLOR,
+              textAlign: GAME_CONSTANTS.Z_ANIMATION.TEXT_ALIGN,
+              shadowColor: GAME_CONSTANTS.Z_ANIMATION.SHADOW_COLOR,
+              shadowBlur: GAME_CONSTANTS.Z_ANIMATION.SHADOW_BLUR
+            });
 
             const buffer = GAME_CONSTANTS.Z_ANIMATION.CULLING_BUFFER;
             const bobOffset = Math.sin(Date.now() / GAME_CONSTANTS.Z_ANIMATION.BOB_SPEED) * GAME_CONSTANTS.Z_ANIMATION.BOB_AMPLITUDE;
@@ -4414,30 +4483,35 @@
 
           // Draw bullets
           game.bullets.forEach(bullet => {
+            const screenPos = toScreenCoords(bullet.x, bullet.y, game.cameraX, game.cameraY);
             ctx.fillStyle = bullet.weaponType.bulletColor;
             ctx.beginPath();
-            ctx.arc(bullet.x - game.cameraX, bullet.y - game.cameraY, bullet.radius, 0, Math.PI * 2);
+            ctx.arc(screenPos.x, screenPos.y, bullet.radius, 0, Math.PI * 2);
             ctx.fill();
           });
 
           // Draw spit projectiles
           game.spit.forEach(spit => {
+            const screenPos = toScreenCoords(spit.x, spit.y, game.cameraX, game.cameraY);
             const spitAttack = GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.spitAttack;
-            ctx.fillStyle = spitAttack.fillColor;
-            ctx.strokeStyle = spitAttack.strokeColor;
-            ctx.lineWidth = spitAttack.lineWidth;
+            applyCanvasStyles(ctx, {
+              fillStyle: spitAttack.fillColor,
+              strokeStyle: spitAttack.strokeColor,
+              lineWidth: spitAttack.lineWidth
+            });
             ctx.beginPath();
-            ctx.arc(spit.x - game.cameraX, spit.y - game.cameraY, spit.radius, 0, Math.PI * 2);
+            ctx.arc(screenPos.x, screenPos.y, spit.radius, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
           });
 
           // Draw ammo pickups with amount badge
           game.ammoPickups.forEach(pickup => {
+            const screenPos = toScreenCoords(pickup.x, pickup.y, game.cameraX, game.cameraY);
             // Draw the ammo ball
             ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
             ctx.beginPath();
-            ctx.arc(pickup.x - game.cameraX, pickup.y - game.cameraY, pickup.radius, 0, Math.PI * 2);
+            ctx.arc(screenPos.x, screenPos.y, pickup.radius, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw the ammo amount badge
@@ -4445,16 +4519,19 @@
             ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(`×${pickup.ammoAmount}`, pickup.x - game.cameraX, pickup.y - game.cameraY);
+            ctx.fillText(`×${pickup.ammoAmount}`, screenPos.x, screenPos.y);
           });
 
           // Draw floating texts (optimized)
           if (game.floatingTexts.length > 0) {
-            ctx.font = GAME_CONSTANTS.FLOATING_TEXT.FONT;
-            ctx.textAlign = 'center';
-            ctx.lineWidth = GAME_CONSTANTS.FLOATING_TEXT.LINE_WIDTH;
-            ctx.shadowColor = GAME_CONSTANTS.FLOATING_TEXT.SHADOW_COLOR;
-            ctx.shadowBlur = GAME_CONSTANTS.FLOATING_TEXT.SHADOW_BLUR;
+            // Batch canvas styles for floating text
+            applyCanvasStyles(ctx, {
+              font: GAME_CONSTANTS.FLOATING_TEXT.FONT,
+              textAlign: 'center',
+              lineWidth: GAME_CONSTANTS.FLOATING_TEXT.LINE_WIDTH,
+              shadowColor: GAME_CONSTANTS.FLOATING_TEXT.SHADOW_COLOR,
+              shadowBlur: GAME_CONSTANTS.FLOATING_TEXT.SHADOW_BLUR
+            });
 
             const fadeDuration = GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME;
             const buffer = GAME_CONSTANTS.FLOATING_TEXT.CULLING_BUFFER;
