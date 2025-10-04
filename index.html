@@ -431,10 +431,12 @@
         SHADOW_COLOR: '#000',
         SHADOW_BLUR: 2,
         TEXT_ALIGN: 'center',
-        // Three Z's with increasing size
-        Z_SMALL: { FONT: 'bold 16px Arial', OFFSET_X: 0, OFFSET_Y: -10 },
-        Z_MEDIUM: { FONT: 'bold 20px Arial', OFFSET_X: 8, OFFSET_Y: -18 },
-        Z_LARGE: { FONT: 'bold 24px Arial', OFFSET_X: 18, OFFSET_Y: -28 },
+        // Array of Z configurations (small to large)
+        Z_CONFIGS: [
+          { FONT: 'bold 16px Arial', OFFSET_X: 0, OFFSET_Y: -10 },
+          { FONT: 'bold 20px Arial', OFFSET_X: 8, OFFSET_Y: -18 },
+          { FONT: 'bold 24px Arial', OFFSET_X: 18, OFFSET_Y: -28 },
+        ],
         // Bobbing animation
         BOB_SPEED: 200, // Milliseconds per cycle
         BOB_AMPLITUDE: 3, // Pixels
@@ -4269,21 +4271,13 @@
                 return;
               }
 
-              // Draw three Z's with increasing size
-              ctx.font = GAME_CONSTANTS.Z_ANIMATION.Z_SMALL.FONT;
-              ctx.fillText('Z',
-                screenX + dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_SMALL.OFFSET_X,
-                screenY - dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_SMALL.OFFSET_Y + bobOffset);
-
-              ctx.font = GAME_CONSTANTS.Z_ANIMATION.Z_MEDIUM.FONT;
-              ctx.fillText('Z',
-                screenX + dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_MEDIUM.OFFSET_X,
-                screenY - dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_MEDIUM.OFFSET_Y + bobOffset);
-
-              ctx.font = GAME_CONSTANTS.Z_ANIMATION.Z_LARGE.FONT;
-              ctx.fillText('Z',
-                screenX + dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_LARGE.OFFSET_X,
-                screenY - dino.size + GAME_CONSTANTS.Z_ANIMATION.Z_LARGE.OFFSET_Y + bobOffset);
+              // Draw Z's with increasing size (loop through configs)
+              GAME_CONSTANTS.Z_ANIMATION.Z_CONFIGS.forEach(zConfig => {
+                ctx.font = zConfig.FONT;
+                ctx.fillText('Z',
+                  screenX + dino.size + zConfig.OFFSET_X,
+                  screenY - dino.size + zConfig.OFFSET_Y + bobOffset);
+              });
             });
 
             // Reset state once at end
