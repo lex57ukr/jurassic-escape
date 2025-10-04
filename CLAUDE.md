@@ -59,11 +59,12 @@ gameState = GAME_CONSTANTS.GAME_STATES.PLAYING;
 if (gameState.isTerminal) { ... }  // Direct property access
 
 // Applies to ALL entity types:
-bullet.weaponType = WEAPONS.REGULAR;          // Full weapon object
-dino.type = DINOSAURS.VELOCIRAPTOR;           // Full dinosaur config
-obstacle.obstacleType = OBSTACLES.TREE;       // Full obstacle config
-powerup.powerupType = POWERUPS.HEALTH;        // Full powerup config
-hazard.hazardType = HAZARDS.TAR_PIT;          // Full hazard config
+bullet.weaponType = WEAPONS.REGULAR;               // Full weapon object
+dino.type = DINOSAURS.VELOCIRAPTOR;                // Full dinosaur config
+obstacle.obstacleType = OBSTACLES.TREE;            // Full obstacle config
+powerup.powerupType = POWERUPS.HEALTH;             // Full powerup config
+hazard.hazardType = HAZARDS.TAR_PIT;               // Full hazard config
+exit.structureType = STATIC_STRUCTURES.EXIT;       // Full structure config
 ```
 
 **Benefits:**
@@ -218,6 +219,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `createAmmoPickup()` - Bouncing ammo drops from defeated dinosaurs
 - `createTarPit()` - Movement-slowing hazards
 - `createElectricFence()` - Damage/stun hazards
+- `createExit(x, y)` - Level exit (static structure with locked state)
 - `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (handles collision avoidance)
 - `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)` - Guard dinosaurs around exit
@@ -249,10 +251,12 @@ useEffect(() => {
 
     // Render phase (canvas drawing with camera offset)
     drawBackground();
-    drawEntities(ctx, cameraX, cameraY, tarPits, obstacles, powerups, territories, ...);
+    drawEntities(ctx, cameraX, cameraY,
+      staticStructures, tarPits, electricFences, decorations, obstacles,
+      powerups, depots, territories, ...);
     drawDinosaurs(); // Special rendering (transform, health bar, zap effect)
     drawPlayer();
-    drawBullets();
+    drawProjectiles();
 
     requestAnimationFrame(gameLoop);
   };
@@ -282,7 +286,14 @@ useEffect(() => {
    - `obstacles` array: entities with `blocksMovement: true`
    - `decorations` array: entities with `blocksMovement: false`
 
-6. **Avoid magic numbers**
+6. **Use specialized arrays for entity categories**
+   - `staticStructures` array: static map objects (exits, gates, signs, etc.)
+   - `tarPits` array: tar pit hazards
+   - `electricFences` array: electric fence hazards
+   - `territories` array: territory markers for dinosaurs
+   - Enables clean batch rendering via `drawEntities()` with proper z-index layering
+
+7. **Avoid magic numbers**
    - Extract to `GAME_CONSTANTS` with descriptive names
 
 ## Adding New Features
