@@ -107,20 +107,14 @@
         DINOSAUR_AGGRO_RANGE: 200,
       },
 
-      // Bullet
-      BULLET: {
-        SPEED: 8,
-        RADIUS: 4,
-      },
-
       // Weapons - Unified weapon configuration with all properties
       WEAPONS: {
         REGULAR: {
           id: 'regular',
           icon: '💥',
           bulletColor: '#ff0',
-          speed: 8, // From BULLET.SPEED
-          radius: 4, // From BULLET.RADIUS
+          speed: 8,
+          radius: 4,
           ammoConfig: {
             playerKey: 'ammo', // Property name on player object
             stateKey: 'playerAmmo', // React state variable name for setters and stateAccumulator
@@ -132,8 +126,8 @@
           id: 'tranquilizer',
           icon: '💉',
           bulletColor: '#00FF00',
-          speed: 6,
-          radius: 5,
+          speed: 5,
+          radius: 3,
           startAmmo: 15,
           scoreMultiplier: 0.5, // 50% of kill points
           ammoConfig: {
@@ -967,15 +961,16 @@
     /**
      * Create a bullet object
      */
-    const createBullet = (fromX, fromY, toX, toY, speed = GAME_CONSTANTS.BULLET.SPEED) => {
+    const createBullet = (fromX, fromY, toX, toY) => {
+      const weapon = GAME_CONSTANTS.WEAPONS.REGULAR;
       const { dx, dy } = normalize(toX - fromX, toY - fromY);
       return {
         x: fromX,
         y: fromY,
-        vx: dx * speed,
-        vy: dy * speed,
-        radius: GAME_CONSTANTS.BULLET.RADIUS,
-        weaponType: GAME_CONSTANTS.WEAPONS.REGULAR
+        vx: dx * weapon.speed,
+        vy: dy * weapon.speed,
+        radius: weapon.radius,
+        weaponType: weapon
       };
     };
 
