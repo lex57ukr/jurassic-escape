@@ -215,10 +215,9 @@ This project demonstrates:
 
 This is a personal project created for educational and entertainment purposes.
 
-## 🐛 Known Issues
+## 🎵 Audio Requirements
 
-- Player may occasionally spawn between obstacles at level start (use jump to escape)
-- Audio files must be available in the `./assets/` folder
+When playing the game offline locally, audio files (`.wav` format) must be available in the `./assets/` folder for sound effects to work. See the **🔊 Sound Files** section above for the complete list.
 
 ## 🎤 Developer Demo Notes
 

@@ -214,6 +214,8 @@
 
       // Spawning
       SPAWN: {
+        PLAYER_SPAWN_CLEARANCE: 150, // Minimum distance obstacles must be from player spawn
+        OBSTACLE_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid obstacle position
         OBSTACLE_MIN_RADIUS: 15,
         OBSTACLE_MAX_RADIUS: 35, // 15 + 20
         OBSTACLE_PADDING: 100,
@@ -696,12 +698,37 @@
 
     /**
      * Create an obstacle object
+     * @param {number} mapWidth - Width of the map
+     * @param {number} mapHeight - Height of the map
+     * @param {number} playerX - Player spawn X position to avoid
+     * @param {number} playerY - Player spawn Y position to avoid
      */
-    const createObstacle = (mapWidth, mapHeight) => {
+    const createObstacle = (mapWidth, mapHeight, playerX = null, playerY = null) => {
+      let x, y, radius;
+      let attempts = 0;
+
+      do {
+        x = Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN;
+        y = Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN;
+        radius = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS);
+        attempts++;
+
+        // If player position provided, check clearance
+        if (playerX !== null && playerY !== null) {
+          const distFromPlayer = distance(x, y, playerX, playerY);
+          const requiredClearance = GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
+          if (distFromPlayer >= requiredClearance) {
+            break; // Valid position found
+          }
+        } else {
+          break; // No player clearance check needed
+        }
+      } while (attempts < GAME_CONSTANTS.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
+
       return {
-        x: Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
-        y: Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN,
-        radius: GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS),
+        x,
+        y,
+        radius,
         type: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLE_TYPES.TREE : GAME_CONSTANTS.OBSTACLE_TYPES.BUSH
       };
     };
@@ -3294,9 +3321,9 @@
         setCurrentWeapon(GAME_CONSTANTS.WEAPON_TYPES.REGULAR);
         setSpeedBoostActive(false);
 
-        // Create obstacles
+        // Create obstacles (with player spawn clearance)
         for (let i = 0; i < config.obstacles; i++) {
-          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight));
+          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y));
         }
 
         // Create dinosaurs
