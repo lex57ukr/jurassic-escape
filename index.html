@@ -204,6 +204,7 @@
       OBSTACLE_TYPES: {
         TREE: 'tree',
         BUSH: 'bush',
+        MUSHROOM: 'mushroom',
       },
 
       // Vegetation Visual Constants
@@ -220,6 +221,23 @@
         BUSH_DARK: '#1C3D1C',
         BUSH_LIGHT: '#4A6F4A',
         BUSH_HIGHLIGHT: '#5C825C',
+        MUSHROOM_STEM_BASE: '#9A8A7A',    // Muted tan stem
+        MUSHROOM_STEM_SHADOW: '#6B5A47',  // Dark brown stem edge
+        MUSHROOM_CAP_COLORS: [            // Array of dark earthy cap colors
+          '#5C3317', // Dark brown
+          '#654321', // Dark wood brown
+          '#6B4423', // Deep chestnut
+          '#7A5230', // Dark earth brown
+          '#8B6914', // Dark goldenrod brown
+        ],
+        MUSHROOM_SPOTS_COLOR: '#C0C0C0',  // Muted gray spots
+        MUSHROOM_SPOTS_COUNT: 3,          // Number of spots per mushroom
+        MUSHROOM_STEM_WIDTH_RATIO: 0.4,   // Stem width relative to radius
+        MUSHROOM_STEM_HEIGHT_RATIO: 0.8,  // Stem height relative to radius
+        MUSHROOM_CAP_RADIUS_RATIO: 0.7,   // Cap radius relative to radius
+        MUSHROOM_CAP_HEIGHT_RATIO: 0.6,   // Cap height ratio for ellipse perspective
+        MUSHROOM_SPOT_DISTANCE_RATIO: 0.4, // Spot distance from center
+        MUSHROOM_SPOT_RADIUS_RATIO: 0.15, // Spot size relative to radius
         FOLIAGE_LAYERS: 3, // Number of foliage layers for trees
         BUSH_CLUSTERS: 5, // Number of overlapping circles for bushes
       },
@@ -238,6 +256,11 @@
         OBSTACLE_MAX_RADIUS: 35, // 15 + 20
         OBSTACLE_PADDING: 100,
         OBSTACLE_MIN_MARGIN: 50,
+        MUSHROOM_MIN_RADIUS: 8,       // Minimum mushroom radius (smaller than regular obstacles)
+        MUSHROOM_MAX_RADIUS: 15,      // Maximum mushroom radius
+        MUSHROOM_PATCH_SIZE: 5,       // Number of mushrooms per patch
+        MUSHROOM_PATCH_SPREAD: 80,    // Spread radius for patch members
+        MUSHROOM_PATCH_PERCENTAGE: 0.2, // 20% of obstacles spawn as mushroom patches
         DINOSAUR_GRID_START_X: 300,
         DINOSAUR_GRID_START_Y: 200,
         DINOSAUR_GRID_SPACING_X: 250,
@@ -749,6 +772,37 @@
         radius,
         type: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLE_TYPES.TREE : GAME_CONSTANTS.OBSTACLE_TYPES.BUSH
       };
+    };
+
+    /**
+     * Create a mushroom patch (cluster of mushrooms with same color)
+     * @param {number} centerX - Patch center X position
+     * @param {number} centerY - Patch center Y position
+     * @param {number} colorIndex - Cap color index for all mushrooms in patch
+     * @returns {Array} Array of mushroom objects
+     */
+    const createMushroomPatch = (centerX, centerY, colorIndex) => {
+      const mushrooms = [];
+      const patchSize = GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_SIZE;
+      const spread = GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_SPREAD;
+
+      for (let i = 0; i < patchSize; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * spread;
+        const x = centerX + Math.cos(angle) * dist;
+        const y = centerY + Math.sin(angle) * dist;
+        const radius = GAME_CONSTANTS.SPAWN.MUSHROOM_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.MUSHROOM_MAX_RADIUS - GAME_CONSTANTS.SPAWN.MUSHROOM_MIN_RADIUS);
+
+        mushrooms.push({
+          x,
+          y,
+          radius,
+          type: GAME_CONSTANTS.OBSTACLE_TYPES.MUSHROOM,
+          colorIndex
+        });
+      }
+
+      return mushrooms;
     };
 
     /**
@@ -1850,7 +1904,53 @@
     };
 
     /**
-     * Draw obstacle (delegates to tree or bush renderer)
+     * Draw mushroom with colorful cap and spots
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} radius - Mushroom radius
+     * @param {number} colorIndex - Index into cap colors array
+     */
+    const drawMushroom = (ctx, screenX, screenY, radius, colorIndex) => {
+      const stemWidth = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_WIDTH_RATIO;
+      const stemHeight = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_HEIGHT_RATIO;
+      const capRadius = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_RADIUS_RATIO;
+
+      // Draw stem shadow (left side)
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_SHADOW;
+      ctx.fillRect(screenX - stemWidth / 2, screenY - stemHeight / 2, stemWidth / 3, stemHeight);
+
+      // Draw stem
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_BASE;
+      ctx.fillRect(screenX - stemWidth / 2, screenY - stemHeight / 2, stemWidth, stemHeight);
+
+      // Draw mushroom cap (ellipse for perspective)
+      const capY = screenY - stemHeight * GAME_CONSTANTS.VEGETATION.MUSHROOM_STEM_HEIGHT_RATIO;
+      const capColors = GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_COLORS;
+      ctx.fillStyle = capColors[colorIndex % capColors.length];
+
+      ctx.beginPath();
+      ctx.ellipse(screenX, capY, capRadius, capRadius * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_HEIGHT_RATIO, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw spots on cap
+      ctx.fillStyle = GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOTS_COLOR;
+      const spotCount = GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOTS_COUNT;
+      for (let i = 0; i < spotCount; i++) {
+        const angle = (i / spotCount) * Math.PI * 2;
+        const spotDist = capRadius * GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOT_DISTANCE_RATIO;
+        const spotX = screenX + Math.cos(angle) * spotDist;
+        const spotY = capY + Math.sin(angle) * spotDist * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_HEIGHT_RATIO;
+        const spotRadius = radius * GAME_CONSTANTS.VEGETATION.MUSHROOM_SPOT_RADIUS_RATIO;
+
+        ctx.beginPath();
+        ctx.arc(spotX, spotY, spotRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    /**
+     * Draw obstacle (delegates to tree, bush, or mushroom renderer)
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {Object} obstacle - Obstacle object
      * @param {number} cameraX - Camera X offset
@@ -1866,6 +1966,9 @@
           break;
         case GAME_CONSTANTS.OBSTACLE_TYPES.BUSH:
           drawBush(ctx, screenX, screenY, obstacle.radius);
+          break;
+        case GAME_CONSTANTS.OBSTACLE_TYPES.MUSHROOM:
+          drawMushroom(ctx, screenX, screenY, obstacle.radius, obstacle.colorIndex || 0);
           break;
       }
     };
@@ -3420,6 +3523,7 @@
         game.dinosaurs = [];
         game.territories = [];
         game.obstacles = [];
+        game.decorations = [];
         game.tarPits = [];
         game.electricFences = [];
         game.keys = {};
@@ -3441,9 +3545,31 @@
         setCurrentWeapon(GAME_CONSTANTS.WEAPON_TYPES.REGULAR);
         setSpeedBoostActive(false);
 
-        // Create obstacles (with player spawn clearance)
+        // Create obstacles (blocking: trees and bushes)
         for (let i = 0; i < config.obstacles; i++) {
           game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y));
+        }
+
+        // Create decorations (walkable: mushroom patches)
+        const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_PERCENTAGE);
+
+        for (let patchIndex = 0; patchIndex < mushroomPatchCount; patchIndex++) {
+          // Pick patch center location
+          const patchCenterX = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
+          const patchCenterY = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
+
+          // Check clearance from player spawn (visual cleanliness, not collision)
+          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y);
+          if (distFromPlayer < GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE) {
+            continue; // Skip this patch if too close to player
+          }
+
+          // Pick a color for this patch (all mushrooms in patch share color)
+          const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.VEGETATION.MUSHROOM_CAP_COLORS.length);
+
+          // Create and add all mushrooms in patch
+          const patch = createMushroomPatch(patchCenterX, patchCenterY, patchColorIndex);
+          game.decorations.push(...patch);
         }
 
         // Create dinosaurs
@@ -3861,9 +3987,14 @@
             drawElectricFence(ctx, fence, game.cameraX, game.cameraY);
           });
 
-          // Draw obstacles
+          // Draw obstacles (blocking)
           game.obstacles.forEach(obs => {
             drawObstacle(ctx, obs, game.cameraX, game.cameraY);
+          });
+
+          // Draw decorations (walkable)
+          game.decorations.forEach(decoration => {
+            drawObstacle(ctx, decoration, game.cameraX, game.cameraY);
           });
 
           // Draw powerups

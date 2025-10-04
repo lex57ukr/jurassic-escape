@@ -31,7 +31,7 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
 - `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
 - `WEAPON_TYPES`: Weapon identifiers with icons (REGULAR/💥, TRANQUILIZER/💉)
-- `OBSTACLE_TYPES`: Environment types (TREE, BUSH)
+- `OBSTACLE_TYPES`: Environment types (TREE, BUSH, MUSHROOM)
 - `POWERUP_TYPES`: Collectible types (HEALTH, SPEED)
 - `AI.STATES`: Dinosaur behavior states (PATROL, CHASE, FLEE, TERRITORY_RETURN)
 - `AI.EXIT_TERRITORY_RADIUS`: 300px radius for exit protection zones
@@ -48,7 +48,7 @@ The codebase follows a **constants-first approach** for type safety and maintain
 
 **Entity Factory Functions:**
 
-- `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, etc.
+- `createObstacle()`, `createPowerup()`, `createAmmoPickup()`, `createTarPit()`, `createElectricFence()`, `createMushroomPatch()`, etc.
 - `createTranqDepot(mapWidth, mapHeight)`: Creates tranquilizer depot with random position
 - `createAmmoDepot(x, y, amount)`: Creates regular ammo depot with fixed position and amount
 - `createExitTerritory(exitX, exitY, totalGuards)`: Creates exit protection territory with guard count tracking
@@ -70,7 +70,7 @@ The main `JurassicEscape` component manages:
 - **Game states**: Defined in `GAME_CONSTANTS.GAME_STATES` - `MENU`, `PLAYING`, `LEVEL_COMPLETE`, `WON`, `LOST`
 - **React state**: `gameState`, `score`, `playerHealth`, `playerAmmo`, `currentLevel`, `speedBoostActive`, `showPauseMenu`, `showSettingsMenu`, `soundEnabled`, `volume`, `viewportScale`, `difficulty`, `autoAim`, `canvasSize`, `isTouchDevice`
 - **Game ref** (`gameRef`): Contains mutable game objects updated every frame
-  - Player, bullets, dinosaurs, obstacles, powerups, ammoPickups, tranqDepots, ammoDepots
+  - Player, bullets, dinosaurs, obstacles, decorations, powerups, ammoPickups, tranqDepots, ammoDepots
   - Camera position, map dimensions, input tracking
   - Touch controls state (joystick, shoot, jump)
 
@@ -199,7 +199,8 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
   - Hand-drawn canvas art with facing direction (horizontal flip for left movement)
     - Facing direction stored in `facingLeft` property, only updates when horizontal velocity exceeds 0.3
   - Sleep mechanic: tranquilized dinosaurs become `isSleeping`, don't move or attack, show Z-Z-Z animation
-- **Obstacles**: Types defined in `GAME_CONSTANTS.OBSTACLE_TYPES` - `TREE` and `BUSH` with circular collision
+- **Obstacles**: Types defined in `GAME_CONSTANTS.OBSTACLE_TYPES` - `TREE` and `BUSH` (blocking) with circular collision
+- **Decorations**: `MUSHROOM` (walkable) - visual elements without collision, spawn in colorful patches
 - **Powerups**: Types defined in `GAME_CONSTANTS.POWERUP_TYPES` - `HEALTH` (red cross) and `SPEED` (lightning bolt)
 - **Ammo pickups**: Dropped when dinosaurs die, with physics-based bouncing animation that continues until motion stops
   - Bouncing physics affected by difficulty: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
@@ -279,7 +280,7 @@ Levels defined in `LEVEL_CONFIGS`:
 - **Responsive canvas sizing**: Scales to fit screen on mobile while maintaining aspect ratio of selected scale
 - Canvas styled with CSS to match `canvasSize` state (width/height in pixels)
 - Camera offset (`cameraX`, `cameraY`) applied to all draw calls
-- Layered drawing order: background → exit → tar pits → electric fences → obstacles → powerups → tranq depots → ammo depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
+- Layered drawing order: background → exit → tar pits → electric fences → obstacles → decorations → powerups → tranq depots → ammo depots → territories → dinosaurs → player → bullets → spit projectiles → ammo pickups → floating texts
 - Health bars drawn above dinosaurs
 - Sleeping Z-Z-Z animation drawn above sleeping dinosaurs (3 "Z"s of increasing size with bobbing animation)
 - Floating text system: score popups (+N), tranq hit counters (1/2, 2/3), ammo pickups with fade-out over 1 second
@@ -294,7 +295,7 @@ Levels defined in `LEVEL_CONFIGS`:
 
 ## Key Implementation Details
 
-- **Collision system**: Player and aggressive dinosaurs collide with obstacles; dinosaurs don't collide with each other; herbivores don't damage player
+- **Collision system**: Player and aggressive dinosaurs collide with obstacles (trees/bushes); decorations (mushrooms) are walkable; dinosaurs don't collide with each other; herbivores don't damage player
 - **Environmental hazards**: Two types of hazards affect gameplay:
   - **Tar pits**: Circular hazards (40px radius) that slow entities to 50% speed when inside
     - Dark brown/black visual with 3 bubbles per pit, spawning every 0.5 seconds with 40-frame animation
@@ -378,4 +379,5 @@ Levels defined in `LEVEL_CONFIGS`:
   - Avoid string literals for types - use type constants (GAME_STATES, AI.STATES, WEAPON_TYPES, etc.)
   - Extract repeated patterns into utility functions (see `randomCentered()`, `randomizeBubbleOffset()`)
   - Use factory functions for entity creation (see `createObstacle()`, `createPowerup()`, etc.)
+  - Separate concerns: blocking entities (`obstacles`) vs decorative (`decorations`)
   - Keep constants at the top of the file before utility functions and components
