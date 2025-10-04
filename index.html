@@ -91,9 +91,11 @@
           bulletColor: '#ff0',
           speed: 8, // From BULLET.SPEED
           radius: 4, // From BULLET.RADIUS
-          ammoProperty: 'ammo',
-          stateAmmoKey: 'playerAmmo',
-          soundEffect: 'SHOOT',
+          ammoConfig: {
+            playerKey: 'ammo', // Property name on player object
+            stateKey: 'playerAmmo', // React state variable name for setters and stateAccumulator
+          },
+          soundEffect: null, // Set after SOUNDS is defined
           bulletFactory: null, // Set after createBullet is defined
         },
         TRANQUILIZER: {
@@ -104,9 +106,11 @@
           radius: 5,
           startAmmo: 15,
           scoreMultiplier: 0.5, // 50% of kill points
-          ammoProperty: 'tranqAmmo',
-          stateAmmoKey: 'playerTranqAmmo',
-          soundEffect: 'TRANQ_SHOOT',
+          ammoConfig: {
+            playerKey: 'tranqAmmo', // Property name on player object
+            stateKey: 'playerTranqAmmo', // React state variable name for setters and stateAccumulator
+          },
+          soundEffect: null, // Set after SOUNDS is defined
           bulletFactory: null, // Set after createTranquilizer is defined
         },
       },
@@ -969,9 +973,11 @@
       };
     };
 
-    // Assign bullet factory functions to weapon configs
+    // Assign bullet factory functions and sound effects to weapon configs
     GAME_CONSTANTS.WEAPONS.REGULAR.bulletFactory = createBullet;
     GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
+    GAME_CONSTANTS.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
+    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
 
     /**
      * Unified weapon firing logic
@@ -986,7 +992,7 @@
      * @returns {boolean} - True if weapon was fired, false if no ammo
      */
     const fireWeapon = (weapon, player, targetX, targetY, game, playSound, stateAccumulator = null, setters = null) => {
-      const ammoCount = player[weapon.ammoProperty];
+      const ammoCount = player[weapon.ammoConfig.playerKey];
 
       if (ammoCount <= 0) {
         return false;
@@ -996,19 +1002,19 @@
       const bullet = weapon.bulletFactory(player.x, player.y, targetX, targetY);
 
       game.bullets.push(bullet);
-      player[weapon.ammoProperty]--;
+      player[weapon.ammoConfig.playerKey]--;
 
       // Update state (either batch accumulator or direct setState)
       if (stateAccumulator) {
-        stateAccumulator[weapon.stateAmmoKey] = player[weapon.ammoProperty];
+        stateAccumulator[weapon.ammoConfig.stateKey] = player[weapon.ammoConfig.playerKey];
       } else if (setters) {
-        const setter = setters[weapon.stateAmmoKey];
+        const setter = setters[weapon.ammoConfig.stateKey];
         if (setter) {
-          setter(player[weapon.ammoProperty]);
+          setter(player[weapon.ammoConfig.playerKey]);
         }
       }
 
-      playSound(SOUNDS[weapon.soundEffect]);
+      playSound(weapon.soundEffect);
       return true;
     };
 

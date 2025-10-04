@@ -31,12 +31,15 @@ The codebase follows a **constants-first approach** for type safety and maintain
 - `RANDOM_CENTER` (0.5): Mathematical constant for centering bidirectional random ranges
 - `GAME_STATES`: Game state machine values (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
 - `WEAPONS`: Unified weapon configuration with all properties per weapon type:
-  - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius, ammoProperty, stateAmmoKey, soundEffect, bulletFactory }`
-  - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier, ammoProperty, stateAmmoKey, soundEffect, bulletFactory }`
+  - `WEAPONS.REGULAR`: `{ id, icon, bulletColor, speed, radius, ammoConfig: { playerKey, stateKey }, soundEffect, bulletFactory }`
+  - `WEAPONS.TRANQUILIZER`: `{ id, icon, bulletColor, speed, radius, startAmmo, scoreMultiplier, ammoConfig: { playerKey, stateKey }, soundEffect, bulletFactory }`
   - Each weapon type is a full object (not just a string ID)
   - Entities store full weapon object: `bullet.weaponType = WEAPONS.REGULAR`, `player.currentWeapon = WEAPONS.REGULAR`
-  - Direct property access: `bullet.weaponType.bulletColor`, `player.currentWeapon.icon`
+  - Direct property access: `bullet.weaponType.bulletColor`, `player.currentWeapon.ammoConfig.playerKey`
   - All weapon properties (visual, mechanical, ammo, state management) in one place
+  - `ammoConfig.playerKey`: Property name on player object (e.g., 'ammo', 'tranqAmmo')
+  - `ammoConfig.stateKey`: React state variable name (e.g., 'playerAmmo', 'playerTranqAmmo') for setters and stateAccumulator
+  - `soundEffect` references SOUNDS object, assigned after SOUNDS is defined
   - `bulletFactory` references (`createBullet`, `createTranquilizer`) assigned after functions are defined
   - Unified `fireWeapon()` helper uses weapon config for all shooting logic (no weapon-specific conditionals)
 - `DINOSAURS`: Unified dinosaur configuration with all properties per dinosaur type:
