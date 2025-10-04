@@ -73,6 +73,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **💥 Ammo Pickups**: Regular ammunition, dropped by defeated dinosaurs
   - Bounces continuously with decreasing amplitude until motion stops
   - Physics simulation with gravity, damping, and friction
+  - **Difficulty scaling**: Easy bounces 40% longer, Normal is baseline, Hard bounces 20% shorter
 - **💉 Tranquilizer Depot**: Green crate with 5 tranquilizer darts (randomly placed)
 - **💥 Regular Ammo Depot**: Blue crate with minimal regular ammunition (fixed locations)
   - 2 depots per level to prevent softlocks at exit guards
@@ -126,7 +127,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
   - Sound control (mute/unmute)
   - Volume control (0-100% slider)
   - Viewport size (Small: 800x600, Medium: 1000x750, Large: 1200x900)
-  - Difficulty (Easy/Normal/Hard) - affects player health, ammo, enemy speed, and invincibility duration
+  - Difficulty (Easy/Normal/Hard) - affects player health, ammo, enemy speed, invincibility duration, and ammo bouncing physics
   - Auto-aim toggle (🎯) - helpful for trackpad users, enabled by default on Easy difficulty, always ON for mobile (read-only)
 - **Jump mechanic** to escape tight spots and stuck positions
 - **Pause menu** with options to continue, restart, or exit
