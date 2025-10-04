@@ -381,12 +381,14 @@
 
       // Environmental Hazards
       HAZARDS: {
+        // General Entity Spacing
+        DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types
+
         // Tar Pits
         TAR_PIT_BASE_RADIUS: 40,
         TAR_PIT_SIZE_VARIANCE: 1.50, // Max variance: 150% (radius ranges from 50% to 200% of base)
         TAR_PIT_SLOW_MULTIPLIER: 0.5, // Reduces speed to 50%
         TAR_PIT_MIN_SPACING: 200, // Minimum distance between tar pits
-        TAR_PIT_OBSTACLE_CLEARANCE: 50, // Clearance from obstacles
         TAR_PIT_SPAWN_MAX_ATTEMPTS: 100,
         TAR_PIT_BUBBLE_FREQUENCY: 30, // Frames between bubble spawns (0.5 seconds)
         TAR_PIT_BUBBLE_DURATION: 40, // Duration of bubble animation in frames
@@ -404,7 +406,7 @@
         FENCE_STUN_DURATION_MULTIPLIER: 0.5, // Dinosaurs stunned for half of tranq sleep duration
         FENCE_PUSHBACK_FORCE: 50, // Bounce back force (MUST be > FENCE_AVOIDANCE_BUFFER to prevent stuck dinos)
         FENCE_MIN_SPACING: 150, // Minimum distance between fences
-        FENCE_OBSTACLE_CLEARANCE: 60, // Clearance from obstacles
+        FENCE_OBSTACLE_CLEARANCE: 60, // Clearance from obstacles (extra 10px vs DEFAULT_ENTITY_CLEARANCE for safety)
         FENCE_SPAWN_MAX_ATTEMPTS: 100,
         FENCE_SPARK_FREQUENCY: 30, // Frames between spark animations (0.5 seconds)
         FENCE_SPARK_DURATION: 10, // Duration of spark animation in frames
@@ -643,6 +645,44 @@
     });
 
     /**
+     * Check if a position is valid (no collisions with existing entities)
+     * @param {number} x - X position to check
+     * @param {number} y - Y position to check
+     * @param {number} radius - Radius of entity to place
+     * @param {Object} game - Game state object with entity arrays
+     * @param {number} clearance - Extra clearance distance (default: DEFAULT_ENTITY_CLEARANCE)
+     * @returns {boolean} True if position is valid (no overlaps)
+     */
+    const isValidPosition = (x, y, radius, game, clearance = GAME_CONSTANTS.HAZARDS.DEFAULT_ENTITY_CLEARANCE) => {
+      // Check against tar pits
+      for (const tarPit of game.tarPits) {
+        const dist = distance(x, y, tarPit.x, tarPit.y);
+        if (dist < radius + tarPit.radius + clearance) {
+          return false;
+        }
+      }
+
+      // Check against obstacles
+      for (const obstacle of game.obstacles) {
+        const dist = distance(x, y, obstacle.x, obstacle.y);
+        if (dist < radius + obstacle.radius + clearance) {
+          return false;
+        }
+      }
+
+      // Check against electric fences (approximate as circle with width/2 radius)
+      for (const fence of game.electricFences) {
+        const dist = distance(x, y, fence.x, fence.y);
+        const fenceRadius = fence.width / 2;
+        if (dist < radius + fenceRadius + clearance) {
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    /**
      * Normalize a vector (dx, dy) and return unit vector with magnitude
      */
     const normalize = (dx, dy) => {
@@ -793,8 +833,9 @@
      * @param {number} mapHeight - Height of the map
      * @param {number} playerX - Player spawn X position to avoid
      * @param {number} playerY - Player spawn Y position to avoid
+     * @param {Object} game - Game state object with existing entities
      */
-    const createObstacle = (mapWidth, mapHeight, playerX = null, playerY = null) => {
+    const createObstacle = (mapWidth, mapHeight, playerX = null, playerY = null, game = null) => {
       let x, y, radius;
       let attempts = 0;
 
@@ -804,16 +845,23 @@
         radius = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS);
         attempts++;
 
-        // If player position provided, check clearance
+        let valid = true;
+
+        // Check player clearance
         if (playerX !== null && playerY !== null) {
           const distFromPlayer = distance(x, y, playerX, playerY);
           const requiredClearance = GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
-          if (distFromPlayer >= requiredClearance) {
-            break; // Valid position found
+          if (distFromPlayer < requiredClearance) {
+            valid = false;
           }
-        } else {
-          break; // No player clearance check needed
         }
+
+        // Check against all existing entities using centralized collision checker
+        if (valid && game !== null) {
+          valid = isValidPosition(x, y, radius, game);
+        }
+
+        if (valid) break;
       } while (attempts < GAME_CONSTANTS.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
 
       return {
@@ -3685,9 +3733,37 @@
         setCurrentWeapon(GAME_CONSTANTS.WEAPON_TYPES.REGULAR);
         setSpeedBoostActive(false);
 
+        // Create tar pits first (so obstacles can avoid them)
+        for (let i = 0; i < config.tarPits; i++) {
+          let tarX, tarY;
+          let attempts = 0;
+          const maxAttempts = GAME_CONSTANTS.HAZARDS.TAR_PIT_SPAWN_MAX_ATTEMPTS;
+
+          while (attempts < maxAttempts) {
+            tarX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            tarY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+
+            let overlapping = false;
+
+            // Check against other tar pits
+            for (const existingTar of game.tarPits) {
+              const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
+              if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_MIN_SPACING) {
+                overlapping = true;
+                break;
+              }
+            }
+
+            if (!overlapping) break;
+            attempts++;
+          }
+
+          game.tarPits.push(createTarPit(tarX, tarY));
+        }
+
         // Create obstacles (blocking: trees and bushes)
         for (let i = 0; i < config.obstacles; i++) {
-          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y));
+          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y, game));
         }
 
         // Create decorations (walkable: mushroom patches and grass patches)
@@ -3898,101 +3974,35 @@
         const farCornerY = game.mapHeight - 200;
         game.ammoDepots.push(createAmmoDepot(farCornerX, farCornerY, config.ammoPerDepot));
 
-        // Create tar pits
-        for (let i = 0; i < config.tarPits; i++) {
-          let tarX, tarY;
-          let attempts = 0;
-          const maxAttempts = GAME_CONSTANTS.HAZARDS.TAR_PIT_SPAWN_MAX_ATTEMPTS;
-
-          while (attempts < maxAttempts) {
-            tarX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            tarY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-
-            let overlapping = false;
-
-            // Check against obstacles
-            for (const obstacle of game.obstacles) {
-              const dist = distance(tarX, tarY, obstacle.x, obstacle.y);
-              if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_BASE_RADIUS + obstacle.radius + GAME_CONSTANTS.HAZARDS.TAR_PIT_OBSTACLE_CLEARANCE) {
-                overlapping = true;
-                break;
-              }
-            }
-
-            // Check against other tar pits
-            if (!overlapping) {
-              for (const existingTar of game.tarPits) {
-                const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
-                if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_MIN_SPACING) {
-                  overlapping = true;
-                  break;
-                }
-              }
-            }
-
-            // Check against electric fences
-            if (!overlapping) {
-              for (const fence of game.electricFences) {
-                const dist = distance(tarX, tarY, fence.x, fence.y);
-                if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT_BASE_RADIUS + GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2 + GAME_CONSTANTS.HAZARDS.TAR_PIT_OBSTACLE_CLEARANCE) {
-                  overlapping = true;
-                  break;
-                }
-              }
-            }
-
-            if (!overlapping) break;
-            attempts++;
-          }
-
-          game.tarPits.push(createTarPit(tarX, tarY));
-        }
-
         // Create electric fences
         for (let i = 0; i < config.electricFences; i++) {
           let fenceX, fenceY, fenceRotation;
           let attempts = 0;
           const maxAttempts = GAME_CONSTANTS.HAZARDS.FENCE_SPAWN_MAX_ATTEMPTS;
+          const fenceRadius = GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2;
 
           while (attempts < maxAttempts) {
             fenceX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
             fenceY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
             fenceRotation = Math.random() * Math.PI * 2; // Random rotation
 
-            let overlapping = false;
+            let valid = true;
 
-            // Check against obstacles
-            for (const obstacle of game.obstacles) {
-              const dist = distance(fenceX, fenceY, obstacle.x, obstacle.y);
-              if (dist < GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2 + obstacle.radius + GAME_CONSTANTS.HAZARDS.FENCE_OBSTACLE_CLEARANCE) {
-                overlapping = true;
+            // Check against other fences (minimum spacing)
+            for (const existingFence of game.electricFences) {
+              const dist = distance(fenceX, fenceY, existingFence.x, existingFence.y);
+              if (dist < GAME_CONSTANTS.HAZARDS.FENCE_MIN_SPACING) {
+                valid = false;
                 break;
               }
             }
 
-            // Check against other fences
-            if (!overlapping) {
-              for (const existingFence of game.electricFences) {
-                const dist = distance(fenceX, fenceY, existingFence.x, existingFence.y);
-                if (dist < GAME_CONSTANTS.HAZARDS.FENCE_MIN_SPACING) {
-                  overlapping = true;
-                  break;
-                }
-              }
+            // Check against all other entities using centralized collision checker
+            if (valid) {
+              valid = isValidPosition(fenceX, fenceY, fenceRadius, game, GAME_CONSTANTS.HAZARDS.FENCE_OBSTACLE_CLEARANCE);
             }
 
-            // Check against tar pits
-            if (!overlapping) {
-              for (const tarPit of game.tarPits) {
-                const dist = distance(fenceX, fenceY, tarPit.x, tarPit.y);
-                if (dist < GAME_CONSTANTS.HAZARDS.FENCE_WIDTH / 2 + tarPit.radius + GAME_CONSTANTS.HAZARDS.FENCE_OBSTACLE_CLEARANCE) {
-                  overlapping = true;
-                  break;
-                }
-              }
-            }
-
-            if (!overlapping) break;
+            if (valid) break;
             attempts++;
           }
 
