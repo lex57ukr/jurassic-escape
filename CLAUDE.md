@@ -37,11 +37,12 @@ The codebase follows a **constants-first approach** for type safety and maintain
   - Entities store weapon ID: `bullet.type = WEAPONS.REGULAR.id`
   - All weapon properties (visual, mechanical, ammo) in one place
 - `DINOSAURS`: Unified dinosaur configuration with all properties per dinosaur type:
-  - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration }`
+  - `DINOSAURS.VELOCIRAPTOR`: `{ id, baseSize, health, speed, color, points, aggressive, territorial, tranqShots, sleepDuration, spitAttack }`
   - Similar structure for TYRANNOSAURUS_REX, STEGOSAURUS, PARASAUROLOPHUS, TRICERATOPS, DILOPHOSAURUS
-  - Each dinosaur type is a full object with stats, AI flags, and tranquilizer properties
-  - Entities store dinosaur ID: `dino.type = DINOSAURS.VELOCIRAPTOR.id`
-  - Helper function `getDinosaurConfig(typeId)` maps string ID to config object
+  - Each dinosaur type is a full object with stats, AI flags, tranquilizer properties, and capabilities
+  - Entities store full dinosaur object: `dino.type = GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR`
+  - Direct property access: `dino.type.tranqShots`, `dino.type.sleepDuration`, `dino.type.baseSize`
+  - Capability system: `spitAttack` is null for non-spitting dinos, object with properties for spitters
 - `OBSTACLES`: Unified object-based obstacle definitions with full configuration per type:
   - `OBSTACLES.TREE`: `{ id, blocksMovement, zIndex, colors: {...}, foliageLayers }`
   - `OBSTACLES.BUSH`: `{ id, blocksMovement, zIndex, colors: {...}, clusters }`
@@ -213,7 +214,10 @@ Uses `useEffect` with `requestAnimationFrame` for the main game loop:
   - **Territorial dinosaurs** (Dilophosaurus): AI states PATROL, CHASE, or TERRITORY_RETURN
     - Territory system: 200 pixel radius zone, marked by skull emoji and dashed red circle
     - Aggressive only when player enters territory (within 250px aggro range)
-    - Spit attack: 180px range, 2 second cooldown, yellow-green projectiles dealing 1 damage
+    - **Spit attack capability**: Defined in `dino.type.spitAttack` object (null for non-spitters)
+      - Dilophosaurus: `{ range: 180, cooldown: 120, projectileSpeed: 4, projectileRadius: 6, damage: 1 }`
+      - Capability-based check: `if (dino.type.spitAttack && ...)` instead of hardcoded type check
+      - Yellow-green projectiles, configurable per dinosaur type
     - Returns to territory center when straying beyond 80% of radius (50% when already returning)
     - Territory spawning avoids obstacles and other territories (440px minimum spacing)
     - Territory marker removed when dinosaur dies
@@ -408,9 +412,11 @@ Levels defined in `LEVEL_CONFIGS`:
 - When adding new features and patterns, keep this file and the main README.md file up to date with relevant details
 - **Code organization principles**:
   - **Unified object pattern**: Follow the OBSTACLES/WEAPONS/DINOSAURS/POWERUPS pattern - each entity type is a full object with all properties
-    - Store full config object reference (e.g., `obstacleType: OBSTACLES.TREE`) OR store ID string and use lookup helper
+    - Store full config object reference: `obstacleType: OBSTACLES.TREE`, `dino.type: DINOSAURS.VELOCIRAPTOR`
+    - DINOSAURS and OBSTACLES store full objects; WEAPONS and POWERUPS store ID strings for flexibility
     - All properties (visual, behavioral, mechanical) defined in one place
-    - Direct property access: `weapon.bulletColor`, `dino.tranqShots`, `powerup.durationFrames`
+    - Direct property access: `weapon.bulletColor`, `dino.type.tranqShots`, `powerup.durationFrames`, `obstacle.obstacleType.colors`
+    - Capability system: Use nullable objects (e.g., `spitAttack: null` vs `spitAttack: { ... }`) for optional features
   - Avoid magic numbers - extract to `GAME_CONSTANTS` with descriptive names
   - Avoid string literals for types - use object constants (OBSTACLES.TREE not 'tree', GAME_STATES.PLAYING not 'playing')
   - Pass full object references when possible - entities store `obstacleType: OBSTACLES.TREE`, code accesses `obs.obstacleType.colors.trunkBase`
