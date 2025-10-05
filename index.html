@@ -14,9 +14,46 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="manifest" href="manifest.json" />
 
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Dynamic React loading: production by default, debug mode via Settings only -->
+  <script>
+    // Load appropriate React build based on debug mode setting
+    (function() {
+      // Check localStorage for debug mode (defaults to false/production)
+      // NOTE: Must use literal 'react-debug-mode' here - runs before GAME_CONSTANTS is defined
+      const isDev = localStorage.getItem('react-debug-mode') === 'true';
+
+      const reactMode = isDev ? 'development' : 'production';
+      const minSuffix = isDev ? '' : '.min'; // Dev builds are not minified
+
+      // Log mode for debugging
+      console.log('[Jurassic Escape] React mode:', reactMode);
+
+      // Load React and ReactDOM dynamically (avoids document.write warnings)
+      function loadScript(src, onLoad) {
+        const script = document.createElement('script');
+        script.src = src;
+        script.crossOrigin = 'anonymous';
+        if (onLoad) script.onload = onLoad;
+        document.head.appendChild(script);
+      }
+
+      // Load scripts in sequence: React → ReactDOM → Babel
+      loadScript(
+        `https://unpkg.com/react@18/umd/react.${reactMode}${minSuffix}.js`,
+        function() {
+          loadScript(
+            `https://unpkg.com/react-dom@18/umd/react-dom.${reactMode}${minSuffix}.js`,
+            function() {
+              loadScript('https://unpkg.com/@babel/standalone/babel.min.js', function() {
+                // Transform all <script type="text/babel"> tags now that Babel is ready
+                Babel.transformScriptTags();
+              });
+            }
+          );
+        }
+      );
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Mobile-specific touch behavior fixes */
@@ -614,6 +651,8 @@
       // CONFIG - Game settings
       // ========================================================================
       CONFIG: {
+        DEBUG_MODE_KEY: 'react-debug-mode', // localStorage key for debug mode
+
         AUDIO: {
           DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
         },
@@ -3874,11 +3913,19 @@
       speedBoostActive,
       autoAim,
       isTouchDevice,
+      debugMode,
       onPauseClick,
       onSettingsClick
     }) => {
       return (
         <div className="flex gap-2 md:gap-3 mb-4 text-white items-center justify-center">
+          {/* Debug Mode Badge - First indicator */}
+          {debugMode && (
+            <div className="bg-orange-600 px-2 py-1 rounded" title="Debug Mode Active">
+              <span className="text-base">🐛</span>
+            </div>
+          )}
+
           {/* Level - Fixed width */}
           <div className="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded min-w-[4rem]">
             <span className="text-sm opacity-60">LVL</span>
@@ -4195,6 +4242,33 @@
                   {isTouchDevice ? 'Always enabled on mobile' : 'Helpful for trackpad users'}
                 </div>
               </div>
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🐛</span>
+                    <span className="text-white font-semibold text-lg">Debug Mode</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const isDebug = localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true';
+                      localStorage.setItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY, !isDebug);
+                      window.location.reload();
+                    }}
+                    className={`px-6 py-2 font-bold rounded-lg transition-colors ${
+                      localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true'
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                    }`}
+                  >
+                    {localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true' ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-400 mt-2 space-y-1">
+                  <div>• Loads React dev builds (unminified, better stack traces)</div>
+                  <div>• Enables React DevTools in browser</div>
+                  <div>• ⚠️ Toggling this setting will reload the game</div>
+                </div>
+              </div>
               <button
                 onClick={onClose}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
@@ -4244,6 +4318,7 @@
         return currentDifficulty === 'easy';
       });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+      const [debugMode] = useState(() => localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true');
 
       // Sound system with cloneNode and requestAnimationFrame
       const soundsRef = useRef({});
@@ -5264,6 +5339,7 @@
                 speedBoostActive={speedBoostActive}
                 autoAim={autoAim}
                 isTouchDevice={isTouchDevice}
+                debugMode={debugMode}
                 onPauseClick={handlePauseClick}
                 onSettingsClick={handleSettingsClick}
               />

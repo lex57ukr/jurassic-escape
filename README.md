@@ -45,6 +45,99 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - Reach the golden EXIT zone to complete each level
 - Survive all 3 levels to win!
 
+## 🛠️ Local Development
+
+### VSCode Debugging Setup
+
+The project includes VSCode configuration files (`.vscode/` is gitignored, so you'll need to create your own). This setup enables:
+
+- **VSCode breakpoints** in your code (requires HTTP server, not file://)
+- **React DevTools** in browser (requires debug mode enabled in Settings)
+- **Unminified React builds** for better stack traces and error messages
+
+#### Step 1: Create `.vscode/tasks.json`
+
+This task automatically starts a Python HTTP server when debugging:
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "start-http-server",
+      "type": "shell",
+      "command": "python3",
+      "args": ["-m", "http.server", "8000"],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^Serving HTTP on.*$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Serving HTTP",
+          "endsPattern": "^Serving HTTP"
+        }
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    }
+  ]
+}
+```
+
+#### Step 2: Create `.vscode/launch.json`
+
+This provides two debug configurations:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome (HTTP)",
+            "url": "http://localhost:8000/index.html",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "preLaunchTask": "start-http-server"
+        },
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Launch Chrome (File)",
+            "url": "file://${workspaceFolder}/index.html",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true
+        }
+    ]
+}
+```
+
+#### Step 3: Enable Debug Mode
+
+1. Launch the game using "Launch Chrome (HTTP)" debug config
+2. Open Settings (⚙️ button)
+3. Toggle **Debug Mode** to ON
+4. Page will reload with unminified React builds
+
+#### Debugging Notes
+
+- **VSCode breakpoints work**: Use "Launch Chrome (HTTP)" config - breakpoints work in initial `<script>` tags
+- **React component breakpoints**: Limited support due to runtime Babel transformation; use browser DevTools for React code debugging
+- **file:// protocol**: VSCode breakpoints don't work with file:// URLs; use HTTP config for debugging
+- **Debug mode**: Loads `react.development.js` and `react-dom.development.js` (unminified) for better error messages and stack traces
+
 ## 🦖 Dinosaur Types
 
 **Aggressive Predators** (chase and attack player):
