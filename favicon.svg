@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="dinoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a9a4a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d6b2d;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- T-Rex silhouette -->
+  <g fill="url(#dinoGrad)">
+    <!-- Head -->
+    <ellipse cx="45" cy="20" rx="12" ry="10"/>
+    <!-- Snout -->
+    <path d="M 52 18 L 60 20 L 58 24 L 52 22 Z"/>
+    <!-- Jaw -->
+    <path d="M 52 22 L 58 24 L 56 28 L 50 26 Z"/>
+    <!-- Eye (white dot) -->
+    <circle cx="48" cy="18" r="2" fill="#fff"/>
+    <!-- Body -->
+    <ellipse cx="32" cy="35" rx="16" ry="18"/>
+    <!-- Tail -->
+    <path d="M 18 30 Q 8 28, 4 24 Q 2 20, 6 18 Q 10 22, 20 26 Z"/>
+    <!-- Back leg -->
+    <path d="M 28 48 L 26 58 L 22 60 L 18 58 L 20 48 Z"/>
+    <!-- Front leg -->
+    <path d="M 36 48 L 34 58 L 30 60 L 26 58 L 28 48 Z"/>
+    <!-- Small arm -->
+    <path d="M 40 28 L 42 34 L 38 36 L 36 30 Z"/>
+    <!-- Neck -->
+    <path d="M 38 24 Q 36 28, 34 32"/>
+  </g>
+
+  <!-- Accent highlights -->
+  <g fill="#5fa05f" opacity="0.6">
+    <ellipse cx="30" cy="32" rx="6" ry="8"/>
+    <path d="M 24 28 Q 20 30, 18 32"/>
+  </g>
+</svg>

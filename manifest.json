@@ -1,0 +1,26 @@
+{
+  "name": "Jurassic Escape",
+  "short_name": "Jurassic Escape",
+  "description": "A thrilling HTML5 browser game where you navigate through a dinosaur-infested island to reach the exit",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#2d8b2d",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "action"],
+  "screenshots": []
+}
