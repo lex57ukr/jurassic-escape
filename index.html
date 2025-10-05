@@ -809,6 +809,7 @@
       PICKUP_TRANQ: { id: 'pickup_tranq', path: './assets/pickup_tranq.wav' },
       ELECTRIC_SHOCK: { id: 'electric_shock', path: './assets/electric_shock.wav' },
       UNPAUSE: { id: 'unpause', path: './assets/game_start.wav' }, // Alias to game_start
+      DING: { id: 'ding', path: './assets/ding.wav' },
     };
 
     // ============================================================================
@@ -5250,7 +5251,8 @@
         const newVolume = parseInt(e.target.value) / 100;
         setVolume(newVolume);
         localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
-      }, []);
+        playSound(SOUNDS.DING);
+      }, [playSound]);
 
       const handleViewportScaleChange = useCallback((key) => {
         setViewportScale(key);
