@@ -3633,45 +3633,63 @@
       onSettingsClick
     }) => {
       return (
-        <div className="flex gap-4 md:gap-8 mb-4 text-white items-center flex-wrap justify-center">
-          <div className="text-xl font-bold">Level {currentLevel}</div>
-          <div className="flex items-center gap-2">
+        <div className="flex gap-2 md:gap-3 mb-4 text-white items-center justify-center">
+          {/* Level - Fixed width */}
+          <div className="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded min-w-[4rem]">
+            <span className="text-sm opacity-60">LVL</span>
+            <span className="text-lg font-bold">{currentLevel}</span>
+          </div>
+
+          {/* Health - Fixed width */}
+          <div className="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded">
             {Array.from({ length: maxHealth }).map((_, i) => (
-              <span key={i}>{i < health ? '❤️' : '🖤'}</span>
+              <span key={i} className="text-base">{i < health ? '❤️' : '🖤'}</span>
             ))}
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
-            <span>{GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}</span>
-            <span className="text-xl font-bold">{ammo}</span>
+
+          {/* Regular Ammo - Fixed width with monospace */}
+          <div className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
+            <span className="text-base">{GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}</span>
+            <span className="text-lg font-bold font-mono text-right flex-1">{ammo}</span>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
-            <span>{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}</span>
-            <span className="text-xl font-bold">{tranqAmmo}</span>
+
+          {/* Tranq Ammo - Fixed width with monospace */}
+          <div className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
+            <span className="text-base">{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}</span>
+            <span className="text-lg font-bold font-mono text-right flex-1">{tranqAmmo}</span>
           </div>
+
+          {/* Status Icons - Compact badges */}
           {speedBoostActive && (
-            <div className="flex items-center gap-2 bg-cyan-500 px-3 py-1 rounded-full">
-              <span>⚡</span>
-              <span className="text-sm font-bold">SPEED BOOST</span>
+            <div className="bg-cyan-500 px-2 py-1 rounded" title="Speed Boost Active">
+              <span className="text-base">⚡</span>
             </div>
           )}
           {(autoAim || isTouchDevice) && (
-            <div className="flex items-center gap-2 bg-purple-600 px-3 py-1 rounded-full">
-              <span>🎯</span>
-              <span className="text-sm font-bold">AUTO-AIM</span>
+            <div className="bg-purple-600 px-2 py-1 rounded" title="Auto-Aim Enabled">
+              <span className="text-base">🎯</span>
             </div>
           )}
-          <div className="text-xl font-bold">Score: {score}</div>
+
+          {/* Score - Fixed width with monospace */}
+          <div className="flex items-center gap-1 bg-gray-800 px-2 py-1 rounded min-w-[5.5rem]">
+            <span className="text-sm opacity-60">SCR</span>
+            <span className="text-lg font-bold font-mono text-right flex-1">{score}</span>
+          </div>
+
+          {/* Controls - Icon only */}
           {isTouchDevice && (
             <button
               onClick={onPauseClick}
-              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-lg"
+              className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded text-xl leading-none"
+              title="Pause"
             >
-              ⏸ PAUSE
+              ⏸
             </button>
           )}
           <button
             onClick={onSettingsClick}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg text-xl"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded text-xl leading-none"
             title="Settings"
           >
             ⚙️
