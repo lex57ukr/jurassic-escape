@@ -651,7 +651,14 @@
       // CONFIG - Game settings
       // ========================================================================
       CONFIG: {
-        DEBUG_MODE_KEY: 'react-debug-mode', // localStorage key for debug mode
+        LOCAL_STORAGE_KEYS: {
+          DEBUG_MODE: 'react-debug-mode', // Note: literal key used in React loading script
+          SOUND_ENABLED: 'jurassicEscapeSoundEnabled',
+          VOLUME: 'jurassicEscapeVolume',
+          VIEWPORT_SCALE: 'jurassicEscapeViewportScale',
+          DIFFICULTY: 'jurassicEscapeDifficulty',
+          AUTO_AIM: 'jurassicEscapeAutoAim'
+        },
 
         AUDIO: {
           DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
@@ -4251,17 +4258,17 @@
                   </div>
                   <button
                     onClick={() => {
-                      const isDebug = localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true';
-                      localStorage.setItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY, !isDebug);
+                      const isDebug = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true';
+                      localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE, !isDebug);
                       window.location.reload();
                     }}
                     className={`px-6 py-2 font-bold rounded-lg transition-colors ${
-                      localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true'
+                      localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true'
                         ? 'bg-green-600 hover:bg-green-700 text-white'
                         : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
                     }`}
                   >
-                    {localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true' ? 'ON' : 'OFF'}
+                    {localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true' ? 'ON' : 'OFF'}
                   </button>
                 </div>
                 <div className="text-xs text-gray-400 mt-2 space-y-1">
@@ -4296,30 +4303,30 @@
       const [canvasSize, setCanvasSize] = useState(GAME_CONSTANTS.CONFIG.VIEWPORTS.medium);
       const [isTouchDevice, setIsTouchDevice] = useState(false);
       const [soundEnabled, setSoundEnabled] = useState(() => {
-        const saved = localStorage.getItem('jurassicEscapeSoundEnabled');
+        const saved = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.SOUND_ENABLED);
         return saved !== null ? JSON.parse(saved) : true;
       });
       const [viewportScale, setViewportScale] = useState(() => {
-        const saved = localStorage.getItem('jurassicEscapeViewportScale');
+        const saved = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.VIEWPORT_SCALE);
         return saved || 'medium';
       });
       const [volume, setVolume] = useState(() => {
-        const saved = localStorage.getItem('jurassicEscapeVolume');
+        const saved = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.VOLUME);
         return saved !== null ? parseFloat(saved) : GAME_CONSTANTS.CONFIG.AUDIO.DEFAULT_VOLUME;
       });
       const [difficulty, setDifficulty] = useState(() => {
-        const saved = localStorage.getItem('jurassicEscapeDifficulty');
+        const saved = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DIFFICULTY);
         return saved || 'normal';
       });
       const [autoAim, setAutoAim] = useState(() => {
-        const saved = localStorage.getItem('jurassicEscapeAutoAim');
+        const saved = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.AUTO_AIM);
         if (saved !== null) return JSON.parse(saved);
         // Default to enabled on Easy, disabled otherwise
-        const currentDifficulty = localStorage.getItem('jurassicEscapeDifficulty') || 'normal';
+        const currentDifficulty = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DIFFICULTY) || 'normal';
         return currentDifficulty === 'easy';
       });
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-      const [debugMode] = useState(() => localStorage.getItem(GAME_CONSTANTS.CONFIG.DEBUG_MODE_KEY) === 'true');
+      const [debugMode] = useState(() => localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true');
 
       // Sound system with cloneNode and requestAnimationFrame
       const soundsRef = useRef({});
@@ -4378,7 +4385,7 @@
         // Force auto-aim ON for touch devices
         if (hasTouchSupport) {
           setAutoAim(true);
-          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
+          localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.AUTO_AIM, JSON.stringify(true));
         }
 
         const updateCanvasSize = () => {
@@ -5243,29 +5250,29 @@
       const handleSoundToggle = useCallback(() => {
         const newValue = !soundEnabled;
         setSoundEnabled(newValue);
-        localStorage.setItem('jurassicEscapeSoundEnabled', JSON.stringify(newValue));
+        localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.SOUND_ENABLED, JSON.stringify(newValue));
         if (newValue) playSound(SOUNDS.GAME_START);
       }, [soundEnabled, playSound]);
 
       const handleVolumeChange = useCallback((e) => {
         const newVolume = parseInt(e.target.value) / 100;
         setVolume(newVolume);
-        localStorage.setItem('jurassicEscapeVolume', newVolume.toString());
+        localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.VOLUME, newVolume.toString());
         playSound(SOUNDS.DING);
       }, [playSound]);
 
       const handleViewportScaleChange = useCallback((key) => {
         setViewportScale(key);
-        localStorage.setItem('jurassicEscapeViewportScale', key);
+        localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.VIEWPORT_SCALE, key);
       }, []);
 
       const handleDifficultyChange = useCallback((key) => {
         setDifficulty(key);
-        localStorage.setItem('jurassicEscapeDifficulty', key);
+        localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DIFFICULTY, key);
         // Enable auto-aim on Easy difficulty
         if (key === 'easy') {
           setAutoAim(true);
-          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(true));
+          localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.AUTO_AIM, JSON.stringify(true));
         }
       }, []);
 
@@ -5273,7 +5280,7 @@
         if (!isTouchDevice) {
           const newValue = !autoAim;
           setAutoAim(newValue);
-          localStorage.setItem('jurassicEscapeAutoAim', JSON.stringify(newValue));
+          localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.AUTO_AIM, JSON.stringify(newValue));
         }
       }, [isTouchDevice, autoAim]);
 
