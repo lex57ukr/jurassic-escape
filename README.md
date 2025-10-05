@@ -193,7 +193,7 @@ The game uses a component-based architecture with React hooks for state manageme
   - Game states, AI states, weapon types, obstacle types, powerup types defined as constants
   - Utility functions for common patterns (random generation, entity creation)
   - Single source of truth prevents typos and improves IDE autocomplete
-- **Game State**: Managed via `GAME_CONSTANTS.GAME_STATES` (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
+- **Game State**: Managed via `GAME_CONSTANTS.CORE.GAME_STATES` (MENU, PLAYING, LEVEL_COMPLETE, WON, LOST)
 - **Physics**: Velocity-based movement, gravity for jumping, circle collision detection
 - **AI**: Dinosaurs use state machine (PATROL, CHASE, FLEE, TERRITORY_RETURN) defined in `GAME_CONSTANTS.AI.STATES`
 - **Sound System**: Audio pooling via `cloneNode()` for simultaneous playback

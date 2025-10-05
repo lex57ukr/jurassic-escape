@@ -37,437 +37,454 @@
     // ============================================================================
 
     const GAME_CONSTANTS = {
-      // Random Number Generation
-      RANDOM_CENTER: 0.5, // Center point for creating bidirectional random ranges (-0.5 to +0.5)
+      // ========================================================================
+      // CORE - Fundamental game mechanics
+      // ========================================================================
+      CORE: {
+        GAME_STATES: {
+          MENU: {
+            id: 'menu',
+            isTerminal: false,
+            runsGameLoop: false,
+            canPause: false,
+            soundEffect: null, // No sound when initially entering menu
+          },
+          PLAYING: {
+            id: 'playing',
+            isTerminal: false,
+            runsGameLoop: true,
+            canPause: true,
+            soundEffect: null, // Assigned after SOUNDS definition
+          },
+          LEVEL_COMPLETE: {
+            id: 'levelComplete',
+            isTerminal: true,
+            runsGameLoop: false,
+            canPause: false,
+            soundEffect: null, // Assigned after SOUNDS definition
+          },
+          WON: {
+            id: 'won',
+            isTerminal: true,
+            runsGameLoop: false,
+            canPause: false,
+            soundEffect: null, // Assigned after SOUNDS definition
+          },
+          LOST: {
+            id: 'lost',
+            isTerminal: true,
+            runsGameLoop: false,
+            canPause: false,
+            soundEffect: null, // Assigned after SOUNDS definition
+          },
+        },
 
-      // Game States
-      GAME_STATES: {
-        MENU: {
-          id: 'menu',
-          isTerminal: false,
-          runsGameLoop: false,
-          canPause: false,
-          soundEffect: null, // No sound when initially entering menu
+        PLAYER: {
+          START_X: 100,
+          START_Y: 100,
+          MAX_HEALTH: 5,
+          START_AMMO: 10,
+          BASE_SPEED: 2.5,
+          RADIUS: 15,
+          JUMP_VELOCITY: 8,
+          JUMP_CLEAR_HEIGHT: 25, // Height needed to clear obstacles
         },
-        PLAYING: {
-          id: 'playing',
-          isTerminal: false,
-          runsGameLoop: true,
-          canPause: true,
-          soundEffect: null, // Assigned after SOUNDS definition
+
+        PHYSICS: {
+          GRAVITY: 0.5,
+          AMMO_GRAVITY: 0.30, // Gravity for ammo pickups (vertical bouncing)
+          AMMO_BOUNCE_DAMPING: -0.65, // Bounce damping (vertical only) - higher = more bouncy
         },
-        LEVEL_COMPLETE: {
-          id: 'levelComplete',
-          isTerminal: true,
-          runsGameLoop: false,
-          canPause: false,
-          soundEffect: null, // Assigned after SOUNDS definition
-        },
-        WON: {
-          id: 'won',
-          isTerminal: true,
-          runsGameLoop: false,
-          canPause: false,
-          soundEffect: null, // Assigned after SOUNDS definition
-        },
-        LOST: {
-          id: 'lost',
-          isTerminal: true,
-          runsGameLoop: false,
-          canPause: false,
-          soundEffect: null, // Assigned after SOUNDS definition
+
+        COMBAT: {
+          DINOSAUR_DAMAGE: 1,
+          PUSHBACK_FORCE: 20,
+          INVINCIBILITY_FRAMES: 60, // ~1 second at 60fps
+          DINOSAUR_AGGRO_RANGE: 200,
         },
       },
 
-      // Player
-      PLAYER: {
-        START_X: 100,
-        START_Y: 100,
-        MAX_HEALTH: 5,
-        START_AMMO: 10,
-        BASE_SPEED: 2.5,
-        RADIUS: 15,
-        JUMP_VELOCITY: 8,
-        JUMP_CLEAR_HEIGHT: 25, // Height needed to clear obstacles
-      },
+      // ========================================================================
+      // ENTITIES - All game objects
+      // ========================================================================
+      ENTITIES: {
+        WEAPONS: {
+          REGULAR: {
+            id: 'regular',
+            icon: '💥',
+            bulletColor: '#ff0',
+            speed: 8,
+            radius: 4,
+            ammoConfig: {
+              playerKey: 'ammo', // Property name on player object
+              stateKey: 'playerAmmo', // React state variable name for setters and stateAccumulator
+            },
+            soundEffect: null, // Set after SOUNDS is defined
+            bulletFactory: null, // Set after createBullet is defined
+          },
+          TRANQUILIZER: {
+            id: 'tranquilizer',
+            icon: '💉',
+            bulletColor: '#00FF00',
+            speed: 5,
+            radius: 3,
+            startAmmo: 15,
+            scoreMultiplier: 0.5, // 50% of kill points
+            ammoConfig: {
+              playerKey: 'tranqAmmo', // Property name on player object
+              stateKey: 'playerTranqAmmo', // React state variable name for setters and stateAccumulator
+            },
+            soundEffect: null, // Set after SOUNDS is defined
+            bulletFactory: null, // Set after createTranquilizer is defined
+          },
+        },
 
-      // Physics
-      PHYSICS: {
-        GRAVITY: 0.5,
-        AMMO_GRAVITY: 0.30, // Gravity for ammo pickups (vertical bouncing)
-        AMMO_BOUNCE_DAMPING: -0.65, // Bounce damping (vertical only) - higher = more bouncy
-      },
+        DINOSAURS: {
+          VELOCIRAPTOR: {
+            id: 'raptor',
+            baseSize: 20,
+            health: 2,
+            speed: 1.5,
+            color: '#8B4513',
+            points: 100,
+            aggressive: true,
+            territorial: false,
+            tranqShots: 1,
+            sleepDuration: 480, // 8 seconds at 60fps
+            spitAttack: null, // No ranged attack
+          },
+          TYRANNOSAURUS_REX: {
+            id: 'trex',
+            baseSize: 35,
+            health: 4,
+            speed: 1.0,
+            color: '#654321',
+            points: 300,
+            aggressive: true,
+            territorial: false,
+            tranqShots: 3,
+            sleepDuration: 240, // 4 seconds at 60fps
+            spitAttack: null, // No ranged attack
+          },
+          STEGOSAURUS: {
+            id: 'stego',
+            baseSize: 30,
+            health: 3,
+            speed: 0.8,
+            color: '#556B2F',
+            points: 200,
+            aggressive: true,
+            territorial: false,
+            tranqShots: 2,
+            sleepDuration: 360, // 6 seconds at 60fps
+            spitAttack: null, // No ranged attack
+          },
+          PARASAUROLOPHUS: {
+            id: 'para',
+            baseSize: 25,
+            health: 2,
+            speed: 1.2,
+            color: '#CD853F',
+            points: 50,
+            aggressive: false,
+            territorial: false,
+            tranqShots: 1,
+            sleepDuration: 420, // 7 seconds at 60fps
+            spitAttack: null, // No ranged attack
+          },
+          TRICERATOPS: {
+            id: 'trike',
+            baseSize: 28,
+            health: 3,
+            speed: 0.9,
+            color: '#8B7355',
+            points: 75,
+            aggressive: false,
+            territorial: false,
+            tranqShots: 2,
+            sleepDuration: 360, // 6 seconds at 60fps
+            spitAttack: null, // No ranged attack
+          },
+          DILOPHOSAURUS: {
+            id: 'dilo',
+            baseSize: 24,
+            health: 3,
+            speed: 1.3,
+            color: '#9ACD32',
+            points: 150,
+            aggressive: true,
+            territorial: true,
+            tranqShots: 2,
+            sleepDuration: 360, // 6 seconds at 60fps
+            spitAttack: {
+              range: 180,              // Attack range in pixels
+              cooldown: 120,           // Frames between attacks (2 seconds at 60fps)
+              projectileSpeed: 4,      // Speed of projectile
+              projectileRadius: 6,     // Radius of projectile
+              damage: 1,               // Damage dealt to player
+              fillColor: '#9ACD32',    // Yellow-green fill
+              strokeColor: '#556B2F',  // Dark olive stroke
+              lineWidth: 1,            // Stroke width
+            },
+          },
+        },
 
-      // Combat
-      COMBAT: {
-        DINOSAUR_DAMAGE: 1,
-        PUSHBACK_FORCE: 20,
-        INVINCIBILITY_FRAMES: 60, // ~1 second at 60fps
-        DINOSAUR_AGGRO_RANGE: 200,
-      },
+        OBSTACLES: {
+          TREE: {
+            id: 'tree',
+            blocksMovement: true,
+            zIndex: 2,
+            colors: {
+              trunkBase: '#5C4033',
+              trunkHighlight: '#8B6F47',
+              trunkShadow: '#3E2723',
+              foliageDark: '#1A5F1A',     // Rich dark green
+              foliageBase: '#2D8B2D',     // Vibrant medium green
+              foliageLight: '#3D9A3D',    // Muted leafy green
+              foliageHighlight: '#5BA85B', // Softer light green
+              groundShadow: 'rgba(0, 0, 0, 0.2)', // Semi-transparent black shadow
+            },
+            foliageLayers: 3, // Number of foliage layers
+          },
+          BUSH: {
+            id: 'bush',
+            blocksMovement: true,
+            zIndex: 2,
+            colors: {
+              base: '#2F4F2F',
+              dark: '#1C3D1C',
+              light: '#4A6F4A',
+              highlight: '#5C825C',
+            },
+            clusters: 5, // Number of overlapping circles
+          },
+          MUSHROOM: {
+            id: 'mushroom',
+            blocksMovement: false,
+            zIndex: 1,
+            colors: {
+              stemBase: '#9A8A7A',    // Muted tan stem
+              stemShadow: '#6B5A47',  // Dark brown stem edge
+              capColors: [            // Array of dark earthy cap colors
+                '#5C3317', // Dark brown
+                '#654321', // Dark wood brown
+                '#6B4423', // Deep chestnut
+                '#7A5230', // Dark earth brown
+                '#8B6914', // Dark goldenrod brown
+              ],
+              spotsColor: '#C0C0C0',  // Muted gray spots
+            },
+            sizes: {
+              spotsCount: 3,              // Default number of spots (fallback)
+              spotsCountOptions: [0, 2, 3], // Valid spot counts (0=plain, 2=few, 3=normal)
+              stemWidthRatio: 0.4,        // Stem width relative to radius
+              stemHeightRatio: 0.8,       // Stem height relative to radius
+              capRadiusRatio: 0.7,        // Cap radius relative to radius
+              capHeightRatio: 0.6,        // Cap height ratio for ellipse perspective
+              spotDistanceRatio: 0.4,     // Spot distance from center
+              spotRadiusRatio: 0.15,      // Spot size relative to radius
+            },
+          },
+          GRASS: {
+            id: 'grass',
+            blocksMovement: false,
+            zIndex: 0,
+            colors: {
+              base: '#4A7C4A',      // Brighter medium green
+              dark: '#2F5F2F',      // Medium-dark green for depth
+              light: '#5FA05F',     // Lighter green highlights
+            },
+            sizes: {
+              bladeCount: 20,       // Number of grass blades per patch
+              bladeWidth: 2,        // Pixel width of each blade
+              minHeight: 10,        // Minimum blade height
+              maxHeight: 20,        // Maximum blade height
+            },
+          },
+        },
 
-      // Weapons - Unified weapon configuration with all properties
-      WEAPONS: {
-        REGULAR: {
-          id: 'regular',
-          icon: '💥',
-          bulletColor: '#ff0',
-          speed: 8,
-          radius: 4,
-          ammoConfig: {
-            playerKey: 'ammo', // Property name on player object
-            stateKey: 'playerAmmo', // React state variable name for setters and stateAccumulator
+        POWERUPS: {
+          HEALTH: {
+            id: 'health',
+            radius: 12,
+            icon: '❤️',
+            color: '#ff1744',
+            fillColor: '#ff1744',
+            strokeColor: '#fff',
+            lineWidth: 2,
+            drawIcon: (ctx, screenX, screenY) => {
+              // Draw cross
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 3;
+              ctx.beginPath();
+              ctx.moveTo(screenX - 5, screenY);
+              ctx.lineTo(screenX + 5, screenY);
+              ctx.moveTo(screenX, screenY - 5);
+              ctx.lineTo(screenX, screenY + 5);
+              ctx.stroke();
+            },
           },
-          soundEffect: null, // Set after SOUNDS is defined
-          bulletFactory: null, // Set after createBullet is defined
-        },
-        TRANQUILIZER: {
-          id: 'tranquilizer',
-          icon: '💉',
-          bulletColor: '#00FF00',
-          speed: 5,
-          radius: 3,
-          startAmmo: 15,
-          scoreMultiplier: 0.5, // 50% of kill points
-          ammoConfig: {
-            playerKey: 'tranqAmmo', // Property name on player object
-            stateKey: 'playerTranqAmmo', // React state variable name for setters and stateAccumulator
+          SPEED: {
+            id: 'speed',
+            radius: 12,
+            icon: '⚡',
+            color: '#00e5ff',
+            durationFrames: 300, // 5 seconds at 60fps
+            multiplier: 1.8,
+            fillColor: '#00e5ff',
+            strokeColor: '#fff',
+            lineWidth: 2,
+            drawIcon: (ctx, screenX, screenY) => {
+              // Draw lightning bolt
+              ctx.fillStyle = '#fff';
+              ctx.beginPath();
+              ctx.moveTo(screenX + 2, screenY - 6);
+              ctx.lineTo(screenX - 2, screenY);
+              ctx.lineTo(screenX + 1, screenY);
+              ctx.lineTo(screenX - 2, screenY + 6);
+              ctx.lineTo(screenX + 2, screenY);
+              ctx.lineTo(screenX - 1, screenY);
+              ctx.closePath();
+              ctx.fill();
+            },
           },
-          soundEffect: null, // Set after SOUNDS is defined
-          bulletFactory: null, // Set after createTranquilizer is defined
         },
-      },
 
-      // Dinosaurs - Unified dinosaur configuration with all properties
-      DINOSAURS: {
-        VELOCIRAPTOR: {
-          id: 'raptor',
-          baseSize: 20,
-          health: 2,
-          speed: 1.5,
-          color: '#8B4513',
-          points: 100,
-          aggressive: true,
-          territorial: false,
-          tranqShots: 1,
-          sleepDuration: 480, // 8 seconds at 60fps
-          spitAttack: null, // No ranged attack
-        },
-        TYRANNOSAURUS_REX: {
-          id: 'trex',
-          baseSize: 35,
-          health: 4,
-          speed: 1.0,
-          color: '#654321',
-          points: 300,
-          aggressive: true,
-          territorial: false,
-          tranqShots: 3,
-          sleepDuration: 240, // 4 seconds at 60fps
-          spitAttack: null, // No ranged attack
-        },
-        STEGOSAURUS: {
-          id: 'stego',
-          baseSize: 30,
-          health: 3,
-          speed: 0.8,
-          color: '#556B2F',
-          points: 200,
-          aggressive: true,
-          territorial: false,
-          tranqShots: 2,
-          sleepDuration: 360, // 6 seconds at 60fps
-          spitAttack: null, // No ranged attack
-        },
-        PARASAUROLOPHUS: {
-          id: 'para',
-          baseSize: 25,
-          health: 2,
-          speed: 1.2,
-          color: '#CD853F',
-          points: 50,
-          aggressive: false,
-          territorial: false,
-          tranqShots: 1,
-          sleepDuration: 420, // 7 seconds at 60fps
-          spitAttack: null, // No ranged attack
-        },
-        TRICERATOPS: {
-          id: 'trike',
-          baseSize: 28,
-          health: 3,
-          speed: 0.9,
-          color: '#8B7355',
-          points: 75,
-          aggressive: false,
-          territorial: false,
-          tranqShots: 2,
-          sleepDuration: 360, // 6 seconds at 60fps
-          spitAttack: null, // No ranged attack
-        },
-        DILOPHOSAURUS: {
-          id: 'dilo',
-          baseSize: 24,
-          health: 3,
-          speed: 1.3,
-          color: '#9ACD32',
-          points: 150,
-          aggressive: true,
-          territorial: true,
-          tranqShots: 2,
-          sleepDuration: 360, // 6 seconds at 60fps
-          spitAttack: {
-            range: 180,              // Attack range in pixels
-            cooldown: 120,           // Frames between attacks (2 seconds at 60fps)
-            projectileSpeed: 4,      // Speed of projectile
-            projectileRadius: 6,     // Radius of projectile
-            damage: 1,               // Damage dealt to player
-            fillColor: '#9ACD32',    // Yellow-green fill
-            strokeColor: '#556B2F',  // Dark olive stroke
-            lineWidth: 1,            // Stroke width
+        HAZARDS: {
+          TAR_PIT: {
+            id: 'tar_pit',
+            baseRadius: 40,
+            sizeVariance: 1.50, // Max variance: 150% (radius ranges from 50% to 200% of base)
+            slowMultiplier: 0.5, // Reduces speed to 50%
+            minSpacing: 200, // Minimum distance between tar pits
+            colors: {
+              base: '#1a0a00',     // Dark tar pit base
+              rim: '#3d2817',      // Lighter brown rim
+            },
+            rimWidth: 4,
+            bubble: {
+              frequency: 30,     // Frames between bubble spawns (0.5 seconds)
+              duration: 40,      // Duration of bubble animation in frames
+              baseRadius: 2,     // Starting bubble radius
+              growth: 4,         // Bubble radius growth
+              count: 3,          // Number of bubbles per pit
+              spread: 20,        // Random spread radius for bubble positions
+            },
+          },
+          ELECTRIC_FENCE: {
+            id: 'electric_fence',
+            width: 80,
+            height: 10,
+            damage: 1,
+            damageCooldown: 60, // Frames between damage ticks (1 second)
+            stunDurationMultiplier: 0.5, // Dinosaurs stunned for half of tranq sleep duration
+            pushbackForce: 50, // Bounce back force (MUST be > memory.avoidanceBuffer to prevent stuck dinos)
+            minSpacing: 150, // Minimum distance between fences
+            obstacleClearance: 60, // Clearance from obstacles (extra 10px for safety)
+            colors: {
+              base: '#2a2a2a',   // Dark gray/black base
+              wire: '#FFD700',   // Yellow electric wires
+            },
+            wireWidth: 2,
+            spark: {
+              frequency: 30,     // Frames between spark animations (0.5 seconds)
+              duration: 10,      // Duration of spark animation in frames
+              radius: 3,         // Radius of spark particles
+            },
+            zap: {
+              duration: 30,            // Duration of zap animation on dinosaurs (0.5 seconds)
+              auraAlpha: 0.3,          // Opacity of yellow zap aura
+              auraRadius: 5,           // Extra radius for zap aura
+              boltLength: 10,          // Length of lightning bolts
+              boltCount: 4,            // Number of lightning bolts
+              boltWidth: 2,            // Width of lightning bolts
+              boltRotationSpeed: 50,   // Milliseconds divisor for bolt rotation speed
+              soundMaxDistance: 400,   // Maximum distance from player to hear zap sound
+            },
+            memory: {
+              duration: 600,           // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
+              avoidanceBuffer: 30,     // Safety margin dinosaurs maintain from remembered fences (MUST be < pushbackForce)
+            },
           },
         },
-      },
 
-      // Static Structures (non-interactive map objects)
-      STATIC_STRUCTURES: {
-        EXIT: {
-          id: 'exit',
-          width: 60,
-          height: 60,
-          collisionRadius: 30,
-          lockIcon: '🔒',
-          lockIconSize: 32,
-          lockIconOffsetY: -40, // Position above exit
-          // Visual properties
-          lockedFillColor: '#888',
-          lockedStrokeColor: '#555',
-          unlockedFillColor: '#FFD700',
-          unlockedStrokeColor: '#FFA500',
-          borderWidth: 3,
-          textFont: '14px Arial',
-          textColor: '#000',
-          textOffsetY: 5,
-          drawFunction: null, // Assigned after draw function definition
-        },
-      },
-
-      // Health Bar
-      HEALTH_BAR: {
-        WIDTH_MULTIPLIER: 2.5,
-        HEIGHT: 5,
-        POSITION_MULTIPLIER: 1.5,
-        BORDER_OFFSET: 1,
-        BORDER_PADDING: 2,
-        BORDER_COLOR: '#000',
-        BACKGROUND_COLOR: '#f00',
-        HEALTH_COLOR: '#0f0',
-      },
-
-      // Obstacles - Unified object-based constants with visual properties
-      OBSTACLES: {
-        TREE: {
-          id: 'tree',
-          blocksMovement: true,
-          zIndex: 2,
-          colors: {
-            trunkBase: '#5C4033',
-            trunkHighlight: '#8B6F47',
-            trunkShadow: '#3E2723',
-            foliageDark: '#1A5F1A',     // Rich dark green
-            foliageBase: '#2D8B2D',     // Vibrant medium green
-            foliageLight: '#3D9A3D',    // Muted leafy green
-            foliageHighlight: '#5BA85B', // Softer light green
-            groundShadow: 'rgba(0, 0, 0, 0.2)', // Semi-transparent black shadow
-          },
-          foliageLayers: 3, // Number of foliage layers
-        },
-        BUSH: {
-          id: 'bush',
-          blocksMovement: true,
-          zIndex: 2,
-          colors: {
-            base: '#2F4F2F',
-            dark: '#1C3D1C',
-            light: '#4A6F4A',
-            highlight: '#5C825C',
-          },
-          clusters: 5, // Number of overlapping circles
-        },
-        MUSHROOM: {
-          id: 'mushroom',
-          blocksMovement: false,
-          zIndex: 1,
-          colors: {
-            stemBase: '#9A8A7A',    // Muted tan stem
-            stemShadow: '#6B5A47',  // Dark brown stem edge
-            capColors: [            // Array of dark earthy cap colors
-              '#5C3317', // Dark brown
-              '#654321', // Dark wood brown
-              '#6B4423', // Deep chestnut
-              '#7A5230', // Dark earth brown
-              '#8B6914', // Dark goldenrod brown
-            ],
-            spotsColor: '#C0C0C0',  // Muted gray spots
-          },
-          sizes: {
-            spotsCount: 3,              // Default number of spots (fallback)
-            spotsCountOptions: [0, 2, 3], // Valid spot counts (0=plain, 2=few, 3=normal)
-            stemWidthRatio: 0.4,        // Stem width relative to radius
-            stemHeightRatio: 0.8,       // Stem height relative to radius
-            capRadiusRatio: 0.7,        // Cap radius relative to radius
-            capHeightRatio: 0.6,        // Cap height ratio for ellipse perspective
-            spotDistanceRatio: 0.4,     // Spot distance from center
-            spotRadiusRatio: 0.15,      // Spot size relative to radius
-          },
-        },
-        GRASS: {
-          id: 'grass',
-          blocksMovement: false,
-          zIndex: 0,
-          colors: {
-            base: '#4A7C4A',      // Brighter medium green
-            dark: '#2F5F2F',      // Medium-dark green for depth
-            light: '#5FA05F',     // Lighter green highlights
-          },
-          sizes: {
-            bladeCount: 20,       // Number of grass blades per patch
-            bladeWidth: 2,        // Pixel width of each blade
-            minHeight: 10,        // Minimum blade height
-            maxHeight: 20,        // Maximum blade height
-          },
-        },
-      },
-
-      // Powerups - Unified powerup configuration with all properties
-      POWERUPS: {
-        HEALTH: {
-          id: 'health',
-          radius: 12,
-          icon: '❤️',
-          color: '#ff1744',
-          fillColor: '#ff1744',
-          strokeColor: '#fff',
-          lineWidth: 2,
-          drawIcon: (ctx, screenX, screenY) => {
-            // Draw cross
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(screenX - 5, screenY);
-            ctx.lineTo(screenX + 5, screenY);
-            ctx.moveTo(screenX, screenY - 5);
-            ctx.lineTo(screenX, screenY + 5);
-            ctx.stroke();
-          },
-        },
-        SPEED: {
-          id: 'speed',
-          radius: 12,
-          icon: '⚡',
-          color: '#00e5ff',
-          durationFrames: 300, // 5 seconds at 60fps
-          multiplier: 1.8,
-          fillColor: '#00e5ff',
-          strokeColor: '#fff',
-          lineWidth: 2,
-          drawIcon: (ctx, screenX, screenY) => {
-            // Draw lightning bolt
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.moveTo(screenX + 2, screenY - 6);
-            ctx.lineTo(screenX - 2, screenY);
-            ctx.lineTo(screenX + 1, screenY);
-            ctx.lineTo(screenX - 2, screenY + 6);
-            ctx.lineTo(screenX + 2, screenY);
-            ctx.lineTo(screenX - 1, screenY);
-            ctx.closePath();
-            ctx.fill();
-          },
-        },
-      },
-
-      // Spawning
-      SPAWN: {
-        PLAYER_SPAWN_CLEARANCE: 150, // Minimum distance obstacles must be from player spawn
-        OBSTACLE_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid obstacle position
-        OBSTACLE_MIN_RADIUS: 15,
-        OBSTACLE_MAX_RADIUS: 35, // 15 + 20
-        OBSTACLE_PADDING: 100,
-        OBSTACLE_MIN_MARGIN: 50,
-        MUSHROOM_MIN_RADIUS: 8,       // Minimum mushroom radius (smaller than regular obstacles)
-        MUSHROOM_MAX_RADIUS: 15,      // Maximum mushroom radius
-        MUSHROOM_PATCH_SIZE: 5,       // Number of mushrooms per patch
-        MUSHROOM_PATCH_SPREAD: 80,    // Spread radius for patch members
-        MUSHROOM_PATCH_PERCENTAGE: 0.2, // 20% of obstacles spawn as mushroom patches
-        GRASS_MIN_RADIUS: 12,         // Minimum grass patch radius
-        GRASS_MAX_RADIUS: 20,         // Maximum grass patch radius
-        GRASS_PATCH_SIZE: 8,          // Number of grass patches per cluster
-        GRASS_PATCH_SPREAD: 100,      // Spread radius for grass cluster members
-        GRASS_PATCH_PERCENTAGE: 0.3,  // 30% of obstacles spawn as grass patch clusters
-        DINOSAUR_GRID_START_X: 300,
-        DINOSAUR_GRID_START_Y: 200,
-        DINOSAUR_GRID_SPACING_X: 250,
-        DINOSAUR_GRID_SPACING_Y: 300,
-        DINOSAUR_GRID_RANDOM_OFFSET: 100,
-        DINOSAUR_SPAWN_MAX_ATTEMPTS: 50,
-        DINOSAUR_SPAWN_SEARCH_RANGE: 400, // ±200 pixels
-        POWERUP_SAFE_ZONE_MARGIN: 400,
-        POWERUP_SAFE_ZONE_PADDING: 800,
-        POWERUP_RADIUS: 12,
-        TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
-        TRANQ_DEPOT_RADIUS: 15,
-        TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
-        AMMO_DEPOT_COUNT_PER_LEVEL: 2, // Number of regular ammo depots per level
-        AMMO_DEPOT_RADIUS: 15, // Same size as tranq depot
-        DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types during spawn
-        HAZARD_SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
-      },
-
-      // Ammo Pickup
-      AMMO_PICKUP: {
-        RADIUS: 8,
-        COLLECTION_BONUS_RADIUS: 10,
-        INITIAL_UPWARD_VELOCITY: -7, // Initial upward velocity for vertical bounce (high for visibility)
-        MAX_BOUNCES: 10, // Maximum number of bounces before removal
-        PROGRESSIVE_DAMPING_FACTOR: 0.3, // How much damping reduces over bounce progression (0.3 = 30% reduction by final bounce)
-        COLOR: '#FFD700', // Gold color
-      },
-
-      // Depot Visual Styles
-      DEPOT_STYLES: {
-        TRANQ: {
-          fillColor: '#228B22',
-          strokeColor: '#006400',
-          lineWidth: 2,
-          drawIcon: (ctx, screenX, screenY) => {
-            // Draw syringe icon
-            ctx.fillStyle = '#00FF00';
-            ctx.beginPath();
-            ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#FFF';
-            ctx.fillRect(screenX - 1, screenY, 2, 6);
-            ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
-          },
-        },
-        AMMO: {
-          fillColor: '#1E90FF',
-          strokeColor: '#0047AB',
-          lineWidth: 2,
-          drawIcon: (ctx, screenX, screenY) => {
-            // Draw bullet icon (💥 emoji)
-            ctx.font = '16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(GAME_CONSTANTS.WEAPONS.REGULAR.icon, screenX, screenY);
+        STATIC_STRUCTURES: {
+          EXIT: {
+            id: 'exit',
+            width: 60,
+            height: 60,
+            collisionRadius: 30,
+            lockIcon: '🔒',
+            lockIconSize: 32,
+            lockIconOffsetY: -40, // Position above exit
+            // Visual properties
+            lockedFillColor: '#888',
+            lockedStrokeColor: '#555',
+            unlockedFillColor: '#FFD700',
+            unlockedStrokeColor: '#FFA500',
+            borderWidth: 3,
+            textFont: '14px Arial',
+            textColor: '#000',
+            textOffsetY: 5,
+            drawFunction: null, // Assigned after draw function definition
           },
         },
       },
 
-      // AI Behavior
+      // ========================================================================
+      // WORLD - Map and level generation
+      // ========================================================================
+      WORLD: {
+        SPAWN: {
+          PLAYER_SPAWN_CLEARANCE: 150, // Minimum distance obstacles must be from player spawn
+          OBSTACLE_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid obstacle position
+          OBSTACLE_MIN_RADIUS: 15,
+          OBSTACLE_MAX_RADIUS: 35, // 15 + 20
+          OBSTACLE_PADDING: 100,
+          OBSTACLE_MIN_MARGIN: 50,
+          MUSHROOM_MIN_RADIUS: 8,       // Minimum mushroom radius (smaller than regular obstacles)
+          MUSHROOM_MAX_RADIUS: 15,      // Maximum mushroom radius
+          MUSHROOM_PATCH_SIZE: 5,       // Number of mushrooms per patch
+          MUSHROOM_PATCH_SPREAD: 80,    // Spread radius for patch members
+          MUSHROOM_PATCH_PERCENTAGE: 0.2, // 20% of obstacles spawn as mushroom patches
+          GRASS_MIN_RADIUS: 12,         // Minimum grass patch radius
+          GRASS_MAX_RADIUS: 20,         // Maximum grass patch radius
+          GRASS_PATCH_SIZE: 8,          // Number of grass patches per cluster
+          GRASS_PATCH_SPREAD: 100,      // Spread radius for grass cluster members
+          GRASS_PATCH_PERCENTAGE: 0.3,  // 30% of obstacles spawn as grass patch clusters
+          DINOSAUR_GRID_START_X: 300,
+          DINOSAUR_GRID_START_Y: 200,
+          DINOSAUR_GRID_SPACING_X: 250,
+          DINOSAUR_GRID_SPACING_Y: 300,
+          DINOSAUR_GRID_RANDOM_OFFSET: 100,
+          DINOSAUR_SPAWN_MAX_ATTEMPTS: 50,
+          DINOSAUR_SPAWN_SEARCH_RANGE: 400, // ±200 pixels
+          POWERUP_SAFE_ZONE_MARGIN: 400,
+          POWERUP_SAFE_ZONE_PADDING: 800,
+          POWERUP_RADIUS: 12,
+          TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
+          TRANQ_DEPOT_RADIUS: 15,
+          TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
+          AMMO_DEPOT_COUNT_PER_LEVEL: 2, // Number of regular ammo depots per level
+          AMMO_DEPOT_RADIUS: 15, // Same size as tranq depot
+          DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types during spawn
+          HAZARD_SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
+        },
+
+        AMMO_PICKUP: {
+          RADIUS: 8,
+          COLLECTION_BONUS_RADIUS: 10,
+          INITIAL_UPWARD_VELOCITY: -7, // Initial upward velocity for vertical bounce (high for visibility)
+          MAX_BOUNCES: 10, // Maximum number of bounces before removal
+          PROGRESSIVE_DAMPING_FACTOR: 0.3, // How much damping reduces over bounce progression (0.3 = 30% reduction by final bounce)
+          COLOR: '#FFD700', // Gold color
+        },
+      },
+
+      // ========================================================================
+      // AI - NPC behavior
+      // ========================================================================
       AI: {
-        // AI States
         STATES: {
           PATROL: 'patrol',
           CHASE: 'chase',
@@ -493,126 +510,116 @@
         EXIT_GUARD_SPAWN_RADIUS_MULTIPLIER: 0.7, // Multiplier for guard spawn distance from exit center
       },
 
-      // Touch Controls
-      TOUCH: {
-        JOYSTICK_DEAD_ZONE: 10,
-        JOYSTICK_MAX_RANGE: 40,
-        AUTO_AIM_FALLBACK_DISTANCE: 100,
-      },
+      // ========================================================================
+      // VISUALS - Rendering and animation
+      // ========================================================================
+      VISUALS: {
+        HEALTH_BAR: {
+          WIDTH_MULTIPLIER: 2.5,
+          HEIGHT: 5,
+          POSITION_MULTIPLIER: 1.5,
+          BORDER_OFFSET: 1,
+          BORDER_PADDING: 2,
+          BORDER_COLOR: '#000',
+          BACKGROUND_COLOR: '#f00',
+          HEALTH_COLOR: '#0f0',
+        },
 
-      // Rendering
-      RENDER: {
-        GRASS_PATCHES: 50,
-        GRASS_PATCH_SIZE: 20,
-      },
+        FLOATING_TEXT: {
+          LIFETIME_FRAMES: 60, // 1 second at 60fps
+          RISE_SPEED: 1,
+          FADE_START_FRAME: 30,
+          FONT: 'bold 20px Arial',
+          LINE_WIDTH: 3,
+          SHADOW_COLOR: '#000',
+          SHADOW_BLUR: 4,
+          CULLING_BUFFER: 50, // Pixels beyond viewport to skip rendering
+          ALPHA_OPAQUE: 1.0,
+        },
 
-      // Floating Text
-      FLOATING_TEXT: {
-        LIFETIME_FRAMES: 60, // 1 second at 60fps
-        RISE_SPEED: 1,
-        FADE_START_FRAME: 30,
-        FONT: 'bold 20px Arial',
-        LINE_WIDTH: 3,
-        SHADOW_COLOR: '#000',
-        SHADOW_BLUR: 4,
-        CULLING_BUFFER: 50, // Pixels beyond viewport to skip rendering
-        ALPHA_OPAQUE: 1.0,
-      },
+        Z_ANIMATION: {
+          FILL_COLOR: '#FFF',
+          SHADOW_COLOR: '#000',
+          SHADOW_BLUR: 2,
+          TEXT_ALIGN: 'center',
+          // Array of Z configurations (small to large)
+          Z_CONFIGS: [
+            { FONT: 'bold 16px Arial', OFFSET_X: 0, OFFSET_Y: -10 },
+            { FONT: 'bold 20px Arial', OFFSET_X: 8, OFFSET_Y: -18 },
+            { FONT: 'bold 24px Arial', OFFSET_X: 18, OFFSET_Y: -28 },
+          ],
+          // Bobbing animation
+          BOB_SPEED: 200, // Milliseconds per cycle
+          BOB_AMPLITUDE: 3, // Pixels
+          CULLING_BUFFER: 50, // Pixels beyond viewport to skip rendering
+        },
 
-      // Sleeping Z-Z-Z Animation
-      Z_ANIMATION: {
-        FILL_COLOR: '#FFF',
-        SHADOW_COLOR: '#000',
-        SHADOW_BLUR: 2,
-        TEXT_ALIGN: 'center',
-        // Array of Z configurations (small to large)
-        Z_CONFIGS: [
-          { FONT: 'bold 16px Arial', OFFSET_X: 0, OFFSET_Y: -10 },
-          { FONT: 'bold 20px Arial', OFFSET_X: 8, OFFSET_Y: -18 },
-          { FONT: 'bold 24px Arial', OFFSET_X: 18, OFFSET_Y: -28 },
-        ],
-        // Bobbing animation
-        BOB_SPEED: 200, // Milliseconds per cycle
-        BOB_AMPLITUDE: 3, // Pixels
-        CULLING_BUFFER: 50, // Pixels beyond viewport to skip rendering
-      },
-
-      // Environmental Hazards - Unified object-based constants with type-specific properties
-      HAZARDS: {
-        TAR_PIT: {
-          id: 'tar_pit',
-          baseRadius: 40,
-          sizeVariance: 1.50, // Max variance: 150% (radius ranges from 50% to 200% of base)
-          slowMultiplier: 0.5, // Reduces speed to 50%
-          minSpacing: 200, // Minimum distance between tar pits
-          colors: {
-            base: '#1a0a00',     // Dark tar pit base
-            rim: '#3d2817',      // Lighter brown rim
+        DEPOT_STYLES: {
+          TRANQ: {
+            fillColor: '#228B22',
+            strokeColor: '#006400',
+            lineWidth: 2,
+            drawIcon: (ctx, screenX, screenY) => {
+              // Draw syringe icon
+              ctx.fillStyle = '#00FF00';
+              ctx.beginPath();
+              ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#FFF';
+              ctx.fillRect(screenX - 1, screenY, 2, 6);
+              ctx.fillRect(screenX - 3, screenY + 6, 6, 2);
+            },
           },
-          rimWidth: 4,
-          bubble: {
-            frequency: 30,     // Frames between bubble spawns (0.5 seconds)
-            duration: 40,      // Duration of bubble animation in frames
-            baseRadius: 2,     // Starting bubble radius
-            growth: 4,         // Bubble radius growth
-            count: 3,          // Number of bubbles per pit
-            spread: 20,        // Random spread radius for bubble positions
+          AMMO: {
+            fillColor: '#1E90FF',
+            strokeColor: '#0047AB',
+            lineWidth: 2,
+            drawIcon: (ctx, screenX, screenY) => {
+              // Draw bullet icon (💥 emoji)
+              ctx.font = '16px Arial';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon, screenX, screenY);
+            },
           },
         },
-        ELECTRIC_FENCE: {
-          id: 'electric_fence',
-          width: 80,
-          height: 10,
-          damage: 1,
-          damageCooldown: 60, // Frames between damage ticks (1 second)
-          stunDurationMultiplier: 0.5, // Dinosaurs stunned for half of tranq sleep duration
-          pushbackForce: 50, // Bounce back force (MUST be > memory.avoidanceBuffer to prevent stuck dinos)
-          minSpacing: 150, // Minimum distance between fences
-          obstacleClearance: 60, // Clearance from obstacles (extra 10px for safety)
-          colors: {
-            base: '#2a2a2a',   // Dark gray/black base
-            wire: '#FFD700',   // Yellow electric wires
-          },
-          wireWidth: 2,
-          spark: {
-            frequency: 30,     // Frames between spark animations (0.5 seconds)
-            duration: 10,      // Duration of spark animation in frames
-            radius: 3,         // Radius of spark particles
-          },
-          zap: {
-            duration: 30,            // Duration of zap animation on dinosaurs (0.5 seconds)
-            auraAlpha: 0.3,          // Opacity of yellow zap aura
-            auraRadius: 5,           // Extra radius for zap aura
-            boltLength: 10,          // Length of lightning bolts
-            boltCount: 4,            // Number of lightning bolts
-            boltWidth: 2,            // Width of lightning bolts
-            boltRotationSpeed: 50,   // Milliseconds divisor for bolt rotation speed
-            soundMaxDistance: 400,   // Maximum distance from player to hear zap sound
-          },
-          memory: {
-            duration: 600,           // How long dinosaurs remember to avoid a fence (10 seconds at 60fps)
-            avoidanceBuffer: 30,     // Safety margin dinosaurs maintain from remembered fences (MUST be < pushbackForce)
-          },
+
+        RENDER: {
+          GRASS_PATCHES: 50,
+          GRASS_PATCH_SIZE: 20,
         },
       },
 
-      // Audio
-      AUDIO: {
-        DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
+      // ========================================================================
+      // INPUT - Control systems
+      // ========================================================================
+      INPUT: {
+        TOUCH: {
+          JOYSTICK_DEAD_ZONE: 10,
+          JOYSTICK_MAX_RANGE: 40,
+          AUTO_AIM_FALLBACK_DISTANCE: 100,
+        },
       },
 
-      // Viewports - Canvas size presets
-      VIEWPORTS: {
-        small: { width: 800, height: 600, label: 'Small' },
-        medium: { width: 1000, height: 750, label: 'Medium' },
-        large: { width: 1200, height: 900, label: 'Large' },
-      },
+      // ========================================================================
+      // CONFIG - Game settings
+      // ========================================================================
+      CONFIG: {
+        AUDIO: {
+          DEFAULT_VOLUME: 0.3, // Default volume level (0.0-1.0)
+        },
 
-      // Canvas Sizing - Responsive canvas layout constants
-      CANVAS_SIZING: {
-        WINDOW_PADDING: 20, // Horizontal padding from window edges
-        VERTICAL_SPACING_DESKTOP: 200, // Space for UI above/below canvas on desktop
-        VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile
+        VIEWPORTS: {
+          small: { width: 800, height: 600, label: 'Small' },
+          medium: { width: 1000, height: 750, label: 'Medium' },
+          large: { width: 1200, height: 900, label: 'Large' },
+        },
+
+        CANVAS_SIZING: {
+          WINDOW_PADDING: 20, // Horizontal padding from window edges
+          VERTICAL_SPACING_DESKTOP: 200, // Space for UI above/below canvas on desktop
+          VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile
+        },
       },
     };
 
@@ -662,12 +669,12 @@
         exitX: 1800,
         exitY: 1400,
         exitGuards: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 3 }
         ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS, count: 2 },
-          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS, count: 2 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 2 }
         ],
         obstacles: 40,
         powerups: 3,
@@ -682,16 +689,16 @@
         exitX: 3000,
         exitY: 2200,
         exitGuards: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 1 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS, count: 1 }
         ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 7 },
-          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS, count: 2 },
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 2 },
-          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS, count: 4 },
-          { type: GAME_CONSTANTS.DINOSAURS.TRICERATOPS, count: 3 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 7 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TYRANNOSAURUS_REX, count: 3 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS, count: 2 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 4 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS, count: 3 }
         ],
         obstacles: 70,
         powerups: 4,
@@ -706,17 +713,17 @@
         exitX: 4200,
         exitY: 3000,
         exitGuards: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 3 },
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 1 },
-          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX, count: 1 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 3 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS, count: 1 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TYRANNOSAURUS_REX, count: 1 }
         ],
         dinosaurs: [
-          { type: GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR, count: 10, speed: 1.7 }, // Faster raptors
-          { type: GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX, count: 5, speed: 1.2 }, // Faster T-Rex
-          { type: GAME_CONSTANTS.DINOSAURS.STEGOSAURUS, count: 5, speed: 0.9 }, // Slightly faster
-          { type: GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS, count: 5 },
-          { type: GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS, count: 6 },
-          { type: GAME_CONSTANTS.DINOSAURS.TRICERATOPS, count: 5 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 10, speed: 1.7 }, // Faster raptors
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TYRANNOSAURUS_REX, count: 5, speed: 1.2 }, // Faster T-Rex
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS, count: 5, speed: 0.9 }, // Slightly faster
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS, count: 5 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 6 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS, count: 5 }
         ],
         obstacles: 100,
         powerups: 5,
@@ -763,14 +770,14 @@
     // ============================================================================
 
     // Sound effects for weapon types
-    GAME_CONSTANTS.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
-    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
+    GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
+    GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
 
     // Sound effects for game state transitions
-    GAME_CONSTANTS.GAME_STATES.PLAYING.soundEffect = SOUNDS.GAME_START;
-    GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE.soundEffect = SOUNDS.LEVEL_COMPLETE;
-    GAME_CONSTANTS.GAME_STATES.WON.soundEffect = SOUNDS.VICTORY;
-    GAME_CONSTANTS.GAME_STATES.LOST.soundEffect = SOUNDS.GAME_OVER;
+    GAME_CONSTANTS.CORE.GAME_STATES.PLAYING.soundEffect = SOUNDS.GAME_START;
+    GAME_CONSTANTS.CORE.GAME_STATES.LEVEL_COMPLETE.soundEffect = SOUNDS.LEVEL_COMPLETE;
+    GAME_CONSTANTS.CORE.GAME_STATES.WON.soundEffect = SOUNDS.VICTORY;
+    GAME_CONSTANTS.CORE.GAME_STATES.LOST.soundEffect = SOUNDS.GAME_OVER;
 
     // ============================================================================
     // UTILITY FUNCTIONS
@@ -791,7 +798,7 @@
      * @returns {number} Random value between -range/2 and +range/2
      */
     const randomCentered = (range) => {
-      return (Math.random() - GAME_CONSTANTS.RANDOM_CENTER) * range;
+      return (Math.random() - 0.5) * range;
     };
 
     /**
@@ -799,8 +806,8 @@
      * @returns {Object} Object with offsetX and offsetY properties
      */
     const randomizeBubbleOffset = () => ({
-      offsetX: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT.bubble.spread),
-      offsetY: randomCentered(GAME_CONSTANTS.HAZARDS.TAR_PIT.bubble.spread)
+      offsetX: randomCentered(GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.bubble.spread),
+      offsetY: randomCentered(GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.bubble.spread)
     });
 
     /**
@@ -812,7 +819,7 @@
      * @param {number} clearance - Extra clearance distance (default: DEFAULT_ENTITY_CLEARANCE)
      * @returns {boolean} True if position is valid (no overlaps)
      */
-    const isValidPosition = (x, y, radius, game, clearance = GAME_CONSTANTS.SPAWN.DEFAULT_ENTITY_CLEARANCE) => {
+    const isValidPosition = (x, y, radius, game, clearance = GAME_CONSTANTS.WORLD.SPAWN.DEFAULT_ENTITY_CLEARANCE) => {
       // Check against tar pits
       for (const tarPit of game.tarPits) {
         const dist = distance(x, y, tarPit.x, tarPit.y);
@@ -945,7 +952,7 @@
      */
     const checkObstacleCollision = (x, y, radius, obstacles, jumpHeight = 0) => {
       // Jump over obstacles if high enough
-      if (jumpHeight >= GAME_CONSTANTS.PLAYER.JUMP_CLEAR_HEIGHT) return false;
+      if (jumpHeight >= GAME_CONSTANTS.CORE.PLAYER.JUMP_CLEAR_HEIGHT) return false;
 
       for (const obs of obstacles) {
         if (circleCollision(x, y, radius, obs.x, obs.y, obs.radius)) {
@@ -959,7 +966,7 @@
      * Create a bullet object
      */
     const createBullet = (fromX, fromY, toX, toY) => {
-      const weapon = GAME_CONSTANTS.WEAPONS.REGULAR;
+      const weapon = GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR;
       const { dx, dy } = normalize(toX - fromX, toY - fromY);
       const bullet = {
         x: fromX,
@@ -997,10 +1004,10 @@
       const tranq = {
         x: fromX,
         y: fromY,
-        vx: dx * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.speed,
-        vy: dy * GAME_CONSTANTS.WEAPONS.TRANQUILIZER.speed,
-        radius: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.radius,
-        weaponType: GAME_CONSTANTS.WEAPONS.TRANQUILIZER
+        vx: dx * GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.speed,
+        vy: dy * GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.speed,
+        radius: GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.radius,
+        weaponType: GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER
       };
 
       // Add instance method for physics update
@@ -1024,7 +1031,7 @@
 
     /**
      * Transition to a new game state with automatic sound effect handling
-     * @param {Object} newState - State object from GAME_CONSTANTS.GAME_STATES
+     * @param {Object} newState - State object from GAME_CONSTANTS.CORE.GAME_STATES
      * @param {Function} playSound - Sound playing function
      * @param {Object|null} stateAccumulator - State accumulator for batched updates (game loop), or null
      * @param {Function|null} setGameState - Direct setState function (when not using accumulator)
@@ -1045,7 +1052,7 @@
 
     /**
      * Unified weapon firing logic
-     * @param {Object} weapon - Weapon type from GAME_CONSTANTS.WEAPONS
+     * @param {Object} weapon - Weapon type from GAME_CONSTANTS.ENTITIES.WEAPONS
      * @param {Object} player - Player object
      * @param {number} targetX - Target X coordinate
      * @param {number} targetY - Target Y coordinate
@@ -1092,14 +1099,14 @@
         startY: y,
         text,
         color,
-        lifetime: GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES,
+        lifetime: GAME_CONSTANTS.VISUALS.FLOATING_TEXT.LIFETIME_FRAMES,
         age: 0
       };
 
       // Add instance method for physics update
       floatingText.update = function() {
         this.age++;
-        this.y -= GAME_CONSTANTS.FLOATING_TEXT.RISE_SPEED;
+        this.y -= GAME_CONSTANTS.VISUALS.FLOATING_TEXT.RISE_SPEED;
         return this.age < this.lifetime; // Return false when expired
       };
 
@@ -1109,17 +1116,17 @@
         const screenY = this.y - cameraY;
 
         // Culling
-        const buffer = GAME_CONSTANTS.FLOATING_TEXT.CULLING_BUFFER;
+        const buffer = GAME_CONSTANTS.VISUALS.FLOATING_TEXT.CULLING_BUFFER;
         const canvas = ctx.canvas;
         if (screenX < -buffer || screenX > canvas.width + buffer || screenY < -buffer || screenY > canvas.height + buffer) {
           return;
         }
 
         // Calculate alpha (fade out in final frames)
-        const fadeDuration = GAME_CONSTANTS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME;
-        const alpha = this.age < GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME
-          ? GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE
-          : GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE - (this.age - GAME_CONSTANTS.FLOATING_TEXT.FADE_START_FRAME) / fadeDuration;
+        const fadeDuration = GAME_CONSTANTS.VISUALS.FLOATING_TEXT.LIFETIME_FRAMES - GAME_CONSTANTS.VISUALS.FLOATING_TEXT.FADE_START_FRAME;
+        const alpha = this.age < GAME_CONSTANTS.VISUALS.FLOATING_TEXT.FADE_START_FRAME
+          ? GAME_CONSTANTS.VISUALS.FLOATING_TEXT.ALPHA_OPAQUE
+          : GAME_CONSTANTS.VISUALS.FLOATING_TEXT.ALPHA_OPAQUE - (this.age - GAME_CONSTANTS.VISUALS.FLOATING_TEXT.FADE_START_FRAME) / fadeDuration;
 
         ctx.globalAlpha = alpha;
         ctx.fillStyle = this.color;
@@ -1142,9 +1149,9 @@
       let attempts = 0;
 
       do {
-        x = Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN;
-        y = Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN;
-        radius = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_RADIUS);
+        x = Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN;
+        y = Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN;
+        radius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_RADIUS);
         attempts++;
 
         let valid = true;
@@ -1152,7 +1159,7 @@
         // Check player clearance
         if (playerX !== null && playerY !== null) {
           const distFromPlayer = distance(x, y, playerX, playerY);
-          const requiredClearance = GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
+          const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
           if (distFromPlayer < requiredClearance) {
             valid = false;
           }
@@ -1164,13 +1171,13 @@
         }
 
         if (valid) break;
-      } while (attempts < GAME_CONSTANTS.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
+      } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
 
       const obstacle = {
         x,
         y,
         radius,
-        obstacleType: Math.random() > 0.5 ? GAME_CONSTANTS.OBSTACLES.TREE : GAME_CONSTANTS.OBSTACLES.BUSH
+        obstacleType: Math.random() > 0.5 ? GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE : GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH
       };
 
       // Add instance draw method
@@ -1192,23 +1199,23 @@
      */
     const createMushroomPatch = (centerX, centerY, colorIndex) => {
       const mushrooms = [];
-      const patchSize = GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_SIZE;
-      const spread = GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_SPREAD;
+      const patchSize = GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SIZE;
+      const spread = GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SPREAD;
 
       for (let i = 0; i < patchSize; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * spread;
         const x = centerX + Math.cos(angle) * dist;
         const y = centerY + Math.sin(angle) * dist;
-        const radius = GAME_CONSTANTS.SPAWN.MUSHROOM_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.MUSHROOM_MAX_RADIUS - GAME_CONSTANTS.SPAWN.MUSHROOM_MIN_RADIUS);
-        const spotOptions = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes.spotsCountOptions;
+        const radius = GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_MIN_RADIUS);
+        const spotOptions = GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.sizes.spotsCountOptions;
         const spotCount = spotOptions[Math.floor(Math.random() * spotOptions.length)];
 
         const mushroom = {
           x,
           y,
           radius,
-          obstacleType: GAME_CONSTANTS.OBSTACLES.MUSHROOM,
+          obstacleType: GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM,
           colorIndex,
           spotCount
         };
@@ -1234,21 +1241,21 @@
      */
     const createGrassPatch = (centerX, centerY) => {
       const patches = [];
-      const patchSize = GAME_CONSTANTS.SPAWN.GRASS_PATCH_SIZE;
-      const spread = GAME_CONSTANTS.SPAWN.GRASS_PATCH_SPREAD;
+      const patchSize = GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SIZE;
+      const spread = GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SPREAD;
 
       for (let i = 0; i < patchSize; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * spread;
         const x = centerX + Math.cos(angle) * dist;
         const y = centerY + Math.sin(angle) * dist;
-        const radius = GAME_CONSTANTS.SPAWN.GRASS_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.SPAWN.GRASS_MAX_RADIUS - GAME_CONSTANTS.SPAWN.GRASS_MIN_RADIUS);
+        const radius = GAME_CONSTANTS.WORLD.SPAWN.GRASS_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.GRASS_MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.GRASS_MIN_RADIUS);
 
         const patch = {
           x,
           y,
           radius,
-          obstacleType: GAME_CONSTANTS.OBSTACLES.GRASS
+          obstacleType: GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS
         };
 
         // Add instance draw method
@@ -1268,10 +1275,10 @@
      * Create a powerup object
      */
     const createPowerup = (mapWidth, mapHeight) => {
-      const powerupType = Math.random() > 0.5 ? GAME_CONSTANTS.POWERUPS.HEALTH : GAME_CONSTANTS.POWERUPS.SPEED;
+      const powerupType = Math.random() > 0.5 ? GAME_CONSTANTS.ENTITIES.POWERUPS.HEALTH : GAME_CONSTANTS.ENTITIES.POWERUPS.SPEED;
       const powerup = {
-        x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        x: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        y: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
         powerupType,
         radius: powerupType.radius,
         active: true
@@ -1290,16 +1297,16 @@
      */
     const createTranqDepot = (mapWidth, mapHeight) => {
       const depot = {
-        x: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        y: GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        radius: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_RADIUS,
-        ammo: GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_AMMO,
+        x: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        y: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
+        radius: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_RADIUS,
+        ammo: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_AMMO,
         active: true
       };
 
       // Add instance method for drawing
       depot.draw = function(ctx, cameraX, cameraY) {
-        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.DEPOT_STYLES.TRANQ);
+        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.TRANQ);
       };
 
       return depot;
@@ -1315,14 +1322,14 @@
       const depot = {
         x,
         y,
-        radius: GAME_CONSTANTS.SPAWN.AMMO_DEPOT_RADIUS,
+        radius: GAME_CONSTANTS.WORLD.SPAWN.AMMO_DEPOT_RADIUS,
         amount,
         active: true
       };
 
       // Add instance method for drawing
       depot.draw = function(ctx, cameraX, cameraY) {
-        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.DEPOT_STYLES.AMMO);
+        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.AMMO);
       };
 
       return depot;
@@ -1340,9 +1347,9 @@
         x,
         y,
         startY,
-        radius: GAME_CONSTANTS.AMMO_PICKUP.RADIUS,
+        radius: GAME_CONSTANTS.WORLD.AMMO_PICKUP.RADIUS,
         vx: 0, // No horizontal velocity for vertical bounce
-        vy: GAME_CONSTANTS.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY,
+        vy: GAME_CONSTANTS.WORLD.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY,
         ammoAmount,
         hasBounced: false,
         bounceCount: 0
@@ -1352,7 +1359,7 @@
       pickup.update = function(player, difficulty, playSound, stateAccumulator, createFloatingText) {
         // Vertical-only movement
         this.y += this.vy;
-        this.vy += GAME_CONSTANTS.PHYSICS.AMMO_GRAVITY;
+        this.vy += GAME_CONSTANTS.CORE.PHYSICS.AMMO_GRAVITY;
 
         // Bounce when hitting the ground
         if (this.y >= this.startY && this.vy > 0) {
@@ -1361,10 +1368,10 @@
 
           // Apply damping with progressive fade
           const diffMod = DIFFICULTY_MODIFIERS[difficulty];
-          const adjustedDamping = GAME_CONSTANTS.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
-          const maxBounces = GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
+          const adjustedDamping = GAME_CONSTANTS.CORE.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
+          const maxBounces = GAME_CONSTANTS.WORLD.AMMO_PICKUP.MAX_BOUNCES;
           const bounceProgress = this.bounceCount / maxBounces;
-          const progressiveDamping = adjustedDamping * (1 - bounceProgress * GAME_CONSTANTS.AMMO_PICKUP.PROGRESSIVE_DAMPING_FACTOR);
+          const progressiveDamping = adjustedDamping * (1 - bounceProgress * GAME_CONSTANTS.WORLD.AMMO_PICKUP.PROGRESSIVE_DAMPING_FACTOR);
 
           this.vy *= progressiveDamping;
           this.hasBounced = true;
@@ -1372,7 +1379,7 @@
 
         // Check collection (only after first bounce)
         if (this.hasBounced) {
-          if (circleCollision(this.x, this.y, this.radius + GAME_CONSTANTS.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, player.x, player.y, player.radius)) {
+          if (circleCollision(this.x, this.y, this.radius + GAME_CONSTANTS.WORLD.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, player.x, player.y, player.radius)) {
             player.ammo += this.ammoAmount;
             stateAccumulator.playerAmmo = player.ammo;
             playSound(SOUNDS.PICKUP_AMMO);
@@ -1383,7 +1390,7 @@
         }
 
         // Keep pickup until max bounces reached
-        return this.bounceCount < GAME_CONSTANTS.AMMO_PICKUP.MAX_BOUNCES;
+        return this.bounceCount < GAME_CONSTANTS.WORLD.AMMO_PICKUP.MAX_BOUNCES;
       };
 
       // Add instance method for rendering
@@ -1391,7 +1398,7 @@
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
 
         // Draw the ammo ball
-        ctx.fillStyle = GAME_CONSTANTS.AMMO_PICKUP.COLOR;
+        ctx.fillStyle = GAME_CONSTANTS.WORLD.AMMO_PICKUP.COLOR;
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -1436,7 +1443,7 @@
       // Add instance method for rendering
       spit.draw = function(ctx, cameraX, cameraY) {
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
-        const spitAttack = GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.spitAttack;
+        const spitAttack = GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS.spitAttack;
         applyCanvasStyles(ctx, {
           fillStyle: spitAttack.fillColor,
           strokeStyle: spitAttack.strokeColor,
@@ -1455,7 +1462,7 @@
      * Create a tar pit object with bubbles
      */
     const createTarPit = (x, y) => {
-      const type = GAME_CONSTANTS.HAZARDS.TAR_PIT;
+      const type = GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT;
       // Generate random size: variance from 50% to 200% of base radius
       const sizeMultiplier = 0.5 + (Math.random() * type.sizeVariance);
       const radius = type.baseRadius * sizeMultiplier;
@@ -1483,7 +1490,7 @@
      * Create an electric fence object
      */
     const createElectricFence = (x, y, rotation) => {
-      const type = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE;
+      const type = GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE;
       const fence = {
         x,
         y,
@@ -1508,7 +1515,7 @@
      * @returns {Object} Exit object with draw() instance method
      */
     const createExit = (x, y) => {
-      const type = GAME_CONSTANTS.STATIC_STRUCTURES.EXIT;
+      const type = GAME_CONSTANTS.ENTITIES.STATIC_STRUCTURES.EXIT;
       const exit = {
         x,
         y,
@@ -1601,8 +1608,8 @@
         }
 
         // Try a new random position
-        territoryX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X * 2);
-        territoryY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y * 2);
+        territoryX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X * 2);
+        territoryY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y * 2);
         attempts++;
       }
 
@@ -1640,7 +1647,7 @@
 
     /**
      * Create an exit guard dinosaur
-     * @param {Object} dinoType - Dinosaur config object from GAME_CONSTANTS.DINOSAURS (e.g., DINOSAURS.VELOCIRAPTOR)
+     * @param {Object} dinoType - Dinosaur config object from GAME_CONSTANTS.ENTITIES.DINOSAURS (e.g., DINOSAURS.VELOCIRAPTOR)
      * @param {number} angle - Angle in degrees for positioning around exit
      * @param {number} exitX - Exit X position
      * @param {number} exitY - Exit Y position
@@ -2327,7 +2334,7 @@
     const drawZapEffect = (ctx, screenX, screenY, size, zapTimer) => {
       if (zapTimer <= 0) return;
 
-      const zap = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE.zap;
+      const zap = GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE.zap;
       const zapAlpha = zapTimer / zap.duration;
 
       // Electric aura
@@ -2458,7 +2465,7 @@
      * @param {Object} obstacle - Obstacle object (unused for tree, but required for consistent interface)
      */
     const drawTree = (ctx, screenX, screenY, radius, obstacle) => {
-      const colors = GAME_CONSTANTS.OBSTACLES.TREE.colors;
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE.colors;
 
       // Draw ground shadow (ellipse under tree)
       ctx.fillStyle = colors.groundShadow;
@@ -2519,8 +2526,8 @@
      * @param {Object} obstacle - Obstacle object (unused for bush, but required for consistent interface)
      */
     const drawBush = (ctx, screenX, screenY, radius, obstacle) => {
-      const colors = GAME_CONSTANTS.OBSTACLES.BUSH.colors;
-      const clusterCount = GAME_CONSTANTS.OBSTACLES.BUSH.clusters;
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH.colors;
+      const clusterCount = GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH.clusters;
       const angleStep = (Math.PI * 2) / clusterCount;
 
       // Base dark layer (shadow)
@@ -2570,8 +2577,8 @@
      * @param {Object} obstacle - Obstacle object (used for colorIndex and spotCount)
      */
     const drawMushroom = (ctx, screenX, screenY, radius, obstacle) => {
-      const colors = GAME_CONSTANTS.OBSTACLES.MUSHROOM.colors;
-      const sizes = GAME_CONSTANTS.OBSTACLES.MUSHROOM.sizes;
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.colors;
+      const sizes = GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.sizes;
 
       const stemWidth = radius * sizes.stemWidthRatio;
       const stemHeight = radius * sizes.stemHeightRatio;
@@ -2619,8 +2626,8 @@
      * @param {number} radius - Grass patch radius
      */
     const drawGrass = (ctx, screenX, screenY, radius, obstacle) => {
-      const colors = GAME_CONSTANTS.OBSTACLES.GRASS.colors;
-      const sizes = GAME_CONSTANTS.OBSTACLES.GRASS.sizes;
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS.colors;
+      const sizes = GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS.sizes;
 
       const bladeCount = sizes.bladeCount;
       const bladeWidth = sizes.bladeWidth;
@@ -2858,7 +2865,7 @@
      * @param {number} maxAttempts - Maximum number of spawn attempts
      * @returns {Object} Valid position {x, y}
      */
-    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_MAX_ATTEMPTS) => {
+    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_MAX_ATTEMPTS) => {
       // Check if initial position is valid
       if (!checkObstacleCollision(x, y, radius, obstacles)) {
         return { x, y };
@@ -2866,8 +2873,8 @@
 
       // Try random positions near the initial spawn point
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const randomX = x + randomCentered(GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
-        const randomY = y + randomCentered(GAME_CONSTANTS.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
+        const randomX = x + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
+        const randomY = y + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
 
         // Clamp to map bounds
         const clampedX = clamp(randomX, radius, game.mapWidth - radius);
@@ -2949,7 +2956,7 @@
       // Update jump physics
       if (game.player.isJumping) {
         game.player.jumpHeight += game.player.jumpVelocity;
-        game.player.jumpVelocity -= GAME_CONSTANTS.PHYSICS.GRAVITY;
+        game.player.jumpVelocity -= GAME_CONSTANTS.CORE.PHYSICS.GRAVITY;
 
         // Land
         if (game.player.jumpHeight <= 0) {
@@ -2979,10 +2986,10 @@
         const dy = game.touch.joystick.currentY - game.touch.joystick.startY;
         const magnitude = Math.sqrt(dx * dx + dy * dy);
 
-        if (magnitude > GAME_CONSTANTS.TOUCH.JOYSTICK_DEAD_ZONE) {
+        if (magnitude > GAME_CONSTANTS.INPUT.TOUCH.JOYSTICK_DEAD_ZONE) {
           const normalizedDx = dx / magnitude;
           const normalizedDy = dy / magnitude;
-          const speedMultiplier = Math.min(magnitude / GAME_CONSTANTS.TOUCH.JOYSTICK_MAX_RANGE, 1);
+          const speedMultiplier = Math.min(magnitude / GAME_CONSTANTS.INPUT.TOUCH.JOYSTICK_MAX_RANGE, 1);
 
           newX += normalizedDx * game.player.speed * speedMultiplier;
           newY += normalizedDy * game.player.speed * speedMultiplier;
@@ -3025,7 +3032,7 @@
       let speedMultiplier = 1;
       if (game.speedBoostTimer > 0) {
         game.speedBoostTimer--;
-        speedMultiplier *= GAME_CONSTANTS.POWERUPS.SPEED.multiplier;
+        speedMultiplier *= GAME_CONSTANTS.ENTITIES.POWERUPS.SPEED.multiplier;
         if (game.speedBoostTimer === 0) {
           stateAccumulator.speedBoostActive = false;
         }
@@ -3033,7 +3040,7 @@
 
       // Apply tar pit slow effect
       if (game.player.inTarPit) {
-        speedMultiplier *= GAME_CONSTANTS.HAZARDS.TAR_PIT.slowMultiplier;
+        speedMultiplier *= GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.slowMultiplier;
       }
 
       game.player.speed = game.player.baseSpeed * speedMultiplier;
@@ -3049,14 +3056,14 @@
      */
     const updateHazards = (game, difficulty, playSound, stateAccumulator) => {
       // Check electric fence collision with player (can jump over if high enough)
-      if (game.player.jumpHeight < GAME_CONSTANTS.PLAYER.JUMP_CLEAR_HEIGHT) {
+      if (game.player.jumpHeight < GAME_CONSTANTS.CORE.PLAYER.JUMP_CLEAR_HEIGHT) {
         for (const fence of game.electricFences) {
           const fenceType = fence.hazardType;
           if (circleRectCollision(game.player.x, game.player.y, game.player.radius, fence.x, fence.y, fenceType.width, fenceType.height, fence.rotation)) {
             // Damage player with cooldown
             if (fence.playerDamageCooldown <= 0 && game.player.invincibilityTimer <= 0) {
               const diffMod = DIFFICULTY_MODIFIERS[difficulty];
-              const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
+              const invincibilityFrames = Math.round(GAME_CONSTANTS.CORE.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
 
               game.player.health -= fenceType.damage;
               stateAccumulator.playerHealth = game.player.health;
@@ -3076,7 +3083,7 @@
 
               // Check if player died
               if (game.player.health <= 0) {
-                transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator);
+                transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.LOST, playSound, stateAccumulator);
                 return true; // Game over
               }
             }
@@ -3110,13 +3117,13 @@
         if (circleCollision(game.player.x, game.player.y, game.player.radius, powerup.x, powerup.y, powerup.radius)) {
           powerup.active = false;
 
-          if (powerup.powerupType === GAME_CONSTANTS.POWERUPS.HEALTH) {
+          if (powerup.powerupType === GAME_CONSTANTS.ENTITIES.POWERUPS.HEALTH) {
             if (game.player.health < game.player.maxHealth) {
               game.player.health++;
               stateAccumulator.playerHealth = game.player.health;
             }
             playSound(SOUNDS.PICKUP_HEALTH);
-          } else if (powerup.powerupType === GAME_CONSTANTS.POWERUPS.SPEED) {
+          } else if (powerup.powerupType === GAME_CONSTANTS.ENTITIES.POWERUPS.SPEED) {
             game.speedBoostTimer = powerup.powerupType.durationFrames;
             stateAccumulator.speedBoostActive = true;
             playSound(SOUNDS.PICKUP_SPEED);
@@ -3179,7 +3186,7 @@
           const dino = game.dinosaurs[i];
 
           if (circleCollision(bullet.x, bullet.y, bullet.radius, dino.x, dino.y, dino.size)) {
-            if (bullet.weaponType === GAME_CONSTANTS.WEAPONS.TRANQUILIZER) {
+            if (bullet.weaponType === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER) {
               // Tranquilizer dart
               if (!dino.isSleeping) {
                 dino.tranqHits++;
@@ -3272,7 +3279,7 @@
         if (circleCollision(spit.x, spit.y, spit.radius, game.player.x, game.player.y, game.player.radius)) {
           if (!isInvincible(game.player)) {
             const diffMod = DIFFICULTY_MODIFIERS[difficulty];
-            const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
+            const invincibilityFrames = Math.round(GAME_CONSTANTS.CORE.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
 
             game.player.health -= spit.damage;
             grantInvincibility(game.player, invincibilityFrames);
@@ -3280,7 +3287,7 @@
             playSound(SOUNDS.PLAYER_HURT);
 
             if (game.player.health <= 0) {
-              transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator);
+              transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.LOST, playSound, stateAccumulator);
               return false; // Game over
             }
           }
@@ -3427,8 +3434,8 @@
         let effectiveVx = dino.vx;
         let effectiveVy = dino.vy;
         if (dinoInTarPit) {
-          effectiveVx *= GAME_CONSTANTS.HAZARDS.TAR_PIT.slowMultiplier;
-          effectiveVy *= GAME_CONSTANTS.HAZARDS.TAR_PIT.slowMultiplier;
+          effectiveVx *= GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.slowMultiplier;
+          effectiveVy *= GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.slowMultiplier;
         }
 
         // Calculate new position
@@ -3544,15 +3551,15 @@
         if (dino.aggressive && !dino.isSleeping) {
           if (circleCollision(dino.x, dino.y, dino.size, game.player.x, game.player.y, game.player.radius)) {
             if (!isInvincible(game.player)) {
-              const invincibilityFrames = Math.round(GAME_CONSTANTS.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
-              game.player.health -= GAME_CONSTANTS.COMBAT.DINOSAUR_DAMAGE;
+              const invincibilityFrames = Math.round(GAME_CONSTANTS.CORE.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
+              game.player.health -= GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_DAMAGE;
               grantInvincibility(game.player, invincibilityFrames);
-              pushEntityAway(game.player, dino.x, dino.y, GAME_CONSTANTS.COMBAT.PUSHBACK_FORCE);
+              pushEntityAway(game.player, dino.x, dino.y, GAME_CONSTANTS.CORE.COMBAT.PUSHBACK_FORCE);
               stateAccumulator.playerHealth = game.player.health;
               playSound(SOUNDS.PLAYER_HURT);
 
               if (game.player.health <= 0) {
-                transitionToState(GAME_CONSTANTS.GAME_STATES.LOST, playSound, stateAccumulator);
+                transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.LOST, playSound, stateAccumulator);
                 return true; // Game over
               }
             }
@@ -3577,26 +3584,26 @@
     // ============================================================================
 
     // Weapon bullet factory functions
-    GAME_CONSTANTS.WEAPONS.REGULAR.bulletFactory = createBullet;
-    GAME_CONSTANTS.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
+    GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.bulletFactory = createBullet;
+    GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
 
     // Dinosaur draw functions
-    GAME_CONSTANTS.DINOSAURS.VELOCIRAPTOR.drawFunction = drawVelociraptor;
-    GAME_CONSTANTS.DINOSAURS.TYRANNOSAURUS_REX.drawFunction = drawTyrannosaurusRex;
-    GAME_CONSTANTS.DINOSAURS.STEGOSAURUS.drawFunction = drawStegosaurus;
-    GAME_CONSTANTS.DINOSAURS.PARASAUROLOPHUS.drawFunction = drawParasaurolophus;
-    GAME_CONSTANTS.DINOSAURS.TRICERATOPS.drawFunction = drawTriceratops;
-    GAME_CONSTANTS.DINOSAURS.DILOPHOSAURUS.drawFunction = drawDilophosaurus;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR.drawFunction = drawVelociraptor;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.TYRANNOSAURUS_REX.drawFunction = drawTyrannosaurusRex;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS.drawFunction = drawStegosaurus;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS.drawFunction = drawParasaurolophus;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS.drawFunction = drawTriceratops;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS.drawFunction = drawDilophosaurus;
 
     // Obstacle draw functions
-    GAME_CONSTANTS.OBSTACLES.TREE.drawFunction = drawTree;
-    GAME_CONSTANTS.OBSTACLES.BUSH.drawFunction = drawBush;
-    GAME_CONSTANTS.OBSTACLES.MUSHROOM.drawFunction = drawMushroom;
-    GAME_CONSTANTS.OBSTACLES.GRASS.drawFunction = drawGrass;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE.drawFunction = drawTree;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH.drawFunction = drawBush;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.drawFunction = drawMushroom;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS.drawFunction = drawGrass;
 
     // Hazard draw functions
-    GAME_CONSTANTS.HAZARDS.TAR_PIT.drawFunction = drawTarPit;
-    GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE.drawFunction = drawElectricFence;
+    GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.drawFunction = drawTarPit;
+    GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE.drawFunction = drawElectricFence;
 
     // ============================================================================
     // REACT SUB-COMPONENTS (Memoized for performance)
@@ -3624,12 +3631,12 @@
               <span key={i}>{i < health ? '❤️' : '🖤'}</span>
             ))}
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
-            <span>{GAME_CONSTANTS.WEAPONS.REGULAR.icon}</span>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
+            <span>{GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}</span>
             <span className="text-xl font-bold">{ammo}</span>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
-            <span>{GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon}</span>
+          <div className={`flex items-center gap-2 px-3 py-1 rounded ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
+            <span>{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}</span>
             <span className="text-xl font-bold">{tranqAmmo}</span>
           </div>
           {speedBoostActive && (
@@ -3707,7 +3714,7 @@
             style={{ touchAction: 'none' }}
             onTouchStart={onWeaponSwitch}
           >
-            <div className={`w-full h-full rounded-full ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
+            <div className={`w-full h-full rounded-full ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
               {currentWeapon.icon}
             </div>
           </div>
@@ -3848,7 +3855,7 @@
                     <span className="text-white font-semibold text-lg">Viewport Size</span>
                   </div>
                   <div className="flex gap-2">
-                    {Object.entries(GAME_CONSTANTS.VIEWPORTS).map(([key, config]) => (
+                    {Object.entries(GAME_CONSTANTS.CONFIG.VIEWPORTS).map(([key, config]) => (
                       <button
                         key={key}
                         onClick={() => onViewportScaleChange(key)}
@@ -3886,9 +3893,9 @@
                     ))}
                   </div>
                   <div className="text-sm text-gray-300 text-center mt-1">
-                    {difficulty === 'easy' && `7 ❤️  15 ${GAME_CONSTANTS.WEAPONS.REGULAR.icon}  22 ${GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon}  Slower enemies  90f invincibility`}
-                    {difficulty === 'normal' && `5 ❤️  10 ${GAME_CONSTANTS.WEAPONS.REGULAR.icon}  15 ${GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon}  Normal enemies  60f invincibility`}
-                    {difficulty === 'hard' && `3 ❤️  5 ${GAME_CONSTANTS.WEAPONS.REGULAR.icon}  10 ${GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon}  Faster enemies  45f invincibility`}
+                    {difficulty === 'easy' && `7 ❤️  15 ${GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}  22 ${GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}  Slower enemies  90f invincibility`}
+                    {difficulty === 'normal' && `5 ❤️  10 ${GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}  15 ${GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}  Normal enemies  60f invincibility`}
+                    {difficulty === 'hard' && `3 ❤️  5 ${GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}  10 ${GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}  Faster enemies  45f invincibility`}
                   </div>
                 </div>
               </div>
@@ -3930,16 +3937,16 @@
 
     const JurassicEscape = () => {
       const canvasRef = useRef(null);
-      const [gameState, setGameState] = useState(GAME_CONSTANTS.GAME_STATES.MENU);
+      const [gameState, setGameState] = useState(GAME_CONSTANTS.CORE.GAME_STATES.MENU);
       const [score, setScore] = useState(0);
-      const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.PLAYER.MAX_HEALTH);
-      const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.PLAYER.START_AMMO);
-      const [playerTranqAmmo, setPlayerTranqAmmo] = useState(GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo);
-      const [currentWeapon, setCurrentWeapon] = useState(GAME_CONSTANTS.WEAPONS.REGULAR);
+      const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.CORE.PLAYER.MAX_HEALTH);
+      const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.CORE.PLAYER.START_AMMO);
+      const [playerTranqAmmo, setPlayerTranqAmmo] = useState(GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.startAmmo);
+      const [currentWeapon, setCurrentWeapon] = useState(GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR);
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
       const [showPauseMenu, setShowPauseMenu] = useState(false);
-      const [canvasSize, setCanvasSize] = useState(GAME_CONSTANTS.VIEWPORTS.medium);
+      const [canvasSize, setCanvasSize] = useState(GAME_CONSTANTS.CONFIG.VIEWPORTS.medium);
       const [isTouchDevice, setIsTouchDevice] = useState(false);
       const [soundEnabled, setSoundEnabled] = useState(() => {
         const saved = localStorage.getItem('jurassicEscapeSoundEnabled');
@@ -3951,7 +3958,7 @@
       });
       const [volume, setVolume] = useState(() => {
         const saved = localStorage.getItem('jurassicEscapeVolume');
-        return saved !== null ? parseFloat(saved) : GAME_CONSTANTS.AUDIO.DEFAULT_VOLUME;
+        return saved !== null ? parseFloat(saved) : GAME_CONSTANTS.CONFIG.AUDIO.DEFAULT_VOLUME;
       });
       const [difficulty, setDifficulty] = useState(() => {
         const saved = localStorage.getItem('jurassicEscapeDifficulty');
@@ -4027,12 +4034,12 @@
         }
 
         const updateCanvasSize = () => {
-          const baseScale = GAME_CONSTANTS.VIEWPORTS[viewportScale];
+          const baseScale = GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale];
           // Adjust spacing based on device type
           const verticalSpacing = hasTouchSupport
-            ? GAME_CONSTANTS.CANVAS_SIZING.VERTICAL_SPACING_MOBILE
-            : GAME_CONSTANTS.CANVAS_SIZING.VERTICAL_SPACING_DESKTOP;
-          const maxWidth = Math.min(window.innerWidth - GAME_CONSTANTS.CANVAS_SIZING.WINDOW_PADDING, baseScale.width);
+            ? GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_MOBILE
+            : GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_DESKTOP;
+          const maxWidth = Math.min(window.innerWidth - GAME_CONSTANTS.CONFIG.CANVAS_SIZING.WINDOW_PADDING, baseScale.width);
           const maxHeight = Math.min(window.innerHeight - verticalSpacing, baseScale.height);
           const aspectRatio = baseScale.width / baseScale.height;
 
@@ -4055,16 +4062,16 @@
 
       const gameRef = useRef({
         player: {
-          x: GAME_CONSTANTS.PLAYER.START_X,
-          y: GAME_CONSTANTS.PLAYER.START_Y,
-          health: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
-          maxHealth: GAME_CONSTANTS.PLAYER.MAX_HEALTH,
-          ammo: GAME_CONSTANTS.PLAYER.START_AMMO,
-          tranqAmmo: GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo,
-          currentWeapon: GAME_CONSTANTS.WEAPONS.REGULAR,
-          speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
-          baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
-          radius: GAME_CONSTANTS.PLAYER.RADIUS,
+          x: GAME_CONSTANTS.CORE.PLAYER.START_X,
+          y: GAME_CONSTANTS.CORE.PLAYER.START_Y,
+          health: GAME_CONSTANTS.CORE.PLAYER.MAX_HEALTH,
+          maxHealth: GAME_CONSTANTS.CORE.PLAYER.MAX_HEALTH,
+          ammo: GAME_CONSTANTS.CORE.PLAYER.START_AMMO,
+          tranqAmmo: GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.startAmmo,
+          currentWeapon: GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR,
+          speed: GAME_CONSTANTS.CORE.PLAYER.BASE_SPEED,
+          baseSpeed: GAME_CONSTANTS.CORE.PLAYER.BASE_SPEED,
+          radius: GAME_CONSTANTS.CORE.PLAYER.RADIUS,
           isJumping: false,
           jumpVelocity: 0,
           jumpHeight: 0,
@@ -4104,21 +4111,21 @@
 
         // Apply difficulty modifiers
         const diffMod = DIFFICULTY_MODIFIERS[difficulty];
-        const playerMaxHealth = Math.round(GAME_CONSTANTS.PLAYER.MAX_HEALTH * diffMod.playerHealthMultiplier);
-        const playerStartAmmo = Math.round(GAME_CONSTANTS.PLAYER.START_AMMO * diffMod.playerAmmoMultiplier);
-        const playerStartTranqAmmo = Math.round(GAME_CONSTANTS.WEAPONS.TRANQUILIZER.startAmmo * diffMod.playerTranqAmmoMultiplier);
+        const playerMaxHealth = Math.round(GAME_CONSTANTS.CORE.PLAYER.MAX_HEALTH * diffMod.playerHealthMultiplier);
+        const playerStartAmmo = Math.round(GAME_CONSTANTS.CORE.PLAYER.START_AMMO * diffMod.playerAmmoMultiplier);
+        const playerStartTranqAmmo = Math.round(GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.startAmmo * diffMod.playerTranqAmmoMultiplier);
 
         game.player = {
-          x: GAME_CONSTANTS.PLAYER.START_X,
-          y: GAME_CONSTANTS.PLAYER.START_Y,
+          x: GAME_CONSTANTS.CORE.PLAYER.START_X,
+          y: GAME_CONSTANTS.CORE.PLAYER.START_Y,
           health: playerMaxHealth,
           maxHealth: playerMaxHealth,
           ammo: playerStartAmmo,
           tranqAmmo: playerStartTranqAmmo,
-          currentWeapon: GAME_CONSTANTS.WEAPONS.REGULAR,
-          speed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
-          baseSpeed: GAME_CONSTANTS.PLAYER.BASE_SPEED,
-          radius: GAME_CONSTANTS.PLAYER.RADIUS,
+          currentWeapon: GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR,
+          speed: GAME_CONSTANTS.CORE.PLAYER.BASE_SPEED,
+          baseSpeed: GAME_CONSTANTS.CORE.PLAYER.BASE_SPEED,
+          radius: GAME_CONSTANTS.CORE.PLAYER.RADIUS,
           isJumping: false,
           jumpVelocity: 0,
           jumpHeight: 0,
@@ -4154,25 +4161,25 @@
         setPlayerHealth(playerMaxHealth);
         setPlayerAmmo(playerStartAmmo);
         setPlayerTranqAmmo(playerStartTranqAmmo);
-        setCurrentWeapon(GAME_CONSTANTS.WEAPONS.REGULAR);
+        setCurrentWeapon(GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR);
         setSpeedBoostActive(false);
 
         // Create tar pits first (so obstacles can avoid them)
         for (let i = 0; i < config.tarPits; i++) {
           let tarX, tarY;
           let attempts = 0;
-          const maxAttempts = GAME_CONSTANTS.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+          const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
 
           while (attempts < maxAttempts) {
-            tarX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            tarY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            tarX = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            tarY = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
 
             let overlapping = false;
 
             // Check against other tar pits
             for (const existingTar of game.tarPits) {
               const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
-              if (dist < GAME_CONSTANTS.HAZARDS.TAR_PIT.minSpacing) {
+              if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.minSpacing) {
                 overlapping = true;
                 break;
               }
@@ -4187,27 +4194,27 @@
 
         // Create obstacles (blocking: trees and bushes)
         for (let i = 0; i < config.obstacles; i++) {
-          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y, game));
+          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y, game));
         }
 
         // Create decorations (walkable: mushroom patches and grass patches)
-        const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.SPAWN.MUSHROOM_PATCH_PERCENTAGE);
-        const grassPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.SPAWN.GRASS_PATCH_PERCENTAGE);
+        const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_PERCENTAGE);
+        const grassPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_PERCENTAGE);
 
         // Spawn mushroom patches
         for (let patchIndex = 0; patchIndex < mushroomPatchCount; patchIndex++) {
           // Pick patch center location
-          const patchCenterX = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
-          const patchCenterY = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
+          const patchCenterX = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
+          const patchCenterY = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
 
           // Check clearance from player spawn (visual cleanliness, not collision)
-          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y);
-          if (distFromPlayer < GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE) {
+          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
+          if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
             continue; // Skip this patch if too close to player
           }
 
           // Pick a color for this patch (all mushrooms in patch share color)
-          const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.OBSTACLES.MUSHROOM.colors.capColors.length);
+          const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.colors.capColors.length);
 
           // Create and add all mushrooms in patch
           const patch = createMushroomPatch(patchCenterX, patchCenterY, patchColorIndex);
@@ -4217,12 +4224,12 @@
         // Spawn grass patches
         for (let patchIndex = 0; patchIndex < grassPatchCount; patchIndex++) {
           // Pick patch center location
-          const patchCenterX = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
-          const patchCenterY = GAME_CONSTANTS.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.OBSTACLE_PADDING);
+          const patchCenterX = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
+          const patchCenterY = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
 
           // Check clearance from player spawn (visual cleanliness, not collision)
-          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.PLAYER.START_X, GAME_CONSTANTS.PLAYER.START_Y);
-          if (distFromPlayer < GAME_CONSTANTS.SPAWN.PLAYER_SPAWN_CLEARANCE) {
+          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
+          if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
             continue; // Skip this patch if too close to player
           }
 
@@ -4248,8 +4255,8 @@
 
           for (let i = 0; i < count; i++) {
             // Calculate initial spawn position
-            const initialX = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_X + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
-            const initialY = GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
+            const initialX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_SPACING_X + Math.random() * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
+            const initialY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
 
             // Find collision-free spawn position
             const spawnPos = findValidSpawnPosition(
@@ -4275,7 +4282,7 @@
               points: dinoConfig.type.points,
               aggressive: dinoConfig.type.aggressive,
               territorial: dinoConfig.type.territorial,
-              aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
+              aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
               fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
               state: GAME_CONSTANTS.AI.STATES.PATROL,
               patrolAngle: Math.random() * Math.PI * 2,
@@ -4348,7 +4355,7 @@
         }
 
         // Create tranquilizer depots
-        const depotCount = GAME_CONSTANTS.SPAWN.TRANQ_DEPOT_COUNT_BASE + level;
+        const depotCount = GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_COUNT_BASE + level;
         for (let i = 0; i < depotCount; i++) {
           game.tranqDepots.push(createTranqDepot(game.mapWidth, game.mapHeight));
         }
@@ -4366,13 +4373,13 @@
         for (let i = 0; i < config.electricFences; i++) {
           let fenceX, fenceY, fenceRotation;
           let attempts = 0;
-          const fenceType = GAME_CONSTANTS.HAZARDS.ELECTRIC_FENCE;
-          const maxAttempts = GAME_CONSTANTS.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+          const fenceType = GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE;
+          const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
           const fenceRadius = fenceType.width / 2;
 
           while (attempts < maxAttempts) {
-            fenceX = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            fenceY = GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            fenceX = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            fenceY = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
             fenceRotation = Math.random() * Math.PI * 2; // Random rotation
 
             let valid = true;
@@ -4438,7 +4445,7 @@
 
           // Handle touch weapon switching
           if (game.touch.switchWeapon) {
-            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.WEAPONS.REGULAR;
+            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR;
             stateAccumulator.currentWeapon = game.player.currentWeapon;
             game.touch.switchWeapon = false;
           }
@@ -4446,7 +4453,7 @@
           // Handle touch shooting
           if (game.touch.shoot) {
             const nearestDino = findNearestDinosaur(game.player.x, game.player.y, game.dinosaurs);
-            const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
+            const targetX = nearestDino ? nearestDino.x : game.player.x + GAME_CONSTANTS.INPUT.TOUCH.AUTO_AIM_FALLBACK_DISTANCE;
             const targetY = nearestDino ? nearestDino.y : game.player.y;
 
             // Fire weapon using unified logic
@@ -4506,9 +4513,9 @@
             if (distance(game.player.x, game.player.y, exitCenterX, exitCenterY) < game.player.radius + game.exit.structureType.collisionRadius) {
               // Check if there's another level after this one
               if (LEVEL_CONFIGS[currentLevel + 1]) {
-                transitionToState(GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE, playSound, null, setGameState);
+                transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.LEVEL_COMPLETE, playSound, null, setGameState);
               } else {
-                transitionToState(GAME_CONSTANTS.GAME_STATES.WON, playSound, null, setGameState);
+                transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.WON, playSound, null, setGameState);
               }
             }
           }
@@ -4518,10 +4525,10 @@
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
           ctx.fillStyle = '#2d4a2d';
-          for (let i = 0; i < GAME_CONSTANTS.RENDER.GRASS_PATCHES; i++) {
+          for (let i = 0; i < GAME_CONSTANTS.VISUALS.RENDER.GRASS_PATCHES; i++) {
             const gx = (i * 73) % game.mapWidth - game.cameraX;
             const gy = (i * 97) % game.mapHeight - game.cameraY;
-            ctx.fillRect(gx, gy, GAME_CONSTANTS.RENDER.GRASS_PATCH_SIZE, GAME_CONSTANTS.RENDER.GRASS_PATCH_SIZE);
+            ctx.fillRect(gx, gy, GAME_CONSTANTS.VISUALS.RENDER.GRASS_PATCH_SIZE, GAME_CONSTANTS.VISUALS.RENDER.GRASS_PATCH_SIZE);
           }
 
           // Draw entities using batch utility (maintains z-index layering via argument order)
@@ -4556,14 +4563,14 @@
             ctx.restore();
 
             // Health bar
-            const barWidth = dino.size * GAME_CONSTANTS.HEALTH_BAR.WIDTH_MULTIPLIER;
-            const barHeight = GAME_CONSTANTS.HEALTH_BAR.HEIGHT;
-            const barY = screenY - dino.size * GAME_CONSTANTS.HEALTH_BAR.POSITION_MULTIPLIER;
-            ctx.fillStyle = GAME_CONSTANTS.HEALTH_BAR.BORDER_COLOR;
-            ctx.fillRect(screenX - barWidth / 2 - GAME_CONSTANTS.HEALTH_BAR.BORDER_OFFSET, barY - GAME_CONSTANTS.HEALTH_BAR.BORDER_OFFSET, barWidth + GAME_CONSTANTS.HEALTH_BAR.BORDER_PADDING, barHeight + GAME_CONSTANTS.HEALTH_BAR.BORDER_PADDING);
-            ctx.fillStyle = GAME_CONSTANTS.HEALTH_BAR.BACKGROUND_COLOR;
+            const barWidth = dino.size * GAME_CONSTANTS.VISUALS.HEALTH_BAR.WIDTH_MULTIPLIER;
+            const barHeight = GAME_CONSTANTS.VISUALS.HEALTH_BAR.HEIGHT;
+            const barY = screenY - dino.size * GAME_CONSTANTS.VISUALS.HEALTH_BAR.POSITION_MULTIPLIER;
+            ctx.fillStyle = GAME_CONSTANTS.VISUALS.HEALTH_BAR.BORDER_COLOR;
+            ctx.fillRect(screenX - barWidth / 2 - GAME_CONSTANTS.VISUALS.HEALTH_BAR.BORDER_OFFSET, barY - GAME_CONSTANTS.VISUALS.HEALTH_BAR.BORDER_OFFSET, barWidth + GAME_CONSTANTS.VISUALS.HEALTH_BAR.BORDER_PADDING, barHeight + GAME_CONSTANTS.VISUALS.HEALTH_BAR.BORDER_PADDING);
+            ctx.fillStyle = GAME_CONSTANTS.VISUALS.HEALTH_BAR.BACKGROUND_COLOR;
             ctx.fillRect(screenX - barWidth / 2, barY, barWidth, barHeight);
-            ctx.fillStyle = GAME_CONSTANTS.HEALTH_BAR.HEALTH_COLOR;
+            ctx.fillStyle = GAME_CONSTANTS.VISUALS.HEALTH_BAR.HEALTH_COLOR;
             ctx.fillRect(screenX - barWidth / 2, barY, barWidth * (dino.health / dino.maxHealth), barHeight);
 
             // Zap effect (electric shock animation)
@@ -4575,14 +4582,14 @@
           if (sleepingDinos.length > 0) {
             // Batch canvas styles for Z animation
             applyCanvasStyles(ctx, {
-              fillStyle: GAME_CONSTANTS.Z_ANIMATION.FILL_COLOR,
-              textAlign: GAME_CONSTANTS.Z_ANIMATION.TEXT_ALIGN,
-              shadowColor: GAME_CONSTANTS.Z_ANIMATION.SHADOW_COLOR,
-              shadowBlur: GAME_CONSTANTS.Z_ANIMATION.SHADOW_BLUR
+              fillStyle: GAME_CONSTANTS.VISUALS.Z_ANIMATION.FILL_COLOR,
+              textAlign: GAME_CONSTANTS.VISUALS.Z_ANIMATION.TEXT_ALIGN,
+              shadowColor: GAME_CONSTANTS.VISUALS.Z_ANIMATION.SHADOW_COLOR,
+              shadowBlur: GAME_CONSTANTS.VISUALS.Z_ANIMATION.SHADOW_BLUR
             });
 
-            const buffer = GAME_CONSTANTS.Z_ANIMATION.CULLING_BUFFER;
-            const bobOffset = Math.sin(Date.now() / GAME_CONSTANTS.Z_ANIMATION.BOB_SPEED) * GAME_CONSTANTS.Z_ANIMATION.BOB_AMPLITUDE;
+            const buffer = GAME_CONSTANTS.VISUALS.Z_ANIMATION.CULLING_BUFFER;
+            const bobOffset = Math.sin(Date.now() / GAME_CONSTANTS.VISUALS.Z_ANIMATION.BOB_SPEED) * GAME_CONSTANTS.VISUALS.Z_ANIMATION.BOB_AMPLITUDE;
 
             sleepingDinos.forEach(dino => {
               const screenX = dino.x - game.cameraX;
@@ -4594,7 +4601,7 @@
               }
 
               // Draw Z's with increasing size (loop through configs)
-              GAME_CONSTANTS.Z_ANIMATION.Z_CONFIGS.forEach(zConfig => {
+              GAME_CONSTANTS.VISUALS.Z_ANIMATION.Z_CONFIGS.forEach(zConfig => {
                 ctx.font = zConfig.FONT;
                 ctx.fillText('Z',
                   screenX + dino.size + zConfig.OFFSET_X,
@@ -4621,17 +4628,17 @@
           // Draw floating texts (using instance methods with batch canvas styles)
           if (game.floatingTexts.length > 0) {
             applyCanvasStyles(ctx, {
-              font: GAME_CONSTANTS.FLOATING_TEXT.FONT,
+              font: GAME_CONSTANTS.VISUALS.FLOATING_TEXT.FONT,
               textAlign: 'center',
-              lineWidth: GAME_CONSTANTS.FLOATING_TEXT.LINE_WIDTH,
-              shadowColor: GAME_CONSTANTS.FLOATING_TEXT.SHADOW_COLOR,
-              shadowBlur: GAME_CONSTANTS.FLOATING_TEXT.SHADOW_BLUR
+              lineWidth: GAME_CONSTANTS.VISUALS.FLOATING_TEXT.LINE_WIDTH,
+              shadowColor: GAME_CONSTANTS.VISUALS.FLOATING_TEXT.SHADOW_COLOR,
+              shadowBlur: GAME_CONSTANTS.VISUALS.FLOATING_TEXT.SHADOW_BLUR
             });
 
             game.floatingTexts.forEach(text => text.draw(ctx, game.cameraX, game.cameraY));
 
             // Reset canvas state
-            ctx.globalAlpha = GAME_CONSTANTS.FLOATING_TEXT.ALPHA_OPAQUE;
+            ctx.globalAlpha = GAME_CONSTANTS.VISUALS.FLOATING_TEXT.ALPHA_OPAQUE;
             ctx.shadowBlur = 0;
           }
 
@@ -4658,14 +4665,14 @@
         setCurrentLevel(1);
         setScore(0);
         initGame(1);
-        transitionToState(GAME_CONSTANTS.GAME_STATES.PLAYING, playSound, null, setGameState);
+        transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.PLAYING, playSound, null, setGameState);
       }, [initGame, playSound]);
 
       const nextLevel = useCallback(() => {
         const next = currentLevel + 1;
         setCurrentLevel(next);
         initGame(next);
-        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
+        setGameState(GAME_CONSTANTS.CORE.GAME_STATES.PLAYING);
       }, [currentLevel, initGame]);
 
       // Ammo setters mapping for fireWeapon function
@@ -4695,13 +4702,13 @@
         // Handle jump on spacebar press
         if (key === ' ' && !game.player.isJumping) {
           game.player.isJumping = true;
-          game.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
+          game.player.jumpVelocity = GAME_CONSTANTS.CORE.PLAYER.JUMP_VELOCITY;
           playSound(SOUNDS.JUMP);
         }
 
         // Handle weapon switching with Q key
         if (key === 'q') {
-          game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.WEAPONS.REGULAR ? GAME_CONSTANTS.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.WEAPONS.REGULAR;
+          game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR;
           setCurrentWeapon(game.player.currentWeapon);
         }
       }, [playSound]);
@@ -4791,7 +4798,7 @@
         e.preventDefault();
         if (!gameRef.current.player.isJumping) {
           gameRef.current.player.isJumping = true;
-          gameRef.current.player.jumpVelocity = GAME_CONSTANTS.PLAYER.JUMP_VELOCITY;
+          gameRef.current.player.jumpVelocity = GAME_CONSTANTS.CORE.PLAYER.JUMP_VELOCITY;
           playSound(SOUNDS.JUMP);
         }
       }, [playSound]);
@@ -4840,13 +4847,13 @@
         setShowPauseMenu(false);
         playSound(SOUNDS.UNPAUSE);
         initGame(currentLevel);
-        setGameState(GAME_CONSTANTS.GAME_STATES.PLAYING);
+        setGameState(GAME_CONSTANTS.CORE.GAME_STATES.PLAYING);
       }, [playSound, initGame, currentLevel]);
 
       const handleExitToMenu = useCallback(() => {
         setShowPauseMenu(false);
         playSound(SOUNDS.VICTORY);
-        setGameState(GAME_CONSTANTS.GAME_STATES.MENU);
+        setGameState(GAME_CONSTANTS.CORE.GAME_STATES.MENU);
       }, [playSound]);
 
       const handleOpenSettingsFromPause = useCallback(() => {
@@ -4893,7 +4900,7 @@
 
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 p-4">
-          {gameState === GAME_CONSTANTS.GAME_STATES.MENU && (
+          {gameState === GAME_CONSTANTS.CORE.GAME_STATES.MENU && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">JURASSIC ESCAPE</h1>
               <p className="text-gray-300 mb-2">Navigate through the dangerous park and reach the exit!</p>
@@ -4921,7 +4928,7 @@
                 </p>
                 <p className="flex items-center justify-center gap-2">
                   <span className="inline-block w-4 h-4 bg-green-600 rounded"></span>
-                  Tranquilizer Depot - Refills {GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon} ammo
+                  Tranquilizer Depot - Refills {GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon} ammo
                 </p>
               </div>
               <div className="flex flex-col gap-3">
@@ -4942,7 +4949,7 @@
             </div>
           )}
 
-          {gameState === GAME_CONSTANTS.GAME_STATES.PLAYING && (
+          {gameState === GAME_CONSTANTS.CORE.GAME_STATES.PLAYING && (
             <div className="flex flex-col items-center">
               <GameHUD
                 health={playerHealth}
@@ -4961,8 +4968,8 @@
               <div className="relative">
                 <canvas
                   ref={canvasRef}
-                  width={GAME_CONSTANTS.VIEWPORTS[viewportScale].width}
-                  height={GAME_CONSTANTS.VIEWPORTS[viewportScale].height}
+                  width={GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale].width}
+                  height={GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale].height}
                   style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
                   className="border-4 border-green-600 bg-green-900 cursor-crosshair"
                   tabIndex={0}
@@ -4987,7 +4994,7 @@
               </div>
               <p className="text-gray-400 mt-2 text-center">
                 {isTouchDevice ? (
-                  <span>Joystick to move • Tap {GAME_CONSTANTS.WEAPONS.REGULAR.icon}/{GAME_CONSTANTS.WEAPONS.TRANQUILIZER.icon} to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
+                  <span>Joystick to move • Tap {GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}/{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon} to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
                 ) : autoAim ? (
                   <span>WASD/Arrows to move • Q to switch weapon • Click to auto-aim 🎯 • Spacebar to jump!</span>
                 ) : (
@@ -5006,7 +5013,7 @@
             </div>
           )}
 
-          {gameState === GAME_CONSTANTS.GAME_STATES.LEVEL_COMPLETE && (
+          {gameState === GAME_CONSTANTS.CORE.GAME_STATES.LEVEL_COMPLETE && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">LEVEL {currentLevel} COMPLETE!</h1>
               <p className="text-2xl text-white mb-4">Score: {score}</p>
@@ -5019,7 +5026,7 @@
             </div>
           )}
 
-          {gameState === GAME_CONSTANTS.GAME_STATES.WON && (
+          {gameState === GAME_CONSTANTS.CORE.GAME_STATES.WON && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-green-400 mb-4">YOU ESCAPED!</h1>
               <p className="text-3xl text-yellow-400 mb-2">ALL LEVELS COMPLETE!</p>
@@ -5033,7 +5040,7 @@
             </div>
           )}
 
-          {gameState === GAME_CONSTANTS.GAME_STATES.LOST && (
+          {gameState === GAME_CONSTANTS.CORE.GAME_STATES.LOST && (
             <div className="text-center">
               <h1 className="text-5xl font-bold text-red-500 mb-4">GAME OVER</h1>
               <p className="text-xl text-white mb-2">Level {currentLevel}</p>
