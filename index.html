@@ -887,8 +887,25 @@
 
     /**
      * Apply canvas rendering styles in batch
+     *
      * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {Object} styles - Style object with optional fillStyle, strokeStyle, lineWidth, font, textAlign, textBaseline
+     * @param {Object} styles - Style object with optional properties:
+     *   fillStyle, strokeStyle, lineWidth, font, textAlign, textBaseline,
+     *   shadowColor, shadowBlur, globalAlpha
+     *
+     * @remarks
+     * Performance optimization for canvas rendering.
+     *
+     * Why batch style application:
+     * - Canvas context state changes are expensive operations
+     * - Batching reduces number of style set operations
+     * - Single function call vs multiple ctx.property assignments
+     * - Enables style reuse via config objects in GAME_CONSTANTS
+     *
+     * Usage pattern:
+     * - Store common style sets in constants
+     * - Pass to applyCanvasStyles before drawing
+     * - Example: applyCanvasStyles(ctx, GAME_CONSTANTS.VISUALS.TEXT_STYLE)
      */
     const applyCanvasStyles = (ctx, styles) => {
       if (styles.fillStyle !== undefined) ctx.fillStyle = styles.fillStyle;
@@ -904,11 +921,31 @@
 
     /**
      * Batch render entity arrays using instance method pattern
-     * Renders multiple entity arrays in order, each calling entity.draw(ctx, cameraX, cameraY)
+     *
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} cameraX - Camera X offset
      * @param {number} cameraY - Camera Y offset
-     * @param {...Array} entityArrays - Variable number of entity arrays to render
+     * @param {...Array} entityArrays - Variable number of entity arrays to render in order
+     *
+     * @remarks
+     * Polymorphic batch rendering utility for instance method pattern.
+     *
+     * Why this pattern:
+     * - All entities have .draw(ctx, cameraX, cameraY) instance method
+     * - No type checking or switch statements needed at render time
+     * - Single unified rendering pipeline for all entity types
+     * - Argument order determines z-index layering
+     *
+     * Z-index layering via argument order:
+     * - Earlier arguments render first (bottom layers)
+     * - Later arguments render last (top layers)
+     * - Example: drawEntities(ctx, cameraX, cameraY, background, obstacles, player)
+     *   renders background → obstacles → player (player on top)
+     *
+     * Performance:
+     * - Eliminates per-entity type checking overhead
+     * - Enables compiler optimizations (monomorphic call site)
+     * - Clean separation of concerns (entities own their rendering)
      */
     const drawEntities = (ctx, cameraX, cameraY, ...entityArrays) => {
       entityArrays.forEach(arr => {
@@ -930,25 +967,52 @@
 
     /**
      * Check if circle collides with rotated rectangle (for electric fences)
+     *
+     * @param {number} circleX - Circle center X in world space
+     * @param {number} circleY - Circle center Y in world space
+     * @param {number} radius - Circle radius
+     * @param {number} rectX - Rectangle center X in world space
+     * @param {number} rectY - Rectangle center Y in world space
+     * @param {number} rectWidth - Rectangle width
+     * @param {number} rectHeight - Rectangle height
+     * @param {number} rotation - Rectangle rotation in radians
+     * @returns {boolean} True if circle and rectangle overlap
+     *
+     * @remarks
+     * Uses inverse rotation transform to simplify collision detection:
+     * - Instead of rotating the rectangle to check collision (complex),
+     *   we rotate the circle backward by -rotation (simpler)
+     * - This transforms the problem into axis-aligned rect vs circle collision
+     * - We then clamp the circle position to the rect bounds to find the closest point
+     * - Finally check if that closest point is within the circle's radius
+     *
+     * Why this approach:
+     * - Avoids complex rotated rectangle corner calculations
+     * - Single matrix transformation handles all rotation cases
+     * - Works for any rotation angle without special cases
      */
     const circleRectCollision = (circleX, circleY, radius, rectX, rectY, rectWidth, rectHeight, rotation) => {
-      // Translate circle to rect's local space
+      // Translate circle to rect's local space (origin at rect center)
       const dx = circleX - rectX;
       const dy = circleY - rectY;
 
-      // Rotate circle position back by -rotation
+      // Apply inverse rotation transform to circle position
+      // This "unrotates" the circle relative to the rectangle,
+      // converting rotated rect problem → axis-aligned rect problem
       const cos = Math.cos(-rotation);
       const sin = Math.sin(-rotation);
       const localX = dx * cos - dy * sin;
       const localY = dx * sin + dy * cos;
 
-      // Find closest point on rect to circle
+      // Find closest point on axis-aligned rect to circle center
+      // Clamping to rect bounds gives us the nearest point on/in rectangle
       const halfWidth = rectWidth / 2;
       const halfHeight = rectHeight / 2;
       const closestX = Math.max(-halfWidth, Math.min(halfWidth, localX));
       const closestY = Math.max(-halfHeight, Math.min(halfHeight, localY));
 
-      // Check distance from circle to closest point
+      // Check distance from circle center to closest point on rectangle
+      // If distance < radius, they overlap
       const distX = localX - closestX;
       const distY = localY - closestY;
       const distSquared = distX * distX + distY * distY;
@@ -972,7 +1036,25 @@
     };
 
     /**
-     * Create a bullet object
+     * Create a bullet object with physics and rendering
+     *
+     * @param {number} fromX - Starting X position
+     * @param {number} fromY - Starting Y position
+     * @param {number} toX - Target X position (for direction calculation)
+     * @param {number} toY - Target Y position (for direction calculation)
+     * @returns {Object} Bullet object with update() and draw() instance methods
+     *
+     * @remarks
+     * Factory pattern used to ensure all bullets have consistent instance methods.
+     *
+     * Why instance methods:
+     * - Enables polymorphic batch rendering via `drawEntities(ctx, cameraX, cameraY, bullets)`
+     * - Each bullet encapsulates its own update and draw logic (OOP pattern)
+     * - Eliminates need for switch statements or type checking at render time
+     * - All entities (bullets, obstacles, dinosaurs) follow same pattern
+     *
+     * Update method returns boolean to enable filter-based cleanup:
+     * `bullets = bullets.filter(b => b.update(mapWidth, mapHeight))`
      */
     const createBullet = (fromX, fromY, toX, toY) => {
       const weapon = GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR;
@@ -986,14 +1068,13 @@
         weaponType: weapon
       };
 
-      // Add instance method for physics update
+      // Returns false when bullet goes out of bounds (signals removal)
       bullet.update = function(mapWidth, mapHeight) {
         this.x += this.vx;
         this.y += this.vy;
         return isInBounds(this.x, this.y, mapWidth, mapHeight);
       };
 
-      // Add instance method for rendering
       bullet.draw = function(ctx, cameraX, cameraY) {
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
         ctx.fillStyle = this.weaponType.bulletColor;
@@ -1019,14 +1100,12 @@
         weaponType: GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER
       };
 
-      // Add instance method for physics update
       tranq.update = function(mapWidth, mapHeight) {
         this.x += this.vx;
         this.y += this.vy;
         return isInBounds(this.x, this.y, mapWidth, mapHeight);
       };
 
-      // Add instance method for rendering
       tranq.draw = function(ctx, cameraX, cameraY) {
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
         ctx.fillStyle = this.weaponType.bulletColor;
@@ -1040,27 +1119,50 @@
 
     /**
      * Transition to a new game state with automatic sound effect handling
+     *
      * @param {Object} newState - State object from GAME_CONSTANTS.CORE.GAME_STATES
      * @param {Function} playSound - Sound playing function
      * @param {Object|null} stateAccumulator - State accumulator for batched updates (game loop), or null
      * @param {Function|null} setGameState - Direct setState function (when not using accumulator)
+     *
+     * @remarks
+     * Dual-mode operation handles two different React state update contexts:
+     *
+     * Mode 1: State Accumulator (game loop)
+     * - Used in 60 FPS game loop where multiple updates happen per frame
+     * - Accumulates all state changes into single object
+     * - Applied once at end of frame to prevent multiple re-renders
+     * - Example: `transitionToState(LOST, playSound, stateAccumulator, null)`
+     *
+     * Mode 2: Direct setState (event handlers)
+     * - Used in event handlers (keyboard, mouse, touch)
+     * - Immediately calls React setState function
+     * - No batching needed since events are discrete
+     * - Example: `transitionToState(PLAYING, playSound, null, setGameState)`
+     *
+     * Why this design:
+     * - Single unified API for state transitions across codebase
+     * - Automatic sound effect playback for all transitions
+     * - Performance: prevents 60+ re-renders per second in game loop
+     * - Simplicity: callers don't need to remember to play sounds
      */
     const transitionToState = (newState, playSound, stateAccumulator = null, setGameState = null) => {
-      // Set the new state
+      // Set the new state (batched or direct depending on context)
       if (stateAccumulator) {
         stateAccumulator.gameState = newState;
       } else if (setGameState) {
         setGameState(newState);
       }
 
-      // Play the associated sound effect if it exists
+      // Always play associated sound effect immediately (not batched)
       if (newState.soundEffect) {
         playSound(newState.soundEffect);
       }
     };
 
     /**
-     * Unified weapon firing logic
+     * Unified weapon firing logic with generic ammo management
+     *
      * @param {Object} weapon - Weapon type from GAME_CONSTANTS.ENTITIES.WEAPONS
      * @param {Object} player - Player object
      * @param {number} targetX - Target X coordinate
@@ -1069,25 +1171,46 @@
      * @param {Function} playSound - Sound playing function
      * @param {Object|null} stateAccumulator - State accumulator for batched updates (game loop), or null for direct setState
      * @param {Object|null} setters - Object mapping ammo keys to setter functions { playerAmmo: setPlayerAmmo, playerTranqAmmo: setPlayerTranqAmmo }
-     * @returns {boolean} - True if weapon was fired, false if no ammo
+     * @returns {boolean} True if weapon was fired, false if no ammo
+     *
+     * @remarks
+     * Generic weapon system uses `weapon.ammoConfig` for type-agnostic ammo management:
+     *
+     * Weapon configuration paths:
+     * - playerKey: "ammo" or "tranqAmmo" (player object property)
+     * - stateKey: "playerAmmo" or "playerTranqAmmo" (React state key)
+     * - bulletFactory: createBullet or createTranquilizer (factory function)
+     *
+     * Why this design:
+     * - Adding new weapons doesn't require code changes here
+     * - All weapon logic configured in GAME_CONSTANTS.ENTITIES.WEAPONS
+     * - Same function handles regular bullets, tranquilizers, future weapons
+     * - Ammo state management abstracted via config paths
+     *
+     * Dual-mode state updates (same pattern as transitionToState):
+     * - stateAccumulator: batched updates for game loop (60 FPS)
+     * - setters: direct setState for event handlers (discrete events)
      */
     const fireWeapon = (weapon, player, targetX, targetY, game, playSound, stateAccumulator = null, setters = null) => {
+      // Check ammo using weapon's configured player property path
       const ammoCount = player[weapon.ammoConfig.playerKey];
 
       if (ammoCount <= 0) {
-        return false;
+        return false; // No ammo available
       }
 
-      // Create bullet using weapon's factory function
+      // Create bullet using weapon's configured factory function
       const bullet = weapon.bulletFactory(player.x, player.y, targetX, targetY);
 
       game.bullets.push(bullet);
       player[weapon.ammoConfig.playerKey]--;
 
-      // Update state (either batch accumulator or direct setState)
+      // Update React state using weapon's configured state key
       if (stateAccumulator) {
+        // Batched update for game loop
         stateAccumulator[weapon.ammoConfig.stateKey] = player[weapon.ammoConfig.playerKey];
       } else if (setters) {
+        // Direct setState for event handlers
         const setter = setters[weapon.ammoConfig.stateKey];
         if (setter) {
           setter(player[weapon.ammoConfig.playerKey]);
@@ -1112,14 +1235,12 @@
         age: 0
       };
 
-      // Add instance method for physics update
       floatingText.update = function() {
         this.age++;
         this.y -= GAME_CONSTANTS.VISUALS.FLOATING_TEXT.RISE_SPEED;
-        return this.age < this.lifetime; // Return false when expired
+        return this.age < this.lifetime;
       };
 
-      // Add instance method for rendering
       floatingText.draw = function(ctx, cameraX, cameraY) {
         const screenX = this.x - cameraX;
         const screenY = this.y - cameraY;
@@ -1189,7 +1310,6 @@
         obstacleType: Math.random() > 0.5 ? GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE : GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH
       };
 
-      // Add instance draw method
       obstacle.draw = function(ctx, cameraX, cameraY) {
         const screenX = this.x - cameraX;
         const screenY = this.y - cameraY;
@@ -1229,7 +1349,6 @@
           spotCount
         };
 
-        // Add instance draw method
         mushroom.draw = function(ctx, cameraX, cameraY) {
           const screenX = this.x - cameraX;
           const screenY = this.y - cameraY;
@@ -1267,7 +1386,6 @@
           obstacleType: GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS
         };
 
-        // Add instance draw method
         patch.draw = function(ctx, cameraX, cameraY) {
           const screenX = this.x - cameraX;
           const screenY = this.y - cameraY;
@@ -1293,7 +1411,6 @@
         active: true
       };
 
-      // Add instance method for drawing
       powerup.draw = function(ctx, cameraX, cameraY) {
         drawPowerup(ctx, this, cameraX, cameraY);
       };
@@ -1313,7 +1430,6 @@
         active: true
       };
 
-      // Add instance method for drawing
       depot.draw = function(ctx, cameraX, cameraY) {
         drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.TRANQ);
       };
@@ -1336,7 +1452,6 @@
         active: true
       };
 
-      // Add instance method for drawing
       depot.draw = function(ctx, cameraX, cameraY) {
         drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.AMMO);
       };
@@ -1345,11 +1460,33 @@
     };
 
     /**
-     * Create an ammo pickup object with physics
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} startY - Starting Y for bounce physics
-     * @param {number} ammoAmount - Number of ammo this pickup restores
+     * Create an ammo pickup with bouncing physics
+     *
+     * @param {number} x - Spawn X position
+     * @param {number} y - Spawn Y position (in air)
+     * @param {number} startY - Ground level Y position
+     * @param {number} ammoAmount - Amount of ammo to grant when collected
+     * @returns {Object} AmmoPickup object with update() and draw() instance methods
+     *
+     * @remarks
+     * Implements satisfying bounce physics with progressive damping.
+     *
+     * Why collection requires first bounce:
+     * - Prevents instant pickup when spawned (spawns at dinosaur death location)
+     * - Creates visual feedback - player sees ammo drop and bounce
+     * - Gives player time to react and position for collection
+     * - Makes pickup feel more "physical" and rewarding
+     *
+     * Progressive damping algorithm:
+     * - Each bounce reduces velocity by damping factor
+     * - Damping increases with bounce count (bounces get progressively weaker)
+     * - Formula: damping * (1 - bounceProgress * progressiveFactor)
+     * - This creates natural-looking bounce decay (not linear)
+     * - Pickup expires after MAX_BOUNCES instead of becoming static
+     *
+     * Collection radius bonus:
+     * - Slightly larger than visual radius for forgiving pickup
+     * - Improves player experience especially on mobile
      */
     const createAmmoPickup = (x, y, startY, ammoAmount) => {
       const pickup = {
@@ -1357,25 +1494,26 @@
         y,
         startY,
         radius: GAME_CONSTANTS.WORLD.AMMO_PICKUP.RADIUS,
-        vx: 0, // No horizontal velocity for vertical bounce
+        vx: 0, // No horizontal velocity for vertical-only bounce
         vy: GAME_CONSTANTS.WORLD.AMMO_PICKUP.INITIAL_UPWARD_VELOCITY,
         ammoAmount,
         hasBounced: false,
         bounceCount: 0
       };
 
-      // Add instance method for physics update and collection
+      // Instance method: physics update, bounce logic, and collection detection
       pickup.update = function(player, difficulty, playSound, stateAccumulator, createFloatingText) {
-        // Vertical-only movement
+        // Apply gravity to vertical velocity
         this.y += this.vy;
         this.vy += GAME_CONSTANTS.CORE.PHYSICS.AMMO_GRAVITY;
 
-        // Bounce when hitting the ground
+        // Ground collision with bounce
         if (this.y >= this.startY && this.vy > 0) {
-          this.y = this.startY;
+          this.y = this.startY; // Snap to ground
           this.bounceCount++;
 
-          // Apply damping with progressive fade
+          // Progressive damping: bounces get weaker over time
+          // Later bounces have stronger damping for natural decay
           const diffMod = DIFFICULTY_MODIFIERS[difficulty];
           const adjustedDamping = GAME_CONSTANTS.CORE.PHYSICS.AMMO_BOUNCE_DAMPING * diffMod.ammoDampingMultiplier;
           const maxBounces = GAME_CONSTANTS.WORLD.AMMO_PICKUP.MAX_BOUNCES;
@@ -1386,7 +1524,7 @@
           this.hasBounced = true;
         }
 
-        // Check collection (only after first bounce)
+        // Collection check (only after first bounce to prevent instant pickup)
         if (this.hasBounced) {
           if (circleCollision(this.x, this.y, this.radius + GAME_CONSTANTS.WORLD.AMMO_PICKUP.COLLECTION_BONUS_RADIUS, player.x, player.y, player.radius)) {
             player.ammo += this.ammoAmount;
@@ -1394,15 +1532,14 @@
             playSound(SOUNDS.PICKUP_AMMO);
             stateAccumulator.floatingTexts = stateAccumulator.floatingTexts || [];
             stateAccumulator.floatingTexts.push(createFloatingText(this.x, this.y, `+${this.ammoAmount}`, '#FFD700'));
-            return false; // Remove pickup
+            return false; // Signal removal
           }
         }
 
-        // Keep pickup until max bounces reached
+        // Keep pickup alive until max bounces reached
         return this.bounceCount < GAME_CONSTANTS.WORLD.AMMO_PICKUP.MAX_BOUNCES;
       };
 
-      // Add instance method for rendering
       pickup.draw = function(ctx, cameraX, cameraY) {
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
 
@@ -1442,14 +1579,12 @@
         damage: dinoType.spitAttack.damage
       };
 
-      // Add instance method for physics update
       spit.update = function(mapWidth, mapHeight) {
         this.x += this.vx;
         this.y += this.vy;
         return isInBounds(this.x, this.y, mapWidth, mapHeight);
       };
 
-      // Add instance method for rendering
       spit.draw = function(ctx, cameraX, cameraY) {
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
         const spitAttack = GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS.spitAttack;
@@ -1487,7 +1622,6 @@
         }))
       };
 
-      // Add instance method for rendering
       tarPit.draw = function(ctx, cameraX, cameraY) {
         this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
       };
@@ -1509,7 +1643,6 @@
         playerDamageCooldown: 0
       };
 
-      // Add instance method for rendering
       fence.draw = function(ctx, cameraX, cameraY) {
         this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
       };
@@ -1532,7 +1665,6 @@
         locked: true, // Exit starts locked (unlocks when conditions met)
       };
 
-      // Add instance method for rendering
       exit.draw = function(ctx, cameraX, cameraY) {
         const screenX = this.x - cameraX;
         const screenY = this.y - cameraY;
@@ -1569,17 +1701,32 @@
     };
 
     /**
-     * Create an exit territory object
-     * @param {number} exitX - Exit X position
-     * @param {number} exitY - Exit Y position
-     * @param {number} totalGuards - Total number of guards protecting this exit
-     */
-    /**
      * Create a territory for a regular territorial dinosaur
+     *
      * @param {Object} dino - Dinosaur object being assigned the territory
      * @param {Object} spawnPos - Position {x, y} where dinosaur spawned
      * @param {Object} game - Game state object
-     * @returns {Object} Territory object with draw() instance method, or null if spawn failed
+     * @returns {Object} Territory object with draw() instance method
+     *
+     * @remarks
+     * Territory placement uses collision avoidance to prevent clustering:
+     *
+     * Spacing requirements:
+     * - TERRITORY_SPACING_MULTIPLIER (2x radius) prevents overlap
+     * - TERRITORY_OBSTACLE_CLEARANCE prevents territories inside obstacles
+     * - Dinosaur can still patrol and defend overlapping areas
+     *
+     * Why fallback position is acceptable:
+     * - After max attempts, returns position even if overlapping
+     * - Multiple territories can share space (not game-breaking)
+     * - Dinosaurs navigate around obstacles naturally in AI
+     * - Prevents infinite loops during dense map generation
+     * - Territory visualization may overlap but AI behavior still works
+     *
+     * Territory ownership tracking:
+     * - dinoIndex stores position in game.dinosaurs array
+     * - Used to remove territory when dinosaur dies
+     * - Must be updated when dinosaurs are removed (see updateBullets)
      */
     const createTerritoryForDino = (dino, spawnPos, game) => {
       const dinoType = dino.type;
@@ -1589,10 +1736,11 @@
       const maxAttempts = GAME_CONSTANTS.AI.TERRITORY_SPAWN_MAX_ATTEMPTS;
       const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * GAME_CONSTANTS.AI.TERRITORY_SPACING_MULTIPLIER;
 
+      // Try to find non-overlapping position
       while (attempts < maxAttempts) {
         let overlapping = false;
 
-        // Check against existing territories
+        // Check against existing territories (prevent clustering)
         for (const existingTerritory of game.territories) {
           const dist = distance(territoryX, territoryY, existingTerritory.x, existingTerritory.y);
           if (dist < minTerritorySpacing) {
@@ -1601,7 +1749,7 @@
           }
         }
 
-        // Check territory center is not too close to obstacles
+        // Check territory center clearance from obstacles
         if (!overlapping) {
           for (const obstacle of game.obstacles) {
             const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
@@ -1613,23 +1761,23 @@
         }
 
         if (!overlapping) {
-          break; // Found a valid position
+          break; // Found valid position
         }
 
-        // Try a new random position
+        // Retry with random position
         territoryX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X * 2);
         territoryY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y * 2);
         attempts++;
       }
 
+      // Create territory (even if overlapping after max attempts)
       const territory = {
         x: territoryX,
         y: territoryY,
         radius: GAME_CONSTANTS.AI.TERRITORY_RADIUS,
-        dinoIndex: game.dinosaurs.length // Track which dino owns this territory
+        dinoIndex: game.dinosaurs.length // Track owning dinosaur by array index
       };
 
-      // Add instance method for drawing
       territory.draw = function(ctx, cameraX, cameraY) {
         drawTerritory(ctx, this, cameraX, cameraY);
       };
@@ -1646,7 +1794,6 @@
         guardCount: totalGuards
       };
 
-      // Add instance method for drawing
       territory.draw = function(ctx, cameraX, cameraY) {
         drawTerritory(ctx, this, cameraX, cameraY);
       };
@@ -1707,7 +1854,6 @@
         avoidFences: []
       };
 
-      // Add instance method for rendering
       guard.draw = function(ctx) {
         const scale = this.size / this.type.baseSize;
         this.type.drawFunction(ctx, scale, this);
@@ -2865,37 +3011,59 @@
     };
 
     /**
-     * Find a valid spawn position that doesn't collide with obstacles
-     * @param {number} x - Initial x position
-     * @param {number} y - Initial y position
-     * @param {number} radius - Collision radius
-     * @param {Array} obstacles - Array of obstacle objects
-     * @param {Object} game - Game reference for map dimensions
-     * @param {number} maxAttempts - Maximum number of spawn attempts
-     * @returns {Object} Valid position {x, y}
+     * Find valid spawn position for dinosaur near target location
+     *
+     * @param {number} x - Desired X position
+     * @param {number} y - Desired Y position
+     * @param {number} radius - Entity radius (dinosaur size)
+     * @param {Array} obstacles - Array of blocking obstacles
+     * @param {Object} game - Game state object
+     * @param {number} maxAttempts - Maximum search attempts
+     * @returns {Object} Position {x, y} - valid if found, original if not
+     *
+     * @remarks
+     * Localized search pattern for dinosaur spawning:
+     *
+     * Search strategy:
+     * - First checks if initial position is already valid (fast path)
+     * - Searches within DINOSAUR_SPAWN_SEARCH_RANGE of desired position
+     * - Uses randomCentered for scattered search pattern around spawn point
+     * - Maintains dinosaurs near their intended grid positions
+     *
+     * Why fallback to invalid position is acceptable:
+     * - Prevents infinite loops when map is densely packed with obstacles
+     * - Dinosaurs have obstacle avoidance AI that navigates them out
+     * - Better to spawn stuck dinosaur than crash/hang the game
+     * - Visual overlap at spawn quickly resolves as AI kicks in
+     * - Grid-based spawning means invalid positions are rare anyway
+     *
+     * Clamping to bounds:
+     * - Prevents dinosaurs spawning outside map edges
+     * - Ensures physics/collision systems always have valid positions
+     * - Radius padding prevents half-off-screen spawns
      */
     const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_MAX_ATTEMPTS) => {
-      // Check if initial position is valid
+      // Fast path: initial position is valid
       if (!checkObstacleCollision(x, y, radius, obstacles)) {
         return { x, y };
       }
 
-      // Try random positions near the initial spawn point
+      // Localized search around desired spawn point
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const randomX = x + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
         const randomY = y + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
 
-        // Clamp to map bounds
+        // Clamp to map bounds with radius padding
         const clampedX = clamp(randomX, radius, game.mapWidth - radius);
         const clampedY = clamp(randomY, radius, game.mapHeight - radius);
 
-        // Check if this position is valid
+        // Check for collision-free position
         if (!checkObstacleCollision(clampedX, clampedY, radius, obstacles)) {
           return { x: clampedX, y: clampedY };
         }
       }
 
-      // Fallback: return original position (dinosaur will have to navigate out)
+      // Fallback: return original (dinosaur AI will navigate out)
       return { x, y };
     };
 
@@ -2952,22 +3120,38 @@
 
     /**
      * Update player movement based on input
+     *
      * @param {Object} game - Game reference object
      * @param {Object} canvas - Canvas element
      * @param {Object} stateAccumulator - Accumulates state changes to batch updates
+     *
+     * @remarks
+     * Handles keyboard, touch joystick, jump physics, and obstacle collision.
+     *
+     * Jump-over-obstacle mechanic:
+     * - Collision check uses player.jumpHeight parameter
+     * - checkObstacleCollision skips check if jumpHeight >= JUMP_CLEAR_HEIGHT
+     * - Creates Mario-style jump mechanic without complex collision shapes
+     * - Why this approach: simple, predictable, easy for player to understand
+     *
+     * Touch joystick with variable speed:
+     * - JOYSTICK_DEAD_ZONE prevents drift from finger wobble
+     * - JOYSTICK_MAX_RANGE caps maximum input distance
+     * - speedMultiplier scales with joystick distance (subtle control)
+     * - Normalized direction ensures consistent diagonal movement
      */
     const updatePlayerMovement = (game, canvas, stateAccumulator) => {
-      // Update player zap timer
+      // Decrement visual effect timer
       if (game.player.zapTimer > 0) {
         game.player.zapTimer--;
       }
 
-      // Update jump physics
+      // Jump physics with gravity
       if (game.player.isJumping) {
         game.player.jumpHeight += game.player.jumpVelocity;
-        game.player.jumpVelocity -= GAME_CONSTANTS.CORE.PHYSICS.GRAVITY;
+        game.player.jumpVelocity -= GAME_CONSTANTS.CORE.PHYSICS.GRAVITY; // Apply gravity each frame
 
-        // Land
+        // Landing detection
         if (game.player.jumpHeight <= 0) {
           game.player.jumpHeight = 0;
           game.player.jumpVelocity = 0;
@@ -3226,29 +3410,41 @@
                 stateAccumulator.score = (stateAccumulator.score || 0) + dino.points;
                 game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
 
-                // Remove territory if territorial
+                // Territory cleanup on dinosaur death
+                // Complex logic handles both normal territories and exit guard territories
                 if (dino.territorial && dino.territoryIndex !== undefined) {
                   const territory = game.territories[dino.territoryIndex];
                   let shouldRemoveTerritory = false;
 
-                  // Handle exit territory guard death
+                  // Exit territory special case: multiple guards share one territory
                   if (territory && territory.isExitTerritory) {
                     territory.guardCount--;
-                    // If all guards are dead, unlock exit and mark for removal
+
+                    // All guards defeated: unlock exit and remove territory
+                    // Why guard counting:
+                    // - Multiple dinosaurs guard single exit territory
+                    // - Exit should only unlock when ALL guards dead
+                    // - Territory persists until last guard falls
+                    // - Creates "defend the gate" mechanic for final challenge
                     if (territory.guardCount === 0) {
                       if (game.exit) game.exit.locked = false;
                       shouldRemoveTerritory = true;
                     }
                   } else {
-                    // Normal territory always removed
+                    // Normal territory: 1:1 mapping with dinosaur, always removed
                     shouldRemoveTerritory = true;
                   }
 
-                  // Remove territory and update indices (shared logic)
+                  // Territory removal with index management
                   if (shouldRemoveTerritory) {
                     game.territories.splice(dino.territoryIndex, 1);
 
-                    // Update territoryIndex for remaining dinosaurs
+                    // Critical: update territoryIndex for all remaining dinosaurs
+                    // Why this is necessary:
+                    // - territoryIndex stores array position, not ID
+                    // - Splicing shifts all subsequent indices down by 1
+                    // - Without update, dinosaurs would reference wrong territories
+                    // - Only affects dinosaurs with index > removed index
                     game.dinosaurs.forEach(d => {
                       if (d.territorial && d.territoryIndex !== undefined && d.territoryIndex > dino.territoryIndex) {
                         d.territoryIndex--;
@@ -3310,61 +3506,93 @@
     };
 
     /**
-     * Update a single dinosaur's AI behavior
+     * Update dinosaur AI behavior and movement
+     *
      * @param {Object} dino - Dinosaur object
      * @param {Object} player - Player object
-     * @param {Object} game - Game reference
-     * @param {string} difficulty - Current difficulty
+     * @param {Object} game - Game state object
+     * @param {string} difficulty - Current difficulty setting
+     *
+     * @remarks
+     * Three-branch AI system based on dinosaur personality:
+     *
+     * 1. Territorial AI (Triceratops, Dilophosaurus):
+     *    - Defends fixed territory, returns to center when player leaves
+     *    - State machine: PATROL → CHASE → TERRITORY_RETURN
+     *    - Uses different return thresholds based on current state (prevents oscillation)
+     *    - TERRITORY_MARGIN allows some buffer before aggro triggers
+     *
+     * 2. Aggressive AI (T-Rex, Velociraptor):
+     *    - Chases player when in aggro range, patrols otherwise
+     *    - Simpler state machine: PATROL ↔ CHASE
+     *    - No territory constraints, can chase across entire map
+     *
+     * 3. Herbivore AI (Parasaurolophus, Stegosaurus):
+     *    - Flees from player when too close
+     *    - Increased speed during FLEE state (panic behavior)
+     *    - Otherwise patrols randomly
+     *
+     * Why different return thresholds for territorial dinosaurs:
+     * - TERRITORY_RETURN_THRESHOLD_RETURNING: 1.5x (larger when already returning)
+     * - TERRITORY_RETURN_THRESHOLD_ACTIVE: 2.0x (smaller when active/chasing)
+     * - Prevents rapid state flipping at territory edge (hysteresis pattern)
+     * - Creates smoother, more believable AI behavior
+     *
+     * Patrol mechanics:
+     * - Random angle adjustment each frame creates wandering behavior
+     * - PATROL_SPEED_MULTIPLIER (0.3) makes patrol slower than chase/flee
+     * - Gives player time to strategize and plan approaches
      */
     const updateDinosaurAI = (dino, player, game, difficulty) => {
       const dist = distance(dino.x, dino.y, player.x, player.y);
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
 
-      // Set base speed (may be modified for specific states like flee)
+      // Apply difficulty scaling to base speed
       dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
 
       if (dino.territorial) {
-        // Territorial dinosaur logic
+        // Territorial AI: defend territory, return to center
         const distFromTerritory = distance(dino.x, dino.y, dino.territoryX, dino.territoryY);
         const playerDistFromTerritory = distance(player.x, player.y, dino.territoryX, dino.territoryY);
 
         const territoryMargin = GAME_CONSTANTS.AI.TERRITORY_MARGIN;
+        // Hysteresis: different thresholds based on current state prevents oscillation
         const returnThreshold = dino.state === GAME_CONSTANTS.AI.STATES.TERRITORY_RETURN
           ? GAME_CONSTANTS.AI.TERRITORY_RETURN_THRESHOLD_RETURNING
           : GAME_CONSTANTS.AI.TERRITORY_RETURN_THRESHOLD_ACTIVE;
 
         if (playerDistFromTerritory < dino.territoryRadius + territoryMargin && dist < GAME_CONSTANTS.AI.TERRITORY_AGGRO_RANGE) {
-          // Chase player
+          // Chase: player invaded territory
           dino.state = GAME_CONSTANTS.AI.STATES.CHASE;
           const { dx, dy } = normalize(player.x - dino.x, player.y - dino.y);
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
 
-          // Spit attack (if dinosaur has this capability)
+          // Ranged attack capability (if dinosaur has spitAttack)
           if (dino.type.spitAttack && dist < dino.type.spitAttack.range && dino.spitCooldown <= 0) {
             game.spit.push(createSpitProjectile(dino.x, dino.y, player.x, player.y, dino.type));
             dino.spitCooldown = dino.type.spitAttack.cooldown;
           }
         } else if (distFromTerritory > dino.territoryRadius * returnThreshold) {
-          // Return to territory
+          // Return: strayed too far from territory center
           dino.state = GAME_CONSTANTS.AI.STATES.TERRITORY_RETURN;
           const { dx, dy } = normalize(dino.territoryX - dino.x, dino.territoryY - dino.y);
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
         } else {
-          // Patrol
+          // Patrol: calm state, wander near territory
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
           dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
           dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
           dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
         }
 
-        // Update spit cooldown
+        // Tick down spit attack cooldown
         if (dino.spitCooldown > 0) {
           dino.spitCooldown--;
         }
       } else if (dino.aggressive) {
-        // Aggressive dinosaur logic
+        // Aggressive AI: chase player in range, patrol otherwise
         if (dist < dino.aggroRange) {
           dino.state = GAME_CONSTANTS.AI.STATES.CHASE;
           const { dx, dy } = normalize(player.x - dino.x, player.y - dino.y);
@@ -3377,10 +3605,10 @@
           dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
         }
       } else {
-        // Herbivore logic
+        // Herbivore AI: flee from player when close
         if (dist < dino.fleeRange) {
           dino.state = GAME_CONSTANTS.AI.STATES.FLEE;
-          const { dx, dy } = normalize(dino.x - player.x, dino.y - player.y);
+          const { dx, dy } = normalize(dino.x - player.x, dino.y - player.y); // Away from player
           dino.speed = dino.baseSpeed * GAME_CONSTANTS.AI.HERBIVORE_FLEE_SPEED_MULTIPLIER * diffMod.enemySpeedMultiplier;
           dino.vx = dx * dino.speed;
           dino.vy = dy * dino.speed;
@@ -3451,17 +3679,21 @@
         let newDinoX = dino.x + effectiveVx;
         let newDinoY = dino.y + effectiveVy;
 
-        // Obstacle avoidance
+        // Obstacle avoidance - perpendicular steering algorithm
+        // Tests left and right perpendicular directions to find clear path
         let dinoCollided = false;
         for (const obs of game.obstacles) {
           if (circleCollision(newDinoX, newDinoY, dino.size, obs.x, obs.y, obs.radius)) {
             dinoCollided = true;
 
-            // Try steering around obstacle
+            // Calculate perpendicular steering directions
+            // Why ±90°: perpendicular to current velocity creates natural "steering around" motion
+            // Alternative approaches (reversing, random angles) look unnatural or get stuck
             const angle = Math.atan2(dino.vy, dino.vx);
-            const avoidAngleLeft = angle + Math.PI / 2;
-            const avoidAngleRight = angle - Math.PI / 2;
+            const avoidAngleLeft = angle + Math.PI / 2;   // 90° counter-clockwise
+            const avoidAngleRight = angle - Math.PI / 2;  // 90° clockwise
 
+            // Test positions at perpendicular angles (2x size for safety margin)
             const avoidDistX = Math.cos(avoidAngleLeft) * dino.size * 2;
             const avoidDistY = Math.sin(avoidAngleLeft) * dino.size * 2;
             const testLeftX = dino.x + avoidDistX;
@@ -3472,35 +3704,47 @@
             const testRightX = dino.x + avoidDistXRight;
             const testRightY = dino.y + avoidDistYRight;
 
+            // Check which directions are clear
             const leftClear = !checkObstacleCollision(testLeftX, testLeftY, dino.size, game.obstacles);
             const rightClear = !checkObstacleCollision(testRightX, testRightY, dino.size, game.obstacles);
 
+            // Priority: favor single clear path, randomize when both clear
             if (leftClear && !rightClear) {
+              // Only left is clear - go left
               newDinoX = testLeftX;
               newDinoY = testLeftY;
               dinoCollided = false;
             } else if (rightClear && !leftClear) {
+              // Only right is clear - go right
               newDinoX = testRightX;
               newDinoY = testRightY;
               dinoCollided = false;
             } else if (leftClear && rightClear) {
+              // Both clear - random choice prevents predictable patterns
               const choice = Math.random() > 0.5;
               newDinoX = choice ? testLeftX : testRightX;
               newDinoY = choice ? testLeftY : testRightY;
               dinoCollided = false;
             }
+            // If neither clear: dinoCollided stays true, dinosaur stops
             break;
           }
         }
 
-        // Electric fence avoidance and collision
+        // Electric fence collision with learning/memory system
+        // Dinosaurs "learn" to avoid fences after getting zapped
         for (const fence of game.electricFences) {
           const fenceType = fence.hazardType;
-          // Check if dinosaur remembers this fence
+
+          // Check if dinosaur remembers this specific fence from previous collision
           const rememberedFence = dino.avoidFences.find(af => af.fence === fence);
 
           if (rememberedFence) {
-            // Steer away from remembered fence
+            // Proactive avoidance: steer away before collision
+            // Why this improves pathfinding:
+            // - Dinosaurs learn from mistakes (feels intelligent)
+            // - Reduces getting stuck bouncing against fences
+            // - Creates natural "cautious" behavior near hazards
             const fenceDist = distance(newDinoX, newDinoY, fence.x, fence.y);
             if (fenceDist < fenceType.width + fenceType.memory.avoidanceBuffer) {
               const { dx, dy } = normalize(newDinoX - fence.x, newDinoY - fence.y);
@@ -3509,9 +3753,9 @@
             }
           }
 
-          // Check collision
+          // Collision detection and response
           if (circleRectCollision(newDinoX, newDinoY, dino.size, fence.x, fence.y, fenceType.width, fenceType.height, fence.rotation)) {
-            // Bounce back - apply position directly
+            // Pushback force - bounce dinosaur away from fence
             const dx = newDinoX - fence.x;
             const dy = newDinoY - fence.y;
             const pushDist = distance(0, 0, dx, dy);
@@ -3520,18 +3764,19 @@
               dino.y = dino.y + (dy / pushDist) * fenceType.pushbackForce;
             }
 
-            // Stun dinosaur
+            // Stun dinosaur (reuses sleep state machinery)
             dino.isSleeping = true;
             dino.sleepTimer = Math.round(dino.type.sleepDuration * fenceType.stunDurationMultiplier);
-            dino.zapTimer = fenceType.zap.duration;
+            dino.zapTimer = fenceType.zap.duration; // Visual effect
 
-            // Remember to avoid this fence
+            // Memory system: remember this fence to avoid it in future
+            // Memory has duration timer that decays (dinosaurs "forget" over time)
             dino.avoidFences.push({
-              fence: fence,
+              fence: fence,  // Reference to specific fence instance
               timer: fenceType.memory.duration
             });
 
-            // Play sound if near player
+            // Spatial audio: only play sound if zap happens near player
             if (distance(dino.x, dino.y, game.player.x, game.player.y) < fenceType.zap.soundMaxDistance) {
               playSound(SOUNDS.ELECTRIC_SHOCK);
             }
@@ -4322,7 +4567,6 @@
               avoidFences: [] // Array of {fence, timer} objects for learned fence avoidance
             };
 
-            // Add instance method for rendering
             dino.draw = function(ctx) {
               const scale = this.size / this.type.baseSize;
               this.type.drawFunction(ctx, scale, this);
@@ -4451,23 +4695,54 @@
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
+        /**
+         * Main game loop running at 60 FPS via requestAnimationFrame
+         *
+         * @remarks
+         * Critical React performance pattern: State Accumulator
+         *
+         * Problem without accumulator:
+         * - 60 game updates per second
+         * - Each update triggers multiple setState calls
+         * - Each setState causes React re-render
+         * - Result: 100+ re-renders per second, janky performance
+         *
+         * Solution with accumulator:
+         * - Create stateAccumulator object at start of frame
+         * - All update functions write to accumulator instead of setState
+         * - Apply all accumulated changes at end of frame (single re-render)
+         * - Result: 60 re-renders per second (one per frame), smooth performance
+         *
+         * Pattern:
+         * ```
+         * const stateAccumulator = {};
+         * updatePlayerSpeed(game, stateAccumulator);       // writes to accumulator
+         * updateDinosaurs(game, difficulty, ..., stateAccumulator);
+         * applyStateUpdates(stateAccumulator, setters);    // batch apply all changes
+         * ```
+         *
+         * Early returns for game-over:
+         * - Update functions return true if game should end
+         * - Prevents rendering/logic after player death
+         * - State transition to LOST/WON already queued in accumulator
+         */
         const gameLoop = () => {
-          // Pause if pause menu or settings menu is showing
+          // Pause loop when menus are open (but keep loop running)
           if (showPauseMenu || showSettingsMenu) {
             animationId = requestAnimationFrame(gameLoop);
             return;
           }
 
-          // State accumulator for batch updates (reduce re-renders)
+          // State accumulator: batch all React state updates into single re-render
           const stateAccumulator = {};
 
-          // Update player speed modifiers
+          // Update player speed modifiers (tar pits, power-ups)
           updatePlayerSpeed(game, stateAccumulator);
 
-          // Update hazards
+          // Update hazards (electric fences collision with player)
           updateHazards(game, difficulty, playSound, stateAccumulator);
 
-          // Update player movement
+          // Update player movement (keyboard, joystick, collision, camera)
           updatePlayerMovement(game, canvas, stateAccumulator);
 
           // Handle touch weapon switching
