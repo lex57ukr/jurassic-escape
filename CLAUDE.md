@@ -55,7 +55,7 @@ The codebase follows a strict 6-section organization pattern:
 // BAD: gameState = 'playing'; if (isTerminalState(gameState)) ...
 
 // Store full object references:
-gameState = GAME_CONSTANTS.GAME_STATES.PLAYING;
+gameState = GAME_CONSTANTS.CORE.GAME_STATES.PLAYING;
 if (gameState.isTerminal) { ... }  // Direct property access
 
 // Applies to ALL entity types:
@@ -173,15 +173,15 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 
 ```javascript
 // Avoid: if (jumpHeight >= 25) ...
-// Instead: if (jumpHeight >= GAME_CONSTANTS.PLAYER.JUMP_CLEAR_HEIGHT) ...
+// Instead: if (jumpHeight >= GAME_CONSTANTS.CORE.PLAYER.JUMP_CLEAR_HEIGHT) ...
 
 // All entity types defined as full objects in GAME_CONSTANTS:
-// - GAME_STATES (id, isTerminal, runsGameLoop, canPause, soundEffect)
-// - WEAPONS (id, icon, bulletColor, ammoConfig, soundEffect, bulletFactory)
-// - DINOSAURS (id, baseSize, health, speed, points, aggressive, territorial, tranqShots, spitAttack, drawFunction)
-// - OBSTACLES (id, blocksMovement, zIndex, colors, drawFunction)
-// - POWERUPS (id, radius, icon, durationFrames, multiplier)
-// - HAZARDS (id, damage, slowMultiplier, colors, drawFunction)
+// - CORE.GAME_STATES (id, isTerminal, runsGameLoop, canPause, soundEffect)
+// - ENTITIES.WEAPONS (id, icon, bulletColor, ammoConfig, soundEffect, bulletFactory)
+// - ENTITIES.DINOSAURS (id, baseSize, health, speed, points, aggressive, territorial, tranqShots, spitAttack, drawFunction)
+// - ENTITIES.OBSTACLES (id, blocksMovement, zIndex, colors, drawFunction)
+// - ENTITIES.POWERUPS (id, radius, icon, durationFrames, multiplier)
+// - ENTITIES.HAZARDS (id, damage, slowMultiplier, colors, drawFunction)
 ```
 
 ## Key Utility Functions
