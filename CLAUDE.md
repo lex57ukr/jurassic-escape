@@ -318,6 +318,85 @@ When adding new entity types, weapons, or game mechanics:
 - Verify settings persistence (localStorage)
 - Check canvas rendering at all viewport sizes (Small/Medium/Large)
 
+## Documentation Patterns
+
+**When to document:**
+
+- New functionality being added to the codebase
+- Changes to existing functionality (update docs to match new behavior)
+- Complex algorithms or non-obvious design decisions
+- Performance optimizations that aren't immediately clear
+- Anything a future maintainer might question "why did they do it this way?"
+
+**JSDoc format:**
+
+```javascript
+/**
+ * Brief one-line description of what the function does
+ *
+ * @param {Type} paramName - Parameter description
+ * @returns {Type} Return value description
+ *
+ * @remarks
+ * Why this implementation approach was chosen.
+ *
+ * Design decisions explained:
+ * - Rationale for algorithm choices
+ * - Performance considerations
+ * - Trade-offs and alternatives considered
+ * - Non-obvious behavior that needs context
+ */
+```
+
+**What to document:**
+
+- **Complex collision math** - Inverse rotation transforms, clamping algorithms
+- **Factory patterns** - Why instance methods, how they enable polymorphism
+- **State management** - Dual-mode operation (accumulator vs direct setState)
+- **AI behavior** - Hysteresis patterns, obstacle avoidance algorithms, learning systems
+- **Physics systems** - Progressive damping, bounce mechanics, gravity
+- **Performance optimizations** - Canvas state batching, entity rendering order
+- **Non-obvious game mechanics** - Jump-over-obstacles, collection delays, territory ownership
+
+**What NOT to document:**
+
+- Obvious code patterns: `entity.draw = function() { ... }` doesn't need "Add instance draw method" comment
+- Self-explanatory loops: `for (const tarPit of game.tarPits)` doesn't need "Loop through tar pits"
+- Simple calculations: `x + vx` doesn't need "Update position"
+- Function calls with clear names: `playSound(SOUNDS.PICKUP)` doesn't need "Play pickup sound"
+
+**Documentation maintenance:**
+
+- When changing a function's behavior, update its JSDoc immediately
+- When refactoring code, remove orphaned/duplicate documentation blocks
+- When extracting utilities, add JSDoc explaining the abstraction's purpose
+- When removing features, remove associated documentation
+- Review inline comments periodically to remove obsolete ones
+
+**Focus on "why" not "what":**
+
+```javascript
+// ❌ Bad (obvious from code):
+// Loop through obstacles
+for (const obstacle of obstacles) { ... }
+
+// ✅ Good (explains rationale):
+// Check if initial position is valid (fast path optimization)
+if (!checkObstacleCollision(x, y, radius, obstacles)) {
+  return { x, y };
+}
+
+// ❌ Bad (restates code):
+// Apply gravity to vertical velocity
+this.vy += GAME_CONSTANTS.CORE.PHYSICS.AMMO_GRAVITY;
+
+// ✅ Good (explains design decision):
+// Progressive damping: bounces get weaker over time
+// Later bounces have stronger damping for natural decay
+const progressiveFactor = bounceCount / maxBounces;
+const damping = adjustedDamping * (1 - bounceProgress * progressiveFactor);
+```
+
 ## Common Pitfalls
 
 ❌ **Creating entities inline without factory functions** → Missing draw() methods, crashes at render time
@@ -325,6 +404,8 @@ When adding new entity types, weapons, or game mechanics:
 ❌ **Adding function bindings before function definitions** → Undefined reference errors
 ❌ **Forgetting state batching in game loop** → 100s of re-renders per second, performance issues
 ❌ **Magic numbers scattered in code** → Hard to maintain, inconsistent behavior
+❌ **Leaving orphaned comments after refactoring** → Confusing documentation, maintenance burden
+❌ **Over-documenting obvious code** → Noise that obscures valuable explanations
 
 ## Additional Resources
 
