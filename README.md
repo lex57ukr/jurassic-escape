@@ -49,6 +49,8 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 ### VSCode Debugging Setup
 
+**Claude Code users:** Run `/setup-vscode-debug` to automatically configure your environment!
+
 The project includes VSCode configuration files (`.vscode/` is gitignored, so you'll need to create your own). This setup enables:
 
 - **VSCode breakpoints** in your code (requires HTTP server, not file://)
