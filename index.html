@@ -639,20 +639,26 @@
       // ========================================================================
       AI: {
         STATES: {
-          PATROL: 'patrol',
-          CHASE: 'chase',
-          FLEE: 'flee',
-          TERRITORY_RETURN: 'return',
-        },
-        PATROL: {
-          ANGLE_CHANGE_RATE: 0.1,
-          SPEED_MULTIPLIER: 0.5,
-        },
-        HERBIVORE: {
-          FLEE_RANGE: 150,     // Distance at which herbivores flee
-          FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
-          FLEE_DIRECTION_DURATION: 90, // Frames to maintain flee direction before recalculating
-          FLEE_RECALC_ANGLE_RANGE: Math.PI / 4, // ±45° adjustment when recalculating flee direction
+          PATROL: {
+            id: 'patrol',
+            angleChangeRate: 0.1,
+            speedMultiplier: 0.5,
+          },
+          CHASE: {
+            id: 'chase',
+            // Chase uses base dinosaur speed and aggro range
+          },
+          FLEE: {
+            id: 'flee',
+            range: 150,                      // Distance at which herbivores flee
+            speedMultiplier: 1.5,            // Speed boost when fleeing
+            directionDuration: 90,           // Frames to maintain flee direction before recalculating
+            recalcAngleRange: Math.PI / 4,   // ±45° adjustment when recalculating flee direction
+          },
+          TERRITORY_RETURN: {
+            id: 'return',
+            // Return uses TERRITORY config for thresholds and behavior
+          },
         },
         TERRITORY: {
           RADIUS: 200,         // Radius of territorial zone
@@ -4453,9 +4459,9 @@
         } else {
           // Patrol: calm state, wander near territory
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL.ANGLE_CHANGE_RATE);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
+          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
+          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
         }
 
         // Tick down spit attack cooldown
@@ -4471,9 +4477,9 @@
           dino.vy = dy * dino.speed;
         } else {
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL.ANGLE_CHANGE_RATE);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
+          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
+          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
         }
       } else {
         // Herbivore AI: flee from player when close with persistent direction
@@ -4481,7 +4487,7 @@
           // Entering or continuing flee state
           const wasAlreadyFleeing = dino.state === GAME_CONSTANTS.AI.STATES.FLEE;
           dino.state = GAME_CONSTANTS.AI.STATES.FLEE;
-          dino.speed = dino.baseSpeed * GAME_CONSTANTS.AI.HERBIVORE.FLEE_SPEED_MULTIPLIER * diffMod.enemySpeedMultiplier;
+          dino.speed = dino.baseSpeed * GAME_CONSTANTS.AI.STATES.FLEE.speedMultiplier * diffMod.enemySpeedMultiplier;
 
           // Set or update flee direction with persistence to prevent oscillation
           if (!wasAlreadyFleeing || dino.fleeDurationTimer <= 0) {
@@ -4496,9 +4502,9 @@
               const angleToPlayer = Math.atan2(dino.y - player.y, dino.x - player.x);
               const currentRelativeAngle = dino.fleeAngle - angleToPlayer;
               // Keep roughly away from player but add variation (±45°)
-              dino.fleeAngle = angleToPlayer + currentRelativeAngle + randomCentered(GAME_CONSTANTS.AI.HERBIVORE.FLEE_RECALC_ANGLE_RANGE);
+              dino.fleeAngle = angleToPlayer + currentRelativeAngle + randomCentered(GAME_CONSTANTS.AI.STATES.FLEE.recalcAngleRange);
             }
-            dino.fleeDurationTimer = GAME_CONSTANTS.AI.HERBIVORE.FLEE_DIRECTION_DURATION;
+            dino.fleeDurationTimer = GAME_CONSTANTS.AI.STATES.FLEE.directionDuration;
           }
 
           // Maintain persistent flee direction
@@ -4509,9 +4515,9 @@
           // Return to patrol when player is far enough
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
           dino.fleeDurationTimer = 0; // Reset timer
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL.ANGLE_CHANGE_RATE);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
+          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
+          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
         }
       }
     };
@@ -4741,7 +4747,7 @@
             } else {
               // FLEE state: update flee angle and reset timer for immediate recalculation
               dino.fleeAngle = Math.atan2(dino.vy, dino.vx);
-              dino.fleeDurationTimer = GAME_CONSTANTS.AI.HERBIVORE.FLEE_DIRECTION_DURATION;
+              dino.fleeDurationTimer = GAME_CONSTANTS.AI.STATES.FLEE.directionDuration;
             }
           }
         }
@@ -5514,7 +5520,7 @@
               aggressive: dinoConfig.type.aggressive,
               territorial: dinoConfig.type.territorial,
               aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
-              fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE.FLEE_RANGE,
+              fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.STATES.FLEE.range,
               state: GAME_CONSTANTS.AI.STATES.PATROL,
               patrolAngle: Math.random() * Math.PI * 2,
               fleeAngle: 0, // Persistent flee direction to prevent oscillation

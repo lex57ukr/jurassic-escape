@@ -196,7 +196,8 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 // - ENTITIES.OBSTACLES (id, blocksMovement, zIndex, colors, drawFunction)
 // - ENTITIES.POWERUPS (id, radius, icon, durationFrames, multiplier)
 // - ENTITIES.HAZARDS (id, damage, slowMultiplier, colors, drawFunction)
-// - AI (nested: STATES, PATROL, HERBIVORE, TERRITORY, EXIT)
+// - AI.STATES (PATROL, CHASE, FLEE, TERRITORY_RETURN - each with id and state-specific properties)
+// - AI (nested: STATES, TERRITORY, EXIT, FACING_DIRECTION_THRESHOLD)
 // - WORLD.SPAWN (nested: PLAYER, DEPOTS, OBSTACLES, DINOSAURS, POWERUPS, HAZARDS)
 ```
 
