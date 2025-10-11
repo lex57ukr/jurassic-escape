@@ -210,12 +210,12 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 
 **Entity Factories** (all add `draw()` instance method):
 
-- `createObstacle(game)` - Trees/bushes/boulders/rock clusters (blocking obstacles)
+- `createObstacle(game)` - Trees/bushes/boulders/rock clusters (blocking obstacles, uses `isValidPosition()`)
 - `createMushroomPatch()` - Mushroom decorations (non-blocking)
 - `createGrassPatch()` - Grass decorations (non-blocking)
-- `createPowerup()` - Health packs, speed boosts
-- `createTranqDepot()` - Tranquilizer ammo crates
-- `createAmmoDepot()` - Regular ammo crates
+- `createPowerup(game)` - Health packs, speed boosts (uses `isValidPosition()`, guaranteed to succeed)
+- `createTranqDepot(game)` - Tranquilizer ammo crates (uses `isValidPosition()`, guaranteed to succeed)
+- `createAmmoDepot()` - Regular ammo crates (fixed positions)
 - `createAmmoPickup()` - Bouncing ammo drops from defeated dinosaurs
 - `createTarPit()` - Movement-slowing hazards
 - `createElectricFence()` - Damage/stun hazards

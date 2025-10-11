@@ -1568,42 +1568,80 @@
     };
 
     /**
-     * Create a powerup object
+     * Generic spawn helper: retries until factory succeeds with valid position
+     * @param {Object} game - Game state object (for collision checking)
+     * @param {Function} radiusGetter - Function that returns entity radius for collision checking
+     * @param {Function} factory - Function (x, y) => entity object
+     * @returns {Object} Entity object (always succeeds)
      */
-    const createPowerup = (mapWidth, mapHeight) => {
-      const powerupType = Math.random() > 0.5 ? GAME_CONSTANTS.ENTITIES.POWERUPS.HEALTH : GAME_CONSTANTS.ENTITIES.POWERUPS.SPEED;
-      const powerup = {
-        x: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        y: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        powerupType,
-        radius: powerupType.radius,
-        active: true
-      };
+    const spawnWithCollisionCheck = (game, radiusGetter, factory) => {
+      // Keep trying until we find a valid position (guaranteed to succeed eventually)
+      while (true) {
+        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
 
-      powerup.draw = function(ctx, cameraX, cameraY) {
-        drawPowerup(ctx, this, cameraX, cameraY);
-      };
-
-      return powerup;
+        const radius = radiusGetter();
+        // Use unified collision validator (checks tar pits, obstacles, fences)
+        if (isValidPosition(x, y, radius, game, 0)) {
+          return factory(x, y);
+        }
+      }
     };
 
     /**
-     * Create a tranquilizer depot object
+     * Create a powerup object with guaranteed valid position
+     * @param {Object} game - Game state object (for collision checking)
+     * @returns {Object} Powerup object (always succeeds)
      */
-    const createTranqDepot = (mapWidth, mapHeight) => {
-      const depot = {
-        x: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        y: GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING),
-        radius: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_RADIUS,
-        ammo: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_AMMO,
-        active: true
-      };
+    const createPowerup = (game) => {
+      const powerupType = Math.random() > 0.5 ? GAME_CONSTANTS.ENTITIES.POWERUPS.HEALTH : GAME_CONSTANTS.ENTITIES.POWERUPS.SPEED;
 
-      depot.draw = function(ctx, cameraX, cameraY) {
-        drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.TRANQ);
-      };
+      return spawnWithCollisionCheck(
+        game,
+        () => powerupType.radius,
+        (x, y) => {
+          const powerup = {
+            x,
+            y,
+            powerupType,
+            radius: powerupType.radius,
+            active: true
+          };
 
-      return depot;
+          powerup.draw = function(ctx, cameraX, cameraY) {
+            drawPowerup(ctx, this, cameraX, cameraY);
+          };
+
+          return powerup;
+        }
+      );
+    };
+
+    /**
+     * Create a tranquilizer depot object with guaranteed valid position
+     * @param {Object} game - Game state object (for collision checking)
+     * @returns {Object} Depot object (always succeeds)
+     */
+    const createTranqDepot = (game) => {
+      return spawnWithCollisionCheck(
+        game,
+        () => GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_RADIUS,
+        (x, y) => {
+          const depot = {
+            x,
+            y,
+            radius: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_RADIUS,
+            ammo: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_AMMO,
+            active: true
+          };
+
+          depot.draw = function(ctx, cameraX, cameraY) {
+            drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.TRANQ);
+          };
+
+          return depot;
+        }
+      );
     };
 
     /**
@@ -4972,6 +5010,12 @@
             continue; // Skip this patch if too close to player
           }
 
+          // Use unified collision validator (checks tar pits, obstacles, fences)
+          // Spread accounts for patch size to avoid partial overlaps
+          if (!isValidPosition(patchCenterX, patchCenterY, GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SPREAD, game, 0)) {
+            continue; // Skip this patch if overlapping hazards
+          }
+
           // Pick a color for this patch (all mushrooms in patch share color)
           const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.colors.capColors.length);
 
@@ -4990,6 +5034,12 @@
           const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
           if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
             continue; // Skip this patch if too close to player
+          }
+
+          // Use unified collision validator (checks tar pits, obstacles, fences)
+          // Spread accounts for patch size to avoid partial overlaps
+          if (!isValidPosition(patchCenterX, patchCenterY, GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SPREAD, game, 0)) {
+            continue; // Skip this patch if overlapping hazards
           }
 
           // Create and add all grass patches in cluster
@@ -5111,13 +5161,13 @@
 
         // Create powerups
         for (let i = 0; i < config.powerups; i++) {
-          game.powerups.push(createPowerup(game.mapWidth, game.mapHeight));
+          game.powerups.push(createPowerup(game));
         }
 
         // Create tranquilizer depots
         const depotCount = GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_COUNT_BASE + level;
         for (let i = 0; i < depotCount; i++) {
-          game.tranqDepots.push(createTranqDepot(game.mapWidth, game.mapHeight));
+          game.tranqDepots.push(createTranqDepot(game));
         }
 
         // Create regular ammo depots (minimal ammo for strongest guard + 1 buffer)
