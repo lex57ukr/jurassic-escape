@@ -456,12 +456,12 @@
             },
             rimWidth: 4,
             bubble: {
-              frequency: 30,     // Frames between bubble spawns (0.5 seconds)
-              duration: 40,      // Duration of bubble animation in frames
-              baseRadius: 2,     // Starting bubble radius
-              growth: 4,         // Bubble radius growth
+              frequency: 104,    // Frames between bubble spawns (~1.73 seconds - very slow, natural)
+              duration: 86,      // Duration of bubble animation in frames
+              baseRadius: 3,     // Starting bubble radius (larger for visibility)
+              growth: 6,         // Bubble radius growth (larger for visibility)
               count: 3,          // Number of bubbles per pit
-              spread: 20,        // Random spread radius for bubble positions
+              spread: 35,        // Random spread radius for bubble positions (increased for less cramming)
             },
           },
           ELECTRIC_FENCE: {
@@ -2724,9 +2724,23 @@
           const bubbleRadius = type.bubble.baseRadius + bubbleProgress * type.bubble.growth;
           const bubbleAlpha = 1 - bubbleProgress;
 
+          // Draw main bubble body
           ctx.fillStyle = `rgba(61, 40, 23, ${bubbleAlpha})`;
           ctx.beginPath();
           ctx.arc(screenX + bubble.offsetX, screenY + bubble.offsetY, bubbleRadius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw highlight for 3D effect (shine on top-left)
+          const highlightAlpha = bubbleAlpha * 0.5; // Softer highlight
+          ctx.fillStyle = `rgba(100, 70, 50, ${highlightAlpha})`;
+          ctx.beginPath();
+          ctx.arc(
+            screenX + bubble.offsetX - bubbleRadius * 0.3,
+            screenY + bubble.offsetY - bubbleRadius * 0.3,
+            bubbleRadius * 0.4,
+            0,
+            Math.PI * 2
+          );
           ctx.fill();
         }
       });
