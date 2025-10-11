@@ -543,8 +543,8 @@
           GRASS_PATCH_SIZE: 8,          // Number of grass patches per cluster
           GRASS_PATCH_SPREAD: 100,      // Spread radius for grass cluster members
           GRASS_PATCH_PERCENTAGE: 0.3,  // 30% of obstacles spawn as grass patch clusters
-          ROCK_CLUSTER_MIN_SPREAD: 15,  // Minimum spacing between rocks in cluster
-          ROCK_CLUSTER_MAX_SPREAD: 45,  // Maximum spacing between rocks in cluster (wider than boulders)
+          ROCK_CLUSTER_MIN_SPREAD: 20,  // Minimum spacing between rocks in cluster
+          ROCK_CLUSTER_MAX_SPREAD: 60,  // Maximum spacing between rocks in cluster (wider spread for no overlap)
           ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN: 12,  // Minimum radius for individual rocks (larger than boulder circles)
           ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX: 20, // Maximum radius for individual rocks
           DINOSAUR_GRID_START_X: 300,
@@ -1457,9 +1457,16 @@
     };
 
     /**
-     * Generate rock positions for a rock cluster
+     * Generate rock positions for a rock cluster with collision avoidance
+     *
      * @param {Object} obstacleType - The ROCK_CLUSTER obstacle type object
      * @returns {Array} Array of rock objects with offsetX, offsetY, radius properties
+     *
+     * @remarks
+     * Ensures rocks within a cluster don't overlap by checking each new rock
+     * against previously placed rocks. Uses retry mechanism to find valid positions.
+     * Skips rocks that can't find valid positions after max attempts to guarantee
+     * no overlaps (resulting in 3-8 rocks per cluster).
      */
     const generateRockClusterRocks = (obstacleType) => {
       const rockCount = Math.floor(
@@ -1467,21 +1474,48 @@
       ) + obstacleType.rocksPerCluster.min;
 
       const rocks = [];
+      const maxAttempts = 100; // Increased attempts for better success rate
 
       for (let i = 0; i < rockCount; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const minSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MIN_SPREAD;
-        const maxSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MAX_SPREAD;
-        const dist = minSpread + Math.random() * (maxSpread - minSpread);
-        const rockRadius = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN +
-                          Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX -
-                          GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN);
+        let validPosition = false;
+        let attempts = 0;
+        let offsetX, offsetY, rockRadius;
 
-        rocks.push({
-          offsetX: Math.cos(angle) * dist,
-          offsetY: Math.sin(angle) * dist,
-          radius: rockRadius
-        });
+        while (!validPosition && attempts < maxAttempts) {
+          const angle = Math.random() * Math.PI * 2;
+          const minSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MIN_SPREAD;
+          const maxSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MAX_SPREAD;
+          const dist = minSpread + Math.random() * (maxSpread - minSpread);
+          rockRadius = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN +
+                       Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX -
+                       GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN);
+
+          offsetX = Math.cos(angle) * dist;
+          offsetY = Math.sin(angle) * dist;
+
+          // Check collision with previously placed rocks
+          validPosition = true;
+          for (const existingRock of rocks) {
+            if (circleCollision(
+              offsetX, offsetY, rockRadius,
+              existingRock.offsetX, existingRock.offsetY, existingRock.radius
+            )) {
+              validPosition = false;
+              break;
+            }
+          }
+
+          attempts++;
+        }
+
+        // Only add rock if valid position was found
+        if (validPosition) {
+          rocks.push({
+            offsetX,
+            offsetY,
+            radius: rockRadius
+          });
+        }
       }
 
       return rocks;
