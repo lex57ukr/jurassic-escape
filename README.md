@@ -351,6 +351,15 @@ Here’s the talk outline I used (~5 minutes):
   - Same principles apply to frontend — testing frameworks + automation matter.  
 - Big takeaway: AI + scope discipline = fast results; automation makes it repeatable.  
 
+### 5. Next Steps
+
+- It took me 5 hours to vibe-code this game; however, it took more than 10 hours to un-vibe it into a polished product.
+- It's much easier to iterate on a polished product for both human and AI devs. Nobody likes spaghetti code!
+- **But this is still a win**: The 15-hour total would be a week+ of solo work. The prototype → refactor cycle is natural and productive when paired with AI.
+- **The real power is collaboration**: I keep Claude on track with patterns and architecture (like reviewing a teammate's code). Claude handles implementation details and consistency checks. We both catch each other's mistakes and build on each other's strengths.
+- **Technical debt compounds quickly**: The initial prototype was impressively fast, but velocity degraded as complexity grew. Adding features to spaghetti code gets progressively harder. Refactoring restored fast iteration - the git history shows the transformation from struggle to flow.
+- **Structure is king for everyone**: Clean code isn't just about maintainability - it's about understanding. Refactoring forces you to internalize concepts deeply. I avoid throwaway code even for quick projects because structure helps me think clearly about what I'm building. The discipline of clean code makes you a better developer, whether you're working solo, with AI, or with a team.  
+
 ---
 
 **Enjoy your escape from the Jurassic period!** 🦕🦖
