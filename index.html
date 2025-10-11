@@ -2113,6 +2113,10 @@
      * @param {Object} dino - Dinosaur object
      */
     const drawTyrannosaurusRex = (ctx, scale, dino) => {
+      // Animation: leg swing for massive bipedal predator
+      const legSwing = 3 * dino.legCycle; // ±3 pixels (subtle but powerful)
+      const armSwing = 0.5 * dino.legCycle; // Tiny arms barely move
+
       // Tail (thick and powerful)
       ctx.fillStyle = '#2E7D32';
       ctx.beginPath();
@@ -2122,29 +2126,29 @@
       ctx.quadraticCurveTo(-38 * scale, 8 * scale, -20 * scale, 5 * scale);
       ctx.fill();
 
-      // Massive leg
+      // Massive leg - animated
       ctx.fillStyle = '#1B5E20';
       ctx.beginPath();
-      ctx.ellipse(-10 * scale, 12 * scale, 10 * scale, 15 * scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(-10 * scale, (12 + legSwing) * scale, 10 * scale, 15 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Lower leg
+      // Lower leg - animated
       ctx.fillStyle = '#2E7D32';
-      ctx.fillRect(-13 * scale, 22 * scale, 6 * scale, 12 * scale);
+      ctx.fillRect(-13 * scale, (22 + legSwing) * scale, 6 * scale, 12 * scale);
 
-      // Large foot
+      // Large foot - animated
       ctx.fillStyle = '#1B5E20';
       ctx.beginPath();
-      ctx.ellipse(-10 * scale, 34 * scale, 8 * scale, 4 * scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(-10 * scale, (34 + legSwing) * scale, 8 * scale, 4 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Three-toed claws
+      // Three-toed claws - animated
       ctx.fillStyle = '#000';
       for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
-        ctx.moveTo(-10 * scale + i * 4 * scale, 34 * scale);
-        ctx.lineTo(-10 * scale + i * 5 * scale, 38 * scale);
-        ctx.lineTo(-10 * scale + i * 3 * scale, 36 * scale);
+        ctx.moveTo(-10 * scale + i * 4 * scale, (34 + legSwing) * scale);
+        ctx.lineTo(-10 * scale + i * 5 * scale, (38 + legSwing) * scale);
+        ctx.lineTo(-10 * scale + i * 3 * scale, (36 + legSwing) * scale);
         ctx.fill();
       }
 
@@ -2211,10 +2215,10 @@
         ctx.fill();
       }
 
-      // Comically tiny arms
+      // Comically tiny arms - animated (barely noticeable)
       ctx.fillStyle = '#388E3C';
       ctx.beginPath();
-      ctx.ellipse(12 * scale, 6 * scale, 3 * scale, 6 * scale, Math.PI * 0.3, 0, Math.PI * 2);
+      ctx.ellipse(12 * scale, (6 + armSwing) * scale, 3 * scale, 6 * scale, Math.PI * 0.3, 0, Math.PI * 2);
       ctx.fill();
 
       // Tiny claws
