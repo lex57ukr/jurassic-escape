@@ -161,6 +161,15 @@ This provides two debug configurations:
 - **Parasaurolophus**: Duck-billed with head crest (2 HP, 50 points, 1 tranq shot)
 - **Triceratops**: Three-horned with frill (3 HP, 75 points, 2 tranq shots)
 
+**Ambient Wildlife** (purely decorative, no interaction):
+
+- **Duck Families**: Mama duck with 2-5 ducklings that waddle around the map
+  - Seek out ponds to swim in circular patterns
+  - Exit ponds to explore and find new swimming spots
+  - Avoid obstacles, electric fences, and tar pits
+  - Ducklings follow mama in single-file line
+  - Level-specific counts: 2 families (Level 1), 3 families (Level 2), 4 families (Level 3)
+
 ## 💎 Collectibles & Powerups
 
 - **❤️ Health Pack**: Restores 1 heart (red cross)

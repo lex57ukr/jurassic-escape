@@ -251,6 +251,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (uses `retryUntilValid` with fallback)
 - `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)` - Guard dinosaurs around exit
+- `createDuckFamily(game)` - Ambient wildlife: mama duck with 2-5 ducklings (uses collision-free spawn positioning)
 
 **Projectile Factories** (all add `update()` and `draw()` instance methods):
 
@@ -291,6 +292,44 @@ useEffect(() => {
   gameLoop();
 }, [dependencies]);
 ```
+
+## Ambient Wildlife Pattern: Duck Families
+
+Duck families demonstrate a complete implementation of the architectural patterns:
+
+**State Machine AI:**
+
+- WANDER → SEEK_POND → SWIMMING → EXIT_POND cycle
+- Each state defined in `GAME_CONSTANTS.AI.AMBIENT_DUCKS.STATES` with full configuration
+- Transitions based on proximity, timers, and pond availability
+
+**Chain Following Pattern:**
+
+- Each duckling follows its predecessor (not mama's path history)
+- 1st duckling → follows mama directly
+- Nth duckling → follows (N-1)th duckling
+- Maintains constant `followDistance` spacing
+- Zero memory overhead, no path history arrays needed
+
+**Pond Occupancy System:**
+
+- Families check if target pond is occupied by another family
+- `isPondOccupied()` helper checks for families in SWIMMING or SEEK_POND states
+- Prevents multiple families clustering in same pond
+- Natural distribution across map
+
+**Physics & Behavior:**
+
+- Swimming: constant linear speed with variable radius (ω = v/r)
+- Obstacle avoidance: raycast detection for trees, fences, tar pits
+- Visited pond tracking: explores all ponds before repeating
+
+**Instance Methods:**
+
+- `family.update(game)` - Main AI state machine
+- `family.checkObstacles(game)` - Collision detection
+- `family.findNearestPond(game, excludePond)` - Pathfinding
+- `family.updateDucklings()` - Chain following logic
 
 ## Code Organization Rules
 

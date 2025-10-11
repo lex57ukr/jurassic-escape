@@ -529,6 +529,38 @@
           },
         },
 
+        AMBIENT_WILDLIFE: {
+          MAMA_DUCK: {
+            id: 'mama_duck',
+            size: 14,
+            waddleSpeed: 0.6,
+            swimSpeed: 0.4,
+            collisionRadius: 10,
+            colors: {
+              body: '#8B6914',        // Dark brown body
+              bodyHighlight: '#A0783C', // Lighter brown highlight
+              head: '#6B5A47',        // Darker brown head
+              bill: '#FF8C00',        // Orange bill
+              billTip: '#DAA520',     // Golden bill tip
+              eye: '#000000',         // Black eye
+              wing: '#6B4423',        // Dark wing accent
+            },
+            drawFunction: null, // Set after drawMamaDuck is defined
+          },
+          DUCKLING: {
+            id: 'duckling',
+            size: 7,
+            collisionRadius: 5,
+            colors: {
+              body: '#FFD700',        // Bright yellow body
+              bodyHighlight: '#FFF59D', // Light yellow highlight
+              bill: '#FFA500',        // Orange bill
+              eye: '#000000',         // Black eye
+            },
+            drawFunction: null, // Set after drawDuckling is defined
+          },
+        },
+
         STATIC_STRUCTURES: {
           EXIT: {
             id: 'exit',
@@ -621,6 +653,14 @@
             SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
           },
 
+          AMBIENT_WILDLIFE: {
+            DUCK_FAMILIES: {
+              MIN_BROOD_SIZE: 2,      // Minimum ducklings per family
+              MAX_BROOD_SIZE: 5,      // Maximum ducklings per family
+              SPAWN_CLEARANCE: 50,    // Clearance from obstacles/structures
+            },
+          },
+
           DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types during spawn
         },
 
@@ -675,6 +715,46 @@
           TERRITORY_RADIUS: 300,    // Larger radius for exit protection zone
           GUARD_AGGRO_RANGE: 350,   // Guard chase range at exit
           GUARD_SPAWN_RADIUS_MULTIPLIER: 0.7, // Multiplier for guard spawn distance from exit center
+        },
+        AMBIENT_DUCKS: {
+          STATES: {
+            WANDER: {
+              id: 'wander',
+              directionChangeFrequency: 120, // Change direction every 2 seconds
+              angleVariance: Math.PI / 3,    // ±60° when changing direction
+            },
+            SEEK_POND: {
+              id: 'seek_pond',
+              detectionRange: 350,             // How far ducks can see ponds
+              steeringForce: 0.08,             // How strongly ducks steer toward target
+            },
+            SWIMMING: {
+              id: 'swimming',
+              minDuration: 1800,               // Minimum 30 seconds at 60fps
+              maxDuration: 3600,               // Maximum 60 seconds at 60fps
+              baseSwimRadius: 0.6,             // Base radius as fraction of pond radius (60%)
+              radiusVariation: 0.15,           // Variation in radius (±15%)
+              swimSpeed: 0.4,                  // Linear speed while swimming (pixels per frame)
+              radiusChangeRate: 0.005,         // How fast radius oscillates
+              rippleFrequency: 8,              // Frames between ripples
+            },
+            EXIT_POND: {
+              id: 'exit_pond',
+              exitDuration: 90,                // 1.5 seconds to swim to edge
+            },
+          },
+          AVOIDANCE: {
+            obstacleDetectionRange: 35,        // How far ahead to check for obstacles
+            steeringAngle: Math.PI / 3,        // Turn 60° when obstacle detected
+            wallMargin: 20,                    // Distance to maintain from map edges
+          },
+          POND_CHOICE: {
+            minimumPondDistance: 100,          // Don't seek ponds closer than this after exiting
+          },
+          DUCKLING: {
+            followDistance: 20,                // Distance ducklings trail behind their leader (chain pattern)
+            bobFrequency: 0.15,                // Slight position bobbing for cute effect
+          },
         },
         FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
       },
@@ -864,6 +944,7 @@
         tarPits: 3,
         ponds: 2,
         electricFences: 2,
+        duckFamilies: 2, // 2 duck families (peaceful ambient wildlife)
         ammoPerDepot: 3 // Raptor (2 HP) + 1 buffer
       },
       2: {
@@ -889,6 +970,7 @@
         tarPits: 7,
         ponds: 5,
         electricFences: 6,
+        duckFamilies: 3, // 3 duck families (more ponds = more ducks)
         ammoPerDepot: 4 // Dilophosaurus (3 HP) + 1 buffer
       },
       3: {
@@ -915,6 +997,7 @@
         tarPits: 12,
         ponds: 10,
         electricFences: 10,
+        duckFamilies: 4, // 4 duck families (largest map with most ponds)
         ammoPerDepot: 5 // T-Rex (4 HP) + 1 buffer
       }
     };
@@ -2274,6 +2357,419 @@
     };
 
     /**
+     * Create a duck family with mama duck and 2-5 ducklings
+     *
+     * @param {Object} game - Game state object (for collision checking and ponds)
+     * @returns {Object} Duck family object with mama, ducklings, and update() instance method
+     *
+     * @remarks
+     * Duck families follow a state machine:
+     * - WANDER: Random movement until pond detected
+     * - SEEK_POND: Navigate toward target pond (avoids obstacles)
+     * - SWIMMING: Circular swim patterns for 30-60 seconds
+     * - EXIT_POND: Swim to edge and waddle away
+     * - After exiting: 50% return to same pond, 50% seek new pond
+     *
+     * Collision avoidance:
+     * - Ducks steer around obstacles and electric fences
+     * - Use simple raycast ahead detection + steering angle
+     * - Cannot pass through blocking obstacles or boundaries
+     */
+    const createDuckFamily = (game) => {
+      const mamaType = GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.MAMA_DUCK;
+      const ducklingType = GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.DUCKLING;
+      const spawnConfig = GAME_CONSTANTS.WORLD.SPAWN.AMBIENT_WILDLIFE.DUCK_FAMILIES;
+      const aiConfig = GAME_CONSTANTS.AI.AMBIENT_DUCKS;
+
+      // Find valid spawn position for mama (near pond if possible)
+      let mamaX, mamaY;
+      const maxAttempts = 50;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        mamaX = 100 + Math.random() * (game.mapWidth - 200);
+        mamaY = 100 + Math.random() * (game.mapHeight - 200);
+
+        if (isValidPosition(mamaX, mamaY, mamaType.collisionRadius, game, spawnConfig.SPAWN_CLEARANCE)) {
+          break;
+        }
+      }
+
+      // Random brood size (2-5 ducklings)
+      const broodSize = spawnConfig.MIN_BROOD_SIZE +
+                       Math.floor(Math.random() * (spawnConfig.MAX_BROOD_SIZE - spawnConfig.MIN_BROOD_SIZE + 1));
+
+      // Create mama duck
+      const mama = {
+        x: mamaX,
+        y: mamaY,
+        vx: 0,
+        vy: 0,
+        angle: Math.random() * Math.PI * 2,
+        size: mamaType.size,
+        animationFrame: 0,
+        facingLeft: false,
+      };
+
+      // Create ducklings in single-file line behind mama
+      const ducklings = [];
+      for (let i = 0; i < broodSize; i++) {
+        const offsetAngle = mama.angle + Math.PI; // Straight behind mama
+        const offsetDistance = aiConfig.DUCKLING.followDistance * (i + 1);
+
+        ducklings.push({
+          x: mama.x + Math.cos(offsetAngle) * offsetDistance,
+          y: mama.y + Math.sin(offsetAngle) * offsetDistance,
+          size: ducklingType.size,
+          animationFrame: Math.random() * 100, // Random phase for variety
+          targetOffsetIndex: i, // For path following
+        });
+      }
+
+      // Duck family state
+      const family = {
+        mama,
+        ducklings,
+        state: aiConfig.STATES.WANDER,
+        targetPond: null,
+        lastPond: null,
+        visitedPonds: [], // Track which ponds have been visited
+        swimTimer: 0,
+        wanderTimer: Math.floor(Math.random() * aiConfig.STATES.WANDER.directionChangeFrequency),
+        swimAngle: 0, // For circular swimming angle
+        swimRadiusPhase: 0, // For variable radius oscillation
+        swimCenterX: 0, // Center of swimming area
+        swimCenterY: 0,
+        rippleTimer: 0,
+      };
+
+      // Update instance method - AI state machine
+      family.update = function(game) {
+        this.mama.animationFrame++;
+
+        // Update state machine
+        if (this.state === aiConfig.STATES.WANDER) {
+          // Wander behavior: random direction changes
+          this.wanderTimer--;
+          if (this.wanderTimer <= 0) {
+            this.mama.angle += randomCentered(aiConfig.STATES.WANDER.angleVariance);
+            this.wanderTimer = aiConfig.STATES.WANDER.directionChangeFrequency;
+          }
+
+          // Check for nearby unoccupied ponds
+          for (const pond of game.ponds) {
+            const dist = distance(this.mama.x, this.mama.y, pond.x, pond.y);
+            if (dist < aiConfig.STATES.SEEK_POND.detectionRange) {
+              // Check if pond is occupied by another family
+              const isPondOccupied = game.duckFamilies.some(otherFamily =>
+                otherFamily !== this &&
+                otherFamily.targetPond === pond &&
+                (otherFamily.state === aiConfig.STATES.SWIMMING || otherFamily.state === aiConfig.STATES.SEEK_POND)
+              );
+
+              if (!isPondOccupied) {
+                this.targetPond = pond;
+                this.state = aiConfig.STATES.SEEK_POND;
+                break;
+              }
+            }
+          }
+
+          // Move mama in wander direction
+          const avoidanceAngle = this.checkObstacles(game);
+          if (avoidanceAngle !== null) {
+            this.mama.angle = avoidanceAngle;
+          }
+
+          this.mama.vx = Math.cos(this.mama.angle) * mamaType.waddleSpeed;
+          this.mama.vy = Math.sin(this.mama.angle) * mamaType.waddleSpeed;
+
+        } else if (this.state === aiConfig.STATES.SEEK_POND) {
+          // Seek pond behavior: move toward target pond
+          if (!this.targetPond) {
+            this.state = aiConfig.STATES.WANDER;
+            return;
+          }
+
+          const dx = this.targetPond.x - this.mama.x;
+          const dy = this.targetPond.y - this.mama.y;
+          const targetAngle = Math.atan2(dy, dx);
+
+          // Smooth steering toward target
+          let angleDiff = targetAngle - this.mama.angle;
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          this.mama.angle += angleDiff * aiConfig.STATES.SEEK_POND.steeringForce;
+
+          // Obstacle avoidance
+          const avoidanceAngle = this.checkObstacles(game);
+          if (avoidanceAngle !== null) {
+            this.mama.angle = avoidanceAngle;
+          }
+
+          this.mama.vx = Math.cos(this.mama.angle) * mamaType.waddleSpeed;
+          this.mama.vy = Math.sin(this.mama.angle) * mamaType.waddleSpeed;
+
+          // Check if reached pond
+          const dist = distance(this.mama.x, this.mama.y, this.targetPond.x, this.targetPond.y);
+          if (dist < this.targetPond.radius * 0.8) {
+            this.state = aiConfig.STATES.SWIMMING;
+            this.swimTimer = aiConfig.STATES.SWIMMING.minDuration +
+                           Math.random() * (aiConfig.STATES.SWIMMING.maxDuration - aiConfig.STATES.SWIMMING.minDuration);
+
+            // Initialize swim angle based on current position (prevents teleporting)
+            this.swimCenterX = this.targetPond.x;
+            this.swimCenterY = this.targetPond.y;
+            this.swimAngle = Math.atan2(this.mama.y - this.swimCenterY, this.mama.x - this.swimCenterX);
+            this.swimRadiusPhase = 0;
+
+            this.lastPond = this.targetPond;
+
+            // Mark pond as visited
+            if (!this.visitedPonds.includes(this.targetPond)) {
+              this.visitedPonds.push(this.targetPond);
+            }
+          }
+
+        } else if (this.state === aiConfig.STATES.SWIMMING) {
+          // Swimming behavior: slow circular pattern with variable radius
+          this.swimTimer--;
+
+          // Calculate variable swim radius (oscillates between baseRadius ± variation)
+          const baseRadius = this.targetPond.radius * aiConfig.STATES.SWIMMING.baseSwimRadius;
+          const radiusVariation = this.targetPond.radius * aiConfig.STATES.SWIMMING.radiusVariation;
+          const swimRadius = baseRadius + Math.sin(this.swimRadiusPhase) * radiusVariation;
+
+          // Calculate angular velocity from desired linear speed (v = r * ω, so ω = v / r)
+          // This keeps swimming speed constant regardless of pond size
+          const angularVelocity = aiConfig.STATES.SWIMMING.swimSpeed / swimRadius;
+
+          // Increment angle for circular swimming (slower in large ponds, faster in small ponds)
+          this.swimAngle += angularVelocity;
+
+          // Oscillate radius phase for variable distance from center
+          this.swimRadiusPhase += aiConfig.STATES.SWIMMING.radiusChangeRate;
+
+          // Calculate position on variable-radius circle
+          this.mama.x = this.swimCenterX + Math.cos(this.swimAngle) * swimRadius;
+          this.mama.y = this.swimCenterY + Math.sin(this.swimAngle) * swimRadius;
+
+          // Calculate velocity for path following (needed for ducklings to follow smoothly)
+          const nextRadiusPhase = this.swimRadiusPhase + aiConfig.STATES.SWIMMING.radiusChangeRate;
+          const nextRadius = baseRadius + Math.sin(nextRadiusPhase) * radiusVariation;
+          const nextAngularVelocity = aiConfig.STATES.SWIMMING.swimSpeed / nextRadius;
+          const nextAngle = this.swimAngle + nextAngularVelocity;
+          const nextX = this.swimCenterX + Math.cos(nextAngle) * nextRadius;
+          const nextY = this.swimCenterY + Math.sin(nextAngle) * nextRadius;
+          this.mama.vx = nextX - this.mama.x;
+          this.mama.vy = nextY - this.mama.y;
+
+          // Update ripples
+          this.rippleTimer++;
+
+          if (this.swimTimer <= 0) {
+            // Exit pond after timer expires
+            this.state = aiConfig.STATES.EXIT_POND;
+
+            // Always find a different pond to visit next (don't return to same pond immediately)
+            this.targetPond = this.findNearestPond(game, this.lastPond);
+
+            // Angle toward pond edge (outward from center)
+            this.mama.angle = Math.atan2(this.mama.y - this.swimCenterY, this.mama.x - this.swimCenterX);
+          }
+
+        } else if (this.state === aiConfig.STATES.EXIT_POND) {
+          // Exit pond behavior: waddle away from water
+          this.mama.vx = Math.cos(this.mama.angle) * mamaType.waddleSpeed;
+          this.mama.vy = Math.sin(this.mama.angle) * mamaType.waddleSpeed;
+
+          // Check if exited pond
+          if (this.lastPond) {
+            const dist = distance(this.mama.x, this.mama.y, this.lastPond.x, this.lastPond.y);
+            if (dist > this.lastPond.radius + 30) {
+              // Fully exited, head to next pond (or wander if no other pond available)
+              if (this.targetPond && this.targetPond !== this.lastPond) {
+                this.state = aiConfig.STATES.SEEK_POND;
+              } else {
+                // No other pond available, wander instead
+                this.state = aiConfig.STATES.WANDER;
+                this.wanderTimer = aiConfig.STATES.WANDER.directionChangeFrequency * 3;
+              }
+            }
+          }
+        }
+
+        // Apply movement to mama (wall bouncing)
+        this.mama.x += this.mama.vx;
+        this.mama.y += this.mama.vy;
+
+        // Boundary checking with margin
+        const margin = aiConfig.AVOIDANCE.wallMargin;
+        if (this.mama.x < margin) {
+          this.mama.x = margin;
+          this.mama.angle = Math.PI - this.mama.angle;
+        }
+        if (this.mama.x > game.mapWidth - margin) {
+          this.mama.x = game.mapWidth - margin;
+          this.mama.angle = Math.PI - this.mama.angle;
+        }
+        if (this.mama.y < margin) {
+          this.mama.y = margin;
+          this.mama.angle = -this.mama.angle;
+        }
+        if (this.mama.y > game.mapHeight - margin) {
+          this.mama.y = game.mapHeight - margin;
+          this.mama.angle = -this.mama.angle;
+        }
+
+        // Update facing direction
+        if (Math.abs(this.mama.vx) > 0.1) {
+          this.mama.facingLeft = this.mama.vx < 0;
+        }
+
+        // Update ducklings (each follows the one in front in a chain)
+        this.updateDucklings();
+      };
+
+      // Helper: Check for obstacles ahead and return avoidance angle if needed
+      family.checkObstacles = function(game) {
+        const checkDist = aiConfig.AVOIDANCE.obstacleDetectionRange;
+        const checkX = this.mama.x + Math.cos(this.mama.angle) * checkDist;
+        const checkY = this.mama.y + Math.sin(this.mama.angle) * checkDist;
+
+        // Check obstacles
+        for (const obstacle of game.obstacles) {
+          if (circleCollision(checkX, checkY, mamaType.collisionRadius, obstacle.x, obstacle.y, obstacle.radius)) {
+            return this.mama.angle + aiConfig.AVOIDANCE.steeringAngle;
+          }
+        }
+
+        // Check electric fences
+        for (const fence of game.electricFences) {
+          const fenceType = fence.hazardType;
+          if (circleRectCollision(
+            checkX, checkY, mamaType.collisionRadius,
+            fence.x, fence.y, fenceType.width, fenceType.height, fence.rotation
+          )) {
+            return this.mama.angle + aiConfig.AVOIDANCE.steeringAngle;
+          }
+        }
+
+        // Check tar pits (ducks should avoid getting stuck!)
+        for (const tarPit of game.tarPits) {
+          if (circleCollision(checkX, checkY, mamaType.collisionRadius, tarPit.x, tarPit.y, tarPit.radius)) {
+            return this.mama.angle + aiConfig.AVOIDANCE.steeringAngle;
+          }
+        }
+
+        return null; // No obstacles detected
+      };
+
+      // Helper: Find nearest unoccupied pond (excluding specific pond)
+      family.findNearestPond = function(game, excludePond) {
+        // Check if all ponds have been visited
+        if (this.visitedPonds.length >= game.ponds.length && game.ponds.length > 0) {
+          // Reset visited list - start exploring again!
+          this.visitedPonds = [];
+        }
+
+        let nearestPond = null;
+        let minDist = Infinity;
+
+        // Helper to check if pond is occupied
+        const isPondOccupied = (pond) => {
+          return game.duckFamilies.some(otherFamily =>
+            otherFamily !== this &&
+            otherFamily.targetPond === pond &&
+            (otherFamily.state === aiConfig.STATES.SWIMMING || otherFamily.state === aiConfig.STATES.SEEK_POND)
+          );
+        };
+
+        // First pass: try to find nearest unvisited, unoccupied pond
+        for (const pond of game.ponds) {
+          if (pond === excludePond) continue;
+          if (this.visitedPonds.includes(pond)) continue; // Skip visited ponds
+          if (isPondOccupied(pond)) continue; // Skip occupied ponds
+
+          const dist = distance(this.mama.x, this.mama.y, pond.x, pond.y);
+          if (dist < minDist && dist > aiConfig.POND_CHOICE.minimumPondDistance) {
+            minDist = dist;
+            nearestPond = pond;
+          }
+        }
+
+        // Second pass: if no unvisited ponds found, find any unoccupied pond
+        if (!nearestPond) {
+          minDist = Infinity;
+          for (const pond of game.ponds) {
+            if (pond === excludePond) continue;
+            if (isPondOccupied(pond)) continue; // Skip occupied ponds
+
+            const dist = distance(this.mama.x, this.mama.y, pond.x, pond.y);
+            if (dist < minDist && dist > aiConfig.POND_CHOICE.minimumPondDistance) {
+              minDist = dist;
+              nearestPond = pond;
+            }
+          }
+        }
+
+        return nearestPond || excludePond; // Fall back to same pond if no others found
+      };
+
+      // Helper: Update duckling positions - each follows its predecessor in a chain
+      family.updateDucklings = function() {
+        const followDistance = aiConfig.DUCKLING.followDistance;
+
+        for (let i = 0; i < this.ducklings.length; i++) {
+          const duckling = this.ducklings[i];
+
+          // Determine who this duckling should follow
+          let leader;
+          if (i === 0) {
+            // First duckling follows mama
+            leader = this.mama;
+          } else {
+            // Other ducklings follow the duckling in front of them
+            leader = this.ducklings[i - 1];
+          }
+
+          // Calculate direction from duckling to leader
+          const dx = leader.x - duckling.x;
+          const dy = leader.y - duckling.y;
+          const distToLeader = Math.sqrt(dx * dx + dy * dy);
+
+          // Target position: followDistance behind the leader
+          let targetX, targetY;
+
+          if (distToLeader > 0.1) {
+            // Position at followDistance behind leader (in direction of leader)
+            const dirX = dx / distToLeader;
+            const dirY = dy / distToLeader;
+
+            // If too far, move closer; if too close, maintain distance
+            const desiredDist = followDistance;
+            targetX = leader.x - dirX * desiredDist;
+            targetY = leader.y - dirY * desiredDist;
+          } else {
+            // Leader is at same position, stay put
+            targetX = duckling.x;
+            targetY = duckling.y;
+          }
+
+          // Add subtle bobbing for cute effect
+          const bobX = Math.sin(duckling.animationFrame * aiConfig.DUCKLING.bobFrequency) * 2;
+          const bobY = Math.cos(duckling.animationFrame * aiConfig.DUCKLING.bobFrequency + i) * 2;
+
+          // Smooth follow (linear interpolation toward target)
+          duckling.x += (targetX + bobX - duckling.x) * 0.15;
+          duckling.y += (targetY + bobY - duckling.y) * 0.15;
+
+          duckling.animationFrame++;
+        }
+      };
+
+      return family;
+    };
+
+    /**
      * Create a territory for a regular territorial dinosaur
      *
      * @param {Object} dino - Dinosaur object being assigned the territory
@@ -3327,6 +3823,130 @@
       }
 
       ctx.restore();
+    };
+
+    /**
+     * Draw mama duck with detailed features
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} size - Duck size
+     * @param {boolean} isSwimming - Whether duck is currently swimming
+     * @param {number} animationFrame - Animation frame counter for bobbing/waddle
+     */
+    const drawMamaDuck = (ctx, size, isSwimming, animationFrame) => {
+      const colors = GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.MAMA_DUCK.colors;
+
+      // Subtle animation
+      const bobOffset = isSwimming ? Math.sin(animationFrame * 0.1) * 1.5 : 0;
+
+      // Body (oval, brown)
+      ctx.fillStyle = colors.body;
+      ctx.beginPath();
+      ctx.ellipse(0, bobOffset, size * 0.8, size * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Body highlight (lighter brown on top)
+      ctx.fillStyle = colors.bodyHighlight;
+      ctx.beginPath();
+      ctx.ellipse(0, bobOffset - size * 0.15, size * 0.6, size * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Wing accent (darker brown)
+      ctx.fillStyle = colors.wing;
+      ctx.beginPath();
+      ctx.ellipse(size * 0.3, bobOffset, size * 0.3, size * 0.4, Math.PI * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head (circle, darker brown)
+      ctx.fillStyle = colors.head;
+      ctx.beginPath();
+      ctx.arc(size * 0.7, bobOffset - size * 0.3, size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bill (orange triangle)
+      ctx.fillStyle = colors.bill;
+      ctx.beginPath();
+      ctx.moveTo(size * 0.9, bobOffset - size * 0.3);
+      ctx.lineTo(size * 1.3, bobOffset - size * 0.35);
+      ctx.lineTo(size * 1.3, bobOffset - size * 0.25);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bill tip (golden)
+      ctx.fillStyle = colors.billTip;
+      ctx.beginPath();
+      ctx.arc(size * 1.3, bobOffset - size * 0.3, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye (black dot)
+      ctx.fillStyle = colors.eye;
+      ctx.beginPath();
+      ctx.arc(size * 0.85, bobOffset - size * 0.35, size * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Water ripples if swimming
+      if (isSwimming) {
+        ctx.strokeStyle = 'rgba(42, 122, 143, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(0, bobOffset + size * 0.5, size * 1.2, size * 0.4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    };
+
+    /**
+     * Draw duckling with fluffy yellow appearance
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} size - Duckling size
+     * @param {boolean} isSwimming - Whether duckling is currently swimming
+     * @param {number} animationFrame - Animation frame counter for bobbing
+     */
+    const drawDuckling = (ctx, size, isSwimming, animationFrame) => {
+      const colors = GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.DUCKLING.colors;
+
+      // Subtle animation (offset slightly from mama for variety)
+      const bobOffset = isSwimming ? Math.sin((animationFrame + 10) * 0.12) * 1 : 0;
+
+      // Body (fluffy yellow circle)
+      ctx.fillStyle = colors.body;
+      ctx.beginPath();
+      ctx.arc(0, bobOffset, size * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Body highlight (lighter yellow)
+      ctx.fillStyle = colors.bodyHighlight;
+      ctx.beginPath();
+      ctx.arc(-size * 0.1, bobOffset - size * 0.2, size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head (smaller circle merged with body)
+      ctx.fillStyle = colors.body;
+      ctx.beginPath();
+      ctx.arc(size * 0.4, bobOffset - size * 0.4, size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Small bill (orange)
+      ctx.fillStyle = colors.bill;
+      ctx.beginPath();
+      ctx.moveTo(size * 0.7, bobOffset - size * 0.4);
+      ctx.lineTo(size * 0.95, bobOffset - size * 0.45);
+      ctx.lineTo(size * 0.95, bobOffset - size * 0.35);
+      ctx.closePath();
+      ctx.fill();
+
+      // Eye (tiny black dot)
+      ctx.fillStyle = colors.eye;
+      ctx.beginPath();
+      ctx.arc(size * 0.55, bobOffset - size * 0.45, size * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Water ripples if swimming (smaller than mama)
+      if (isSwimming) {
+        ctx.strokeStyle = 'rgba(42, 122, 143, 0.25)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.ellipse(0, bobOffset + size * 0.7, size * 0.8, size * 0.3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     };
 
     /**
@@ -4873,6 +5493,22 @@
       return false; // Not game over
     };
 
+    /**
+     * Update all duck families (ambient wildlife)
+     * @param {Object} game - Game state object
+     *
+     * @remarks
+     * Ducks are purely decorative - no gameplay impact
+     * - No collision with player or dinosaurs
+     * - State machine runs independently per family
+     * - Provides ambient life and visual interest to environment
+     */
+    const updateDuckFamilies = (game) => {
+      for (const family of game.duckFamilies) {
+        family.update(game);
+      }
+    };
+
     // ============================================================================
     // FUNCTION BINDINGS
     // All function assignments consolidated here (after all functions are defined)
@@ -4903,6 +5539,10 @@
     GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.drawFunction = drawTarPit;
     GAME_CONSTANTS.ENTITIES.HAZARDS.POND.drawFunction = drawPond;
     GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE.drawFunction = drawElectricFence;
+
+    // Ambient wildlife draw functions
+    GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.MAMA_DUCK.drawFunction = drawMamaDuck;
+    GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.DUCKLING.drawFunction = drawDuckling;
 
     // ============================================================================
     // REACT SUB-COMPONENTS (Memoized for performance)
@@ -5502,6 +6142,7 @@
         game.ponds = [];
         game.electricFences = [];
         game.staticStructures = [];
+        game.duckFamilies = [];
         game.keys = {};
         game.speedBoostTimer = 0;
 
@@ -5703,6 +6344,11 @@
         // Create electric fences
         for (let i = 0; i < config.electricFences; i++) {
           game.electricFences.push(createElectricFence(game));
+        }
+
+        // Create duck families (ambient wildlife)
+        for (let i = 0; i < config.duckFamilies; i++) {
+          game.duckFamilies.push(createDuckFamily(game));
         }
       }, [difficulty]);
 
@@ -6063,6 +6709,9 @@
           // Update dinosaurs (includes AI, movement, collisions)
           updateDinosaurs(game, difficulty, playSound, stateAccumulator);
 
+          // Update duck families (ambient wildlife)
+          updateDuckFamilies(game);
+
           // Batch apply all state updates (reduces re-renders)
           const setters = {
             gameState: setGameState,
@@ -6122,6 +6771,57 @@
             game.ammoDepots,       // Layer 9: Regular ammo depots
             game.territories       // Layer 10: Territory markers
           );
+
+          // Draw duck families (ambient wildlife)
+          game.duckFamilies.forEach(family => {
+            const aiConfig = GAME_CONSTANTS.AI.AMBIENT_DUCKS;
+            const isSwimming = family.state === aiConfig.STATES.SWIMMING;
+
+            // Draw ducklings first (behind mama)
+            family.ducklings.forEach(duckling => {
+              const screenX = duckling.x - game.cameraX;
+              const screenY = duckling.y - game.cameraY;
+
+              ctx.save();
+              ctx.translate(screenX, screenY);
+
+              // Ducklings always face mama
+              const dxToMama = family.mama.x - duckling.x;
+              if (Math.abs(dxToMama) > 1) {
+                if (dxToMama < 0) ctx.scale(-1, 1);
+              }
+
+              GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.DUCKLING.drawFunction(
+                ctx,
+                duckling.size,
+                isSwimming,
+                duckling.animationFrame
+              );
+
+              ctx.restore();
+            });
+
+            // Draw mama duck (on top of ducklings)
+            const mamaScreenX = family.mama.x - game.cameraX;
+            const mamaScreenY = family.mama.y - game.cameraY;
+
+            ctx.save();
+            ctx.translate(mamaScreenX, mamaScreenY);
+
+            // Mama faces direction of movement
+            if (family.mama.facingLeft) {
+              ctx.scale(-1, 1);
+            }
+
+            GAME_CONSTANTS.ENTITIES.AMBIENT_WILDLIFE.MAMA_DUCK.drawFunction(
+              ctx,
+              family.mama.size,
+              isSwimming,
+              family.mama.animationFrame
+            );
+
+            ctx.restore();
+          });
 
           // Draw dinosaurs
           game.dinosaurs.forEach(dino => {
