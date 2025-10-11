@@ -323,6 +323,20 @@
             },
             clusters: 5, // Number of overlapping circles
           },
+          BOULDER: {
+            id: 'boulder',
+            blocksMovement: true,
+            canJumpOver: true,
+            zIndex: 2,
+            colors: {
+              base: '#808080',       // Medium gray
+              dark: '#4A4A4A',       // Dark gray
+              light: '#A0A0A0',      // Light gray
+              highlight: '#C0C0C0',  // Very light gray highlights
+              groundShadow: 'rgba(0, 0, 0, 0.25)', // Shadow under boulder
+            },
+            clusters: 4, // Number of overlapping circles for rocky texture
+          },
           MUSHROOM: {
             id: 'mushroom',
             blocksMovement: false,
@@ -1375,15 +1389,17 @@
         if (valid) break;
       } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
 
-      // Select obstacle type: 40% trees, 40% bushes, 20% tall trees
+      // Select obstacle type: 30% trees, 30% bushes, 15% tall trees, 25% boulders
       const rand = Math.random();
       let obstacleType;
-      if (rand < 0.4) {
+      if (rand < 0.3) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE;
-      } else if (rand < 0.8) {
+      } else if (rand < 0.6) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH;
-      } else {
+      } else if (rand < 0.75) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE;
+      } else {
+        obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.BOULDER;
       }
 
       const obstacle = {
@@ -2887,6 +2903,77 @@
     };
 
     /**
+     * Draw boulder with rocky, irregular appearance
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} radius - Boulder radius
+     * @param {Object} obstacle - Obstacle object (unused for boulder, but required for consistent interface)
+     */
+    const drawBoulder = (ctx, screenX, screenY, radius, obstacle) => {
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.BOULDER.colors;
+
+      // Draw ground shadow (irregular ellipse under boulder)
+      ctx.fillStyle = colors.groundShadow;
+      ctx.beginPath();
+      ctx.ellipse(screenX, screenY + radius * 0.8, radius * 1.0, radius * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Create irregular boulder shape with fewer circles for better performance
+      // Base dark layer (5 circles for asymmetric base)
+      ctx.fillStyle = colors.dark;
+      const basePoints = [
+        { x: -0.1, y: 0, r: 0.85 },
+        { x: 0.55, y: -0.3, r: 0.6 },
+        { x: -0.65, y: 0.2, r: 0.55 },
+        { x: 0.3, y: 0.6, r: 0.5 },
+        { x: -0.4, y: -0.5, r: 0.45 },
+      ];
+      basePoints.forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(screenX + pt.x * radius, screenY + pt.y * radius, radius * pt.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Main boulder body (4 circles for medium gray texture)
+      ctx.fillStyle = colors.base;
+      const mainPoints = [
+        { x: -0.15, y: -0.05, r: 0.75 },
+        { x: 0.45, y: -0.25, r: 0.55 },
+        { x: -0.55, y: 0.25, r: 0.5 },
+        { x: 0.25, y: 0.5, r: 0.45 },
+      ];
+      mainPoints.forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(screenX + pt.x * radius, screenY + pt.y * radius, radius * pt.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Light gray patches (4 circles for highlights)
+      ctx.fillStyle = colors.light;
+      const lightPoints = [
+        { x: -0.25, y: -0.15, r: 0.35 },
+        { x: 0.15, y: 0.15, r: 0.3 },
+        { x: -0.45, y: 0.35, r: 0.25 },
+        { x: 0.35, y: -0.35, r: 0.25 },
+      ];
+      lightPoints.forEach(pt => {
+        ctx.beginPath();
+        ctx.arc(screenX + pt.x * radius, screenY + pt.y * radius, radius * pt.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Bright highlight spots (2 circles for sunlight reflection)
+      ctx.fillStyle = colors.highlight;
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.35, screenY - radius * 0.4, radius * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.55, screenY - radius * 0.1, radius * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    /**
      * Draw mushroom with colorful cap and spots
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} screenX - Screen X position
@@ -4065,6 +4152,7 @@
     GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE.drawFunction = drawTree;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE.drawFunction = drawTallTree;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH.drawFunction = drawBush;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.BOULDER.drawFunction = drawBoulder;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.drawFunction = drawMushroom;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS.drawFunction = drawGrass;
 
