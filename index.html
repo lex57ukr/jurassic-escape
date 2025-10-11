@@ -462,6 +462,36 @@
               spread: 35,        // Random spread radius for bubble positions (increased for less cramming)
             },
           },
+          POND: {
+            id: 'pond',
+            baseRadius: 143,
+            sizeVariance: 1.20, // Max variance: 120% (radius ranges from 50% to 170% of base)
+            slowMultiplier: 0.65, // Reduces speed to 65% (less harsh than tar)
+            minSpacing: 360, // Minimum distance between ponds (increased for larger size)
+            colors: {
+              base: '#1a4d5c',       // Deep blue-green water
+              surface: '#2d7a8f',    // Lighter water surface
+              highlight: '#4a9fb5',  // Water highlights/ripples
+            },
+            ripple: {
+              frequency: 72,       // Frames between ripples (~1.2 seconds)
+              duration: 60,        // Duration of ripple animation in frames
+              maxRadius: 52,       // Maximum ripple radius (scaled up for larger ponds)
+              count: 3,            // Number of concurrent ripples (more for larger surface)
+              spread: 65,          // Random spread radius for ripple origins (scaled up)
+            },
+            vegetation: {
+              lilyPadCount: 6,     // More lily pads for larger ponds
+              lilyPadRadius: 6,    // Larger lily pads
+              lilyPadColor: '#2d5016', // Dark green
+              lilyPadHighlight: '#4a7c2a', // Lighter green highlight
+              reedCount: 8,        // More cattail/reed stems around edges
+              reedHeight: 16,      // Taller reeds
+              reedWidth: 2,        // Width of reed stems
+              reedColor: '#3a5a1f', // Dark green-brown
+              reedTopColor: '#6b4423', // Brown cattail tops
+            },
+          },
           ELECTRIC_FENCE: {
             id: 'electric_fence',
             width: 80,
@@ -790,6 +820,7 @@
         obstacles: 40,
         powerups: 3,
         tarPits: 3,
+        ponds: 2,
         electricFences: 2,
         ammoPerDepot: 3 // Raptor (2 HP) + 1 buffer
       },
@@ -814,6 +845,7 @@
         obstacles: 70,
         powerups: 4,
         tarPits: 7,
+        ponds: 5,
         electricFences: 6,
         ammoPerDepot: 4 // Dilophosaurus (3 HP) + 1 buffer
       },
@@ -839,6 +871,7 @@
         obstacles: 100,
         powerups: 5,
         tarPits: 12,
+        ponds: 10,
         electricFences: 10,
         ammoPerDepot: 5 // T-Rex (4 HP) + 1 buffer
       }
@@ -935,6 +968,13 @@
       for (const tarPit of game.tarPits) {
         const dist = distance(x, y, tarPit.x, tarPit.y);
         if (dist < radius + tarPit.radius + clearance) {
+          return false;
+        }
+      }
+
+      for (const pond of game.ponds) {
+        const dist = distance(x, y, pond.x, pond.y);
+        if (dist < radius + pond.radius + clearance) {
           return false;
         }
       }
@@ -1864,6 +1904,59 @@
       };
 
       return tarPit;
+    };
+
+    /**
+     * Create a pond object with ripples and vegetation
+     * @param {number} x - Pond center X position
+     * @param {number} y - Pond center Y position
+     * @returns {Object} Pond object with draw instance method
+     */
+    const createPond = (x, y) => {
+      const type = GAME_CONSTANTS.ENTITIES.HAZARDS.POND;
+      // Generate random size: variance from 50% to 170% of base radius
+      const sizeMultiplier = 0.5 + (Math.random() * type.sizeVariance);
+      const radius = type.baseRadius * sizeMultiplier;
+
+      // Generate random vegetation positions (lily pads scattered in water)
+      const lilyPads = Array.from({ length: type.vegetation.lilyPadCount }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * (radius * 0.7); // Keep within 70% of pond radius
+        return {
+          offsetX: Math.cos(angle) * distance,
+          offsetY: Math.sin(angle) * distance,
+        };
+      });
+
+      // Generate random reed positions (around edges)
+      const reeds = Array.from({ length: type.vegetation.reedCount }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = radius * (0.75 + Math.random() * 0.20); // 75-95% of radius (near edges)
+        return {
+          offsetX: Math.cos(angle) * distance,
+          offsetY: Math.sin(angle) * distance,
+        };
+      });
+
+      const pond = {
+        x,
+        y,
+        radius,
+        hazardType: type,
+        lilyPads,
+        reeds,
+        ripples: Array.from({ length: type.ripple.count }, () => ({
+          timer: Math.random() * type.ripple.frequency,
+          offsetX: randomCentered(type.ripple.spread),
+          offsetY: randomCentered(type.ripple.spread),
+        }))
+      };
+
+      pond.draw = function(ctx, cameraX, cameraY) {
+        this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+      };
+
+      return pond;
     };
 
     /**
@@ -2869,6 +2962,97 @@
     };
 
     /**
+     * Draw pond with ripples and vegetation
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} cameraX - Camera X offset
+     * @param {number} cameraY - Camera Y offset
+     * @param {Object} pond - Pond object
+     */
+    const drawPond = (ctx, cameraX, cameraY, pond) => {
+      const screenX = pond.x - cameraX;
+      const screenY = pond.y - cameraY;
+      const type = pond.hazardType;
+
+      // Draw water body with gradient
+      const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, pond.radius);
+      gradient.addColorStop(0, type.colors.surface);
+      gradient.addColorStop(0.7, type.colors.base);
+      gradient.addColorStop(1, type.colors.base);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, pond.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Update and draw ripples
+      pond.ripples.forEach(ripple => {
+        ripple.timer++;
+        if (ripple.timer >= type.ripple.frequency) {
+          ripple.timer = 0;
+          // Randomize origin for next ripple
+          ripple.offsetX = randomCentered(type.ripple.spread);
+          ripple.offsetY = randomCentered(type.ripple.spread);
+        }
+
+        // Draw ripple during active phase
+        if (ripple.timer < type.ripple.duration) {
+          const rippleProgress = ripple.timer / type.ripple.duration;
+          const rippleRadius = rippleProgress * type.ripple.maxRadius;
+          const rippleAlpha = (1 - rippleProgress) * 0.4;
+
+          ctx.strokeStyle = `rgba(74, 159, 181, ${rippleAlpha})`; // Highlight color
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(screenX + ripple.offsetX, screenY + ripple.offsetY, rippleRadius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      // Draw reeds around edges (cattails)
+      pond.reeds.forEach(reed => {
+        const reedX = screenX + reed.offsetX;
+        const reedY = screenY + reed.offsetY;
+
+        // Reed stem
+        ctx.strokeStyle = type.vegetation.reedColor;
+        ctx.lineWidth = type.vegetation.reedWidth;
+        ctx.beginPath();
+        ctx.moveTo(reedX, reedY);
+        ctx.lineTo(reedX, reedY - type.vegetation.reedHeight);
+        ctx.stroke();
+
+        // Cattail top
+        ctx.fillStyle = type.vegetation.reedTopColor;
+        ctx.beginPath();
+        ctx.ellipse(reedX, reedY - type.vegetation.reedHeight, 2, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw lily pads
+      pond.lilyPads.forEach(lily => {
+        const lilyX = screenX + lily.offsetX;
+        const lilyY = screenY + lily.offsetY;
+
+        // Lily pad body
+        ctx.fillStyle = type.vegetation.lilyPadColor;
+        ctx.beginPath();
+        ctx.arc(lilyX, lilyY, type.vegetation.lilyPadRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Lily pad highlight (small crescent for 3D effect)
+        ctx.fillStyle = type.vegetation.lilyPadHighlight;
+        ctx.beginPath();
+        ctx.arc(
+          lilyX - type.vegetation.lilyPadRadius * 0.3,
+          lilyY - type.vegetation.lilyPadRadius * 0.3,
+          type.vegetation.lilyPadRadius * 0.5,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
+    };
+
+    /**
      * Draw electric fence with spark animation
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} cameraX - Camera X offset
@@ -3749,7 +3933,7 @@
     };
 
     /**
-     * Update player speed modifiers (boost, tar pits, etc.)
+     * Update player speed modifiers (boost, tar pits, ponds, etc.)
      * @param {Object} game - Game reference object
      * @param {Object} stateAccumulator - Accumulates state changes
      */
@@ -3759,6 +3943,15 @@
       for (const tarPit of game.tarPits) {
         if (circleCollision(game.player.x, game.player.y, game.player.radius, tarPit.x, tarPit.y, tarPit.radius)) {
           game.player.inTarPit = true;
+          break;
+        }
+      }
+
+      // Check if player is in pond
+      game.player.inPond = false;
+      for (const pond of game.ponds) {
+        if (circleCollision(game.player.x, game.player.y, game.player.radius, pond.x, pond.y, pond.radius)) {
+          game.player.inPond = true;
           break;
         }
       }
@@ -3776,6 +3969,11 @@
       // Apply tar pit slow effect
       if (game.player.inTarPit) {
         speedMultiplier *= GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.slowMultiplier;
+      }
+
+      // Apply pond slow effect
+      if (game.player.inPond) {
+        speedMultiplier *= GAME_CONSTANTS.ENTITIES.HAZARDS.POND.slowMultiplier;
       }
 
       game.player.speed = game.player.baseSpeed * speedMultiplier;
@@ -4233,12 +4431,25 @@
           }
         }
 
-        // Apply tar pit slow effect
+        // Check if in pond
+        let dinoInPond = false;
+        for (const pond of game.ponds) {
+          if (circleCollision(dino.x, dino.y, dino.size, pond.x, pond.y, pond.radius)) {
+            dinoInPond = true;
+            break;
+          }
+        }
+
+        // Apply tar pit and pond slow effects
         let effectiveVx = dino.vx;
         let effectiveVy = dino.vy;
         if (dinoInTarPit) {
           effectiveVx *= GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.slowMultiplier;
           effectiveVy *= GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.slowMultiplier;
+        }
+        if (dinoInPond) {
+          effectiveVx *= GAME_CONSTANTS.ENTITIES.HAZARDS.POND.slowMultiplier;
+          effectiveVy *= GAME_CONSTANTS.ENTITIES.HAZARDS.POND.slowMultiplier;
         }
 
         // Calculate new position
@@ -4463,6 +4674,7 @@
 
     // Hazard draw functions
     GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.drawFunction = drawTarPit;
+    GAME_CONSTANTS.ENTITIES.HAZARDS.POND.drawFunction = drawPond;
     GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE.drawFunction = drawElectricFence;
 
     // ============================================================================
@@ -5060,6 +5272,7 @@
         game.obstacles = [];
         game.decorations = [];
         game.tarPits = [];
+        game.ponds = [];
         game.electricFences = [];
         game.staticStructures = [];
         game.keys = {};
@@ -5105,6 +5318,45 @@
           }
 
           game.tarPits.push(createTarPit(tarX, tarY));
+        }
+
+        // Create ponds (with collision avoidance from tar pits and other ponds)
+        for (let i = 0; i < config.ponds; i++) {
+          let pondX, pondY;
+          let attempts = 0;
+          const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+
+          while (attempts < maxAttempts) {
+            pondX = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+            pondY = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+
+            let overlapping = false;
+
+            // Check spacing from tar pits
+            for (const tarPit of game.tarPits) {
+              const dist = distance(pondX, pondY, tarPit.x, tarPit.y);
+              if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.POND.minSpacing) {
+                overlapping = true;
+                break;
+              }
+            }
+
+            // Check spacing from other ponds
+            if (!overlapping) {
+              for (const existingPond of game.ponds) {
+                const dist = distance(pondX, pondY, existingPond.x, existingPond.y);
+                if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.POND.minSpacing) {
+                  overlapping = true;
+                  break;
+                }
+              }
+            }
+
+            if (!overlapping) break;
+            attempts++;
+          }
+
+          game.ponds.push(createPond(pondX, pondY));
         }
 
         // Create obstacles (blocking: trees, bushes, boulders, rock clusters)
@@ -5713,13 +5965,14 @@
           drawEntities(ctx, game.cameraX, game.cameraY,
             game.staticStructures, // Layer 1: Static structures (exits, gates, signs)
             game.tarPits,          // Layer 2: Tar pits (ground hazards)
-            game.electricFences,   // Layer 3: Electric fences
-            game.decorations,      // Layer 4: Walkable decorations (grass, mushrooms)
-            game.obstacles,        // Layer 5: Blocking obstacles (trees, bushes)
-            game.powerups,         // Layer 6: Collectible powerups
-            game.tranqDepots,      // Layer 7: Tranquilizer depots
-            game.ammoDepots,       // Layer 8: Regular ammo depots
-            game.territories       // Layer 9: Territory markers
+            game.ponds,            // Layer 3: Ponds (water hazards)
+            game.electricFences,   // Layer 4: Electric fences
+            game.decorations,      // Layer 5: Walkable decorations (grass, mushrooms)
+            game.obstacles,        // Layer 6: Blocking obstacles (trees, bushes)
+            game.powerups,         // Layer 7: Collectible powerups
+            game.tranqDepots,      // Layer 8: Tranquilizer depots
+            game.ammoDepots,       // Layer 9: Regular ammo depots
+            game.territories       // Layer 10: Territory markers
           );
 
           // Draw dinosaurs
