@@ -358,7 +358,28 @@ Here’s the talk outline I used (~5 minutes):
 - **But this is still a win**: The 15-hour total would be a week+ of solo work. The prototype → refactor cycle is natural and productive when paired with AI.
 - **The real power is collaboration**: I keep Claude on track with patterns and architecture (like reviewing a teammate's code). Claude handles implementation details and consistency checks. We both catch each other's mistakes and build on each other's strengths.
 - **Technical debt compounds quickly**: The initial prototype was impressively fast, but velocity degraded as complexity grew. Adding features to spaghetti code gets progressively harder. Refactoring restored fast iteration - the git history shows the transformation from struggle to flow.
-- **Structure is king for everyone**: Clean code isn't just about maintainability - it's about understanding. Refactoring forces you to internalize concepts deeply. I avoid throwaway code even for quick projects because structure helps me think clearly about what I'm building. The discipline of clean code makes you a better developer, whether you're working solo, with AI, or with a team.  
+- **Structure is king for everyone**: Clean code isn't just about maintainability - it's about understanding. Refactoring forces you to internalize concepts deeply. I avoid throwaway code even for quick projects because structure helps me think clearly about what I'm building. The discipline of clean code makes you a better developer, whether you're working solo, with AI, or with a team.
+
+#### Fast Iteration: A Concrete Example (Claude's Perspective)
+
+Adding the "tall trees that cannot be jumped over" feature demonstrates how clean architecture enables rapid iteration:
+
+**What made it fast:**
+
+1. **Constants-First Design**: Found `OBSTACLES` section immediately, added `TALL_TREE` with all properties centralized
+2. **Unified Object Pattern**: The `canJumpOver` property was instantly accessible everywhere via `obs.obstacleType.canJumpOver` - no switch statements or lookups needed
+3. **Factory Functions**: `createObstacle()` was the single point of change for spawn logic - no hunting through initialization code
+4. **Separated Concerns**: Each system was independent (rendering, collision, spawn, bindings)
+5. **Clear Documentation**: CLAUDE.md made it crystal clear where to add constants, draw functions, and bindings
+
+**The result:**
+
+- **5 surgical edits** across ~120 lines of code
+- **Zero ripple effects** - didn't need to refactor existing code, update multiple call sites, add switch statements, or debug unexpected interactions
+- **No hunting** - every edit location was obvious from the architecture
+- **One collision function update** to respect the new property
+
+This is what maintainable architecture looks like: adding a new game mechanic with different collision rules, visual rendering, and spawn distribution required touching exactly the places you'd expect, with zero surprises. The unified object pattern meant the `canJumpOver` property "just worked" everywhere it was needed.  
 
 ---
 
