@@ -3845,8 +3845,27 @@
         }
 
         // Clamp to bounds
+        const preClampX = dino.x;
+        const preClampY = dino.y;
         dino.x = clamp(dino.x, dino.size, game.mapWidth - dino.size);
         dino.y = clamp(dino.y, dino.size, game.mapHeight - dino.size);
+
+        // Boundary bounce for PATROL state
+        // When roaming dinosaurs hit map edges, bounce them away to prevent getting stuck
+        // Chase/Return states recalculate direction each frame, so they don't need this
+        if (dino.state === GAME_CONSTANTS.AI.STATES.PATROL) {
+          const hitLeftOrRight = preClampX !== dino.x;
+          const hitTopOrBottom = preClampY !== dino.y;
+
+          if (hitLeftOrRight || hitTopOrBottom) {
+            // Reflect velocity away from boundary
+            if (hitLeftOrRight) dino.vx = -dino.vx;
+            if (hitTopOrBottom) dino.vy = -dino.vy;
+
+            // Update patrol angle to match new reflected direction
+            dino.patrolAngle = Math.atan2(dino.vy, dino.vx);
+          }
+        }
 
         // Check collision with player (only aggressive dinosaurs and not sleeping)
         if (dino.aggressive && !dino.isSleeping) {
