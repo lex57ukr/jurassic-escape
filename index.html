@@ -683,9 +683,11 @@
             id: 'patrol',
             angleChangeRate: 0.1,
             speedMultiplier: 0.5,
+            avoidsHazards: true,             // Patrol avoids hazards for natural wandering
           },
           CHASE: {
             id: 'chase',
+            avoidsHazards: false,            // Chase ignores hazards for dramatic gameplay
             // Chase uses base dinosaur speed and aggro range
           },
           FLEE: {
@@ -693,10 +695,11 @@
             range: 150,                      // Distance at which herbivores flee
             speedMultiplier: 1.5,            // Speed boost when fleeing
             directionDuration: 90,           // Frames to maintain flee direction before recalculating
-            recalcAngleRange: Math.PI / 4,   // ±45° adjustment when recalculating flee direction
+            avoidsHazards: true,             // Flee avoids hazards to prevent getting trapped
           },
           TERRITORY_RETURN: {
             id: 'return',
+            avoidsHazards: false,            // Return ignores hazards to reach territory quickly
             // Return uses TERRITORY config for thresholds and behavior
           },
         },
@@ -757,6 +760,10 @@
           },
         },
         FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
+        HAZARD_AVOIDANCE: {
+          detectionRange: 50,              // How far ahead dinosaurs check for hazards
+          steeringAngle: Math.PI / 2.5,    // Turn ~72° when hazard detected
+        },
       },
 
       // ========================================================================
@@ -2894,12 +2901,10 @@
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
       const adjustedSpeed = dinoType.speed * diffMod.enemySpeedMultiplier;
 
+      // Mix in navigation/avoidance behavior
       const guard = {
+        ...createNavigatingEntity(x, y, dinoType.baseSize, GAME_CONSTANTS.AI.HAZARD_AVOIDANCE),
         type: dinoType,
-        x,
-        y,
-        vx: 0,
-        vy: 0,
         health: dinoType.health,
         maxHealth: dinoType.health,
         speed: adjustedSpeed,
@@ -2915,8 +2920,7 @@
         territoryIndex,
         aggroRange: GAME_CONSTANTS.AI.EXIT.GUARD_AGGRO_RANGE, // Aggro range for territorial behavior
         state: GAME_CONSTANTS.AI.STATES.PATROL,
-        patrolAngle: Math.random() * Math.PI * 2,
-        fleeAngle: 0, // Persistent flee direction to prevent oscillation
+        motionAngle: Math.random() * Math.PI * 2,
         fleeDurationTimer: 0, // Frames remaining before recalculating flee direction
         isSleeping: false,
         sleepTimer: 0,
@@ -2928,6 +2932,11 @@
         // Animation properties
         animationFrame: 0, // Counter incremented each frame when moving
         legCycle: 0 // Sine wave value for leg positions (-1 to 1)
+      };
+
+      // Override to specify what dinosaurs avoid (only tar pits and ponds)
+      guard.getHazardsToCheck = function(game) {
+        return [...game.tarPits, ...game.ponds];
       };
 
       guard.draw = function(ctx) {
@@ -5093,6 +5102,227 @@
     };
 
     /**
+     * Mixin: Creates a navigating entity with hazard avoidance capabilities
+     *
+     * @param {number} x - Initial X position
+     * @param {number} y - Initial Y position
+     * @param {number} radius - Entity collision radius
+     * @param {Object} avoidanceConfig - Configuration object with detectionRange and steeringAngle
+     * @returns {Object} Entity with navigation and avoidance methods
+     *
+     * @remarks
+     * Mixin pattern for shared navigation behavior across entity types.
+     *
+     * Properties provided by mixin:
+     * - x, y, radius, vx, vy, avoidanceConfig
+     * - Methods: getAvoidancePosition, getHazardsToCheck, calculateAvoidanceAngle,
+     *   checkEscapeFromHazard, isHazardAhead, checkHazardsAhead, applyAvoidance
+     *
+     * Required properties (must be added by factory after spreading mixin):
+     * - state: Current AI state object (must have avoidsHazards, speedMultiplier?, directionDuration?)
+     * - motionAngle: Current movement direction in radians
+     * - speed: Current movement speed
+     * - fleeDurationTimer: (optional) Timer for FLEE state persistence
+     *
+     * Why mixin instead of classes:
+     * - Preserves existing factory function architecture
+     * - No inheritance complexity
+     * - Easy to compose with other entity properties
+     * - Incremental adoption (can mix into existing factories one at a time)
+     *
+     * Usage in factory functions:
+     * ```javascript
+     * const createDinosaur = (...) => {
+     *   const dino = {
+     *     ...createNavigatingEntity(x, y, size, HAZARD_AVOIDANCE),
+     *     // Required properties for applyAvoidance to work
+     *     state: GAME_CONSTANTS.AI.STATES.PATROL,
+     *     motionAngle: Math.random() * Math.PI * 2,
+     *     speed, health, type, aggressive, ...
+     *   };
+     *
+     *   // Override methods to customize behavior
+     *   dino.getHazardsToCheck = function(game) {
+     *     return [...game.tarPits, ...game.ponds]; // Dinos only avoid these
+     *   };
+     *
+     *   return dino;
+     * };
+     * ```
+     *
+     * Customization points (override in factory):
+     * - getAvoidancePosition() - where to check for hazards
+     * - getHazardsToCheck(game) - what hazards to avoid
+     * - calculateAvoidanceAngle(hazard) - how to steer around hazards
+     * - checkEscapeFromHazard(game) - how to escape when stuck inside
+     */
+    const createNavigatingEntity = (x, y, radius, avoidanceConfig) => {
+      return {
+        x,
+        y,
+        radius,
+        vx: 0,
+        vy: 0,
+        avoidanceConfig,
+
+        /**
+         * Get position to check for hazards (ahead of entity)
+         * Override for different checking strategies
+         */
+        getAvoidancePosition() {
+          const angle = Math.atan2(this.vy, this.vx);
+          return {
+            x: this.x + Math.cos(angle) * this.avoidanceConfig.detectionRange,
+            y: this.y + Math.sin(angle) * this.avoidanceConfig.detectionRange
+          };
+        },
+
+        /**
+         * Get list of hazards this entity should avoid
+         * Override to customize what each entity type avoids
+         * @param {Object} game - Game state object
+         * @returns {Array} Array of hazard objects
+         */
+        getHazardsToCheck(game) {
+          // Default: avoid all hazards
+          return [
+            ...game.obstacles,
+            ...game.tarPits,
+            ...game.ponds,
+            ...game.electricFences
+          ];
+        },
+
+        /**
+         * Calculate avoidance angle using cross product (smart steering)
+         * Override for different steering strategies
+         * @param {Object} hazard - Hazard object with x, y properties
+         * @returns {number} Angle to steer in radians
+         */
+        calculateAvoidanceAngle(hazard) {
+          const toHazardX = hazard.x - this.x;
+          const toHazardY = hazard.y - this.y;
+
+          // Cross product determines which side hazard is on
+          const cross = this.vx * toHazardY - this.vy * toHazardX;
+          const steerDirection = cross > 0 ? 1 : -1;
+
+          const angle = Math.atan2(this.vy, this.vx);
+          return angle + (this.avoidanceConfig.steeringAngle * steerDirection);
+        },
+
+        /**
+         * Check if entity is inside a hazard and needs to escape
+         * @param {Object} game - Game state object
+         * @returns {number|null} Escape angle or null if not stuck
+         */
+        checkEscapeFromHazard(game) {
+          for (const hazard of this.getHazardsToCheck(game)) {
+            // Check if hazard is circular (has radius)
+            if (hazard.radius !== undefined) {
+              if (circleCollision(this.x, this.y, this.radius, hazard.x, hazard.y, hazard.radius)) {
+                // Steer directly away from hazard center
+                return Math.atan2(this.y - hazard.y, this.x - hazard.x);
+              }
+            }
+          }
+          return null;
+        },
+
+        /**
+         * Test if hazard is in path at check position
+         * @param {Object} checkPos - Position to check {x, y}
+         * @param {Object} hazard - Hazard object
+         * @returns {boolean} True if hazard detected at check position
+         */
+        isHazardAhead(checkPos, hazard) {
+          if (hazard.rotation !== undefined) {
+            // Electric fence (rectangle)
+            return circleRectCollision(
+              checkPos.x, checkPos.y, this.radius,
+              hazard.x, hazard.y, hazard.hazardType.width, hazard.hazardType.height, hazard.rotation
+            );
+          } else {
+            // Circular hazard
+            return circleCollision(checkPos.x, checkPos.y, this.radius, hazard.x, hazard.y, hazard.radius);
+          }
+        },
+
+        /**
+         * Check for hazards ahead and return avoidance angle
+         * @param {Object} game - Game state object
+         * @returns {number|null} Avoidance angle or null if no hazards detected
+         *
+         * @remarks
+         * Two-phase detection system:
+         * 1. Escape: If currently inside hazard, steer directly away from center
+         * 2. Avoidance: If hazard ahead, use smart steering to navigate around it
+         */
+        checkHazardsAhead(game) {
+          // Phase 1: Check if stuck inside a hazard (escape mode)
+          const escapeAngle = this.checkEscapeFromHazard(game);
+          if (escapeAngle !== null) return escapeAngle;
+
+          // Phase 2: Check hazards ahead (avoidance mode)
+          const checkPos = this.getAvoidancePosition();
+          const hazards = this.getHazardsToCheck(game);
+
+          for (const hazard of hazards) {
+            if (this.isHazardAhead(checkPos, hazard)) {
+              return this.calculateAvoidanceAngle(hazard);
+            }
+          }
+
+          return null; // No hazards detected
+        },
+
+        /**
+         * Apply avoidance by updating motionAngle and velocity
+         * State-aware method that adjusts speed and timers based on current AI state
+         * @param {Object} game - Game state object
+         *
+         * @remarks
+         * State-aware behavior using this.state:
+         * - Checks state.avoidsHazards to determine if avoidance should occur
+         * - Uses state.speedMultiplier for state-appropriate movement speed
+         * - Resets fleeDurationTimer using state.directionDuration if present
+         *
+         * Configuration-driven approach allows states to opt-in/out of avoidance:
+         * - PATROL: avoidsHazards=true (natural wandering)
+         * - FLEE: avoidsHazards=true (prevent getting trapped)
+         * - CHASE: avoidsHazards=false (dramatic gameplay)
+         * - TERRITORY_RETURN: avoidsHazards=false (quick return to territory)
+         */
+        applyAvoidance(game) {
+          // Early exit if state doesn't support hazard avoidance
+          if (!this.state || !this.state.avoidsHazards) {
+            return;
+          }
+
+          const avoidanceAngle = this.checkHazardsAhead(game);
+          if (avoidanceAngle !== null) {
+            this.motionAngle = avoidanceAngle;
+
+            // Calculate speed based on state
+            let speed = this.speed;
+            if (this.state.speedMultiplier !== undefined) {
+              speed = this.speed * this.state.speedMultiplier;
+            }
+
+            this.vx = Math.cos(this.motionAngle) * speed;
+            this.vy = Math.sin(this.motionAngle) * speed;
+
+            // State-specific timer handling
+            if (this.state.directionDuration !== undefined && this.fleeDurationTimer !== undefined) {
+              // FLEE state: reset timer to maintain persistent direction
+              this.fleeDurationTimer = this.state.directionDuration;
+            }
+          }
+        }
+      };
+    };
+
+    /**
      * Update dinosaur AI behavior and movement
      *
      * @param {Object} dino - Dinosaur object
@@ -5169,9 +5399,9 @@
         } else {
           // Patrol: calm state, wander near territory
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.motionAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
+          dino.vx = Math.cos(dino.motionAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.motionAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
         }
 
         // Tick down spit attack cooldown
@@ -5187,9 +5417,9 @@
           dino.vy = dy * dino.speed;
         } else {
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.motionAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
+          dino.vx = Math.cos(dino.motionAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.motionAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
         }
       } else {
         // Herbivore AI: flee from player when close with persistent direction
@@ -5201,35 +5431,31 @@
 
           // Set or update flee direction with persistence to prevent oscillation
           if (!wasAlreadyFleeing || dino.fleeDurationTimer <= 0) {
-            // New flee or timer expired - calculate new flee direction
-            if (!wasAlreadyFleeing) {
-              // Just started fleeing - run directly away from player
-              const { dx, dy } = normalize(dino.x - player.x, dino.y - player.y);
-              dino.fleeAngle = Math.atan2(dy, dx);
-            } else {
-              // Timer expired while fleeing - adjust direction slightly to avoid obstacles
-              // Base adjustment on current flee angle with random variation
-              const angleToPlayer = Math.atan2(dino.y - player.y, dino.x - player.x);
-              const currentRelativeAngle = dino.fleeAngle - angleToPlayer;
-              // Keep roughly away from player but add variation (±45°)
-              dino.fleeAngle = angleToPlayer + currentRelativeAngle + randomCentered(GAME_CONSTANTS.AI.STATES.FLEE.recalcAngleRange);
-            }
+            // New flee or timer expired - recalculate flee direction away from player
+            // Always flee directly away from current player position (no "return to original path")
+            const { dx, dy } = normalize(dino.x - player.x, dino.y - player.y);
+            dino.motionAngle = Math.atan2(dy, dx);
             dino.fleeDurationTimer = GAME_CONSTANTS.AI.STATES.FLEE.directionDuration;
           }
 
           // Maintain persistent flee direction
-          dino.vx = Math.cos(dino.fleeAngle) * dino.speed;
-          dino.vy = Math.sin(dino.fleeAngle) * dino.speed;
+          dino.vx = Math.cos(dino.motionAngle) * dino.speed;
+          dino.vy = Math.sin(dino.motionAngle) * dino.speed;
+
           dino.fleeDurationTimer--;
         } else {
           // Return to patrol when player is far enough
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
           dino.fleeDurationTimer = 0; // Reset timer
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          // Add slight random variation to motion angle for natural patrol behavior
+          dino.motionAngle += randomCentered(GAME_CONSTANTS.AI.STATES.PATROL.angleChangeRate);
+          dino.vx = Math.cos(dino.motionAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.motionAngle) * dino.speed * GAME_CONSTANTS.AI.STATES.PATROL.speedMultiplier;
         }
       }
+
+      // Hazard avoidance - method checks state.avoidsHazards internally
+      dino.applyAvoidance(game);
     };
 
     /**
@@ -5451,12 +5677,11 @@
             if (hitLeftOrRight) dino.vx = -dino.vx;
             if (hitTopOrBottom) dino.vy = -dino.vy;
 
-            // Update state-specific direction angle
-            if (dino.state === GAME_CONSTANTS.AI.STATES.PATROL) {
-              dino.patrolAngle = Math.atan2(dino.vy, dino.vx);
-            } else {
-              // FLEE state: update flee angle and reset timer for immediate recalculation
-              dino.fleeAngle = Math.atan2(dino.vy, dino.vx);
+            // Update motion angle based on reflected velocity
+            dino.motionAngle = Math.atan2(dino.vy, dino.vx);
+
+            // FLEE state: reset timer for persistent flee direction
+            if (dino.state === GAME_CONSTANTS.AI.STATES.FLEE) {
               dino.fleeDurationTimer = GAME_CONSTANTS.AI.STATES.FLEE.directionDuration;
             }
           }
@@ -6235,11 +6460,9 @@
               game
             );
 
+            // Mix in navigation/avoidance behavior
             const dino = {
-              x: spawnPos.x,
-              y: spawnPos.y,
-              vx: 0,
-              vy: 0,
+              ...createNavigatingEntity(spawnPos.x, spawnPos.y, dinoConfig.type.baseSize, GAME_CONSTANTS.AI.HAZARD_AVOIDANCE),
               health: dinoConfig.type.health,
               maxHealth: dinoConfig.type.health,
               speed: baseSpeed * diffMod.enemySpeedMultiplier, // Apply difficulty
@@ -6253,8 +6476,7 @@
               aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
               fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.STATES.FLEE.range,
               state: GAME_CONSTANTS.AI.STATES.PATROL,
-              patrolAngle: Math.random() * Math.PI * 2,
-              fleeAngle: 0, // Persistent flee direction to prevent oscillation
+              motionAngle: Math.random() * Math.PI * 2,
               fleeDurationTimer: 0, // Frames remaining before recalculating flee direction
               isSleeping: false,
               sleepTimer: 0,
@@ -6266,6 +6488,11 @@
               // Animation properties
               animationFrame: 0, // Counter incremented each frame when moving
               legCycle: 0 // Sine wave value for leg positions (-1 to 1)
+            };
+
+            // Override to specify what dinosaurs avoid (only tar pits and ponds)
+            dino.getHazardsToCheck = function(game) {
+              return [...game.tarPits, ...game.ponds];
             };
 
             dino.draw = function(ctx) {

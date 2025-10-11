@@ -139,7 +139,78 @@ if (bullet.update(mapWidth, mapHeight)) {
 - Enables batch rendering via `drawEntities()` utility
 - Cleaner game loop - physics and rendering encapsulated in entities
 
-### 3. Factory Function Pattern
+### 3. Mixin Pattern (for Shared Behavior)
+
+**Mixins provide reusable behavior that can be composed into entities.**
+
+Use mixins when multiple entity types need identical functionality:
+
+```javascript
+// Mixin: createNavigatingEntity() - Provides hazard avoidance for moving entities
+const createNavigatingEntity = (x, y, radius, avoidanceConfig) => {
+  return {
+    // Properties provided by mixin
+    x, y, radius, vx: 0, vy: 0, avoidanceConfig,
+
+    // Shared methods all navigating entities get
+    checkHazardsAhead(game) { /* smart avoidance logic */ },
+    getHazardsToCheck(game) { /* what to avoid */ },
+    calculateAvoidanceAngle(hazard) { /* how to steer */ },
+    applyAvoidance(game) { /* reads this.state for automatic speed/timer handling */ }
+  };
+};
+
+// Usage in factory: Spread mixin, then add required properties
+const createDinosaur = (x, y, type) => {
+  const dino = {
+    ...createNavigatingEntity(x, y, type.baseSize, GAME_CONSTANTS.AI.HAZARD_AVOIDANCE),
+
+    // Required properties for applyAvoidance() to work:
+    state: GAME_CONSTANTS.AI.STATES.PATROL,  // Must have: avoidsHazards, speedMultiplier?, directionDuration?
+    motionAngle: Math.random() * Math.PI * 2, // Current movement direction
+    speed: type.speed,                         // Current movement speed
+    fleeDurationTimer: 0,                      // (Optional) For FLEE state timer
+
+    // Other dinosaur-specific properties
+    type, health: type.health, aggressive: type.aggressive
+  };
+
+  // Override to customize behavior
+  dino.getHazardsToCheck = function(game) {
+    return [...game.tarPits, ...game.ponds]; // Dinosaurs only avoid these
+  };
+
+  return dino;
+};
+
+// In AI code: Ultra-simple unconditional call
+dino.applyAvoidance(game);
+// Method reads this.state.avoidsHazards to decide whether to avoid
+// Then automatically uses state.speedMultiplier and state.directionDuration
+```
+
+**Benefits:**
+
+- Eliminates code duplication across entity types
+- Easy to compose multiple mixins (spread them all)
+- Override methods for per-entity customization
+- Preserves factory function architecture (no class inheritance complexity)
+- Incremental adoption - mix into one entity type at a time
+
+**When to use mixins:**
+
+- Shared navigation/avoidance logic (dinosaurs, ducks, future creatures)
+- Common AI behaviors (pathfinding, state machines)
+- Reusable rendering effects (shadows, outlines, animations)
+
+**Mixin guidelines:**
+
+- Keep mixins focused (single responsibility)
+- Provide sensible defaults, allow overrides
+- Document customization points in JSDoc
+- Prefix mixin factories with `create` for consistency
+
+### 4. Factory Function Pattern
 
 **All entities created via factory functions to ensure consistency.**
 
@@ -156,7 +227,7 @@ const guard = createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, dif
 
 **Rule:** NEVER create entities inline without factory functions - risks missing instance methods or initialization logic.
 
-### 4. React Performance Pattern
+### 5. React Performance Pattern
 
 **State batching prevents multiple re-renders per frame (60 FPS).**
 
@@ -181,7 +252,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - UI components (`GameHUD`, `TouchControls`, `PauseMenu`, `SettingsMenu`) wrapped with `React.memo`
 - Handlers organized into logical sections (Game Flow, Desktop Input, Mobile Touch, UI Interaction, etc.)
 
-### 5. Constants-First Approach
+### 6. Constants-First Approach
 
 **All magic numbers extracted to `GAME_CONSTANTS` with descriptive names.**
 
@@ -196,12 +267,24 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 // - ENTITIES.OBSTACLES (id, blocksMovement, zIndex, colors, drawFunction)
 // - ENTITIES.POWERUPS (id, radius, icon, durationFrames, multiplier)
 // - ENTITIES.HAZARDS (id, damage, slowMultiplier, colors, drawFunction)
-// - AI.STATES (PATROL, CHASE, FLEE, TERRITORY_RETURN - each with id and state-specific properties)
-// - AI (nested: STATES, TERRITORY, EXIT, FACING_DIRECTION_THRESHOLD)
+// - AI.STATES (PATROL, CHASE, FLEE, TERRITORY_RETURN)
+//   - Each state: id, speedMultiplier?, directionDuration?, avoidsHazards
+//   - avoidsHazards controls whether entities in this state avoid hazards
+// - AI (nested: STATES, TERRITORY, EXIT, FACING_DIRECTION_THRESHOLD, HAZARD_AVOIDANCE)
 // - WORLD.SPAWN (nested: PLAYER, DEPOTS, OBSTACLES, DINOSAURS, POWERUPS, HAZARDS)
 ```
 
 ## Key Utility Functions
+
+**Navigation & Avoidance Mixin:**
+
+- `createNavigatingEntity(x, y, radius, avoidanceConfig)` - Mixin providing hazard avoidance for moving entities
+  - Methods: `checkHazardsAhead()`, `getHazardsToCheck()`, `calculateAvoidanceAngle()`, `applyAvoidance(game)`
+  - State-aware: Reads `this.state.avoidsHazards` to determine if avoidance should occur
+  - Configuration-driven: States opt-in via `avoidsHazards` property (PATROL/FLEE=true, CHASE/RETURN=false)
+  - Automatically uses `state.speedMultiplier` and `state.directionDuration` when avoidance triggers
+  - Override `getHazardsToCheck()` to customize per-entity (dinosaurs avoid pits/ponds, ducks avoid obstacles/fences)
+  - See "Mixin Pattern" section for usage examples
 
 **Rendering Utilities:**
 
