@@ -406,7 +406,6 @@
             strokeColor: '#fff',
             lineWidth: 2,
             drawIcon: (ctx, screenX, screenY) => {
-              // Draw cross
               ctx.strokeStyle = '#fff';
               ctx.lineWidth = 3;
               ctx.beginPath();
@@ -428,7 +427,6 @@
             strokeColor: '#fff',
             lineWidth: 2,
             drawIcon: (ctx, screenX, screenY) => {
-              // Draw lightning bolt
               ctx.fillStyle = '#fff';
               ctx.beginPath();
               ctx.moveTo(screenX + 2, screenY - 6);
@@ -659,7 +657,6 @@
             strokeColor: '#006400',
             lineWidth: 2,
             drawIcon: (ctx, screenX, screenY) => {
-              // Draw syringe icon
               ctx.fillStyle = '#00FF00';
               ctx.beginPath();
               ctx.arc(screenX, screenY - 3, 3, 0, Math.PI * 2);
@@ -674,7 +671,6 @@
             strokeColor: '#0047AB',
             lineWidth: 2,
             drawIcon: (ctx, screenX, screenY) => {
-              // Draw bullet icon (💥 emoji)
               ctx.font = '16px Arial';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
@@ -929,7 +925,6 @@
      * @returns {boolean} True if position is valid (no overlaps)
      */
     const isValidPosition = (x, y, radius, game, clearance = GAME_CONSTANTS.WORLD.SPAWN.DEFAULT_ENTITY_CLEARANCE) => {
-      // Check against tar pits
       for (const tarPit of game.tarPits) {
         const dist = distance(x, y, tarPit.x, tarPit.y);
         if (dist < radius + tarPit.radius + clearance) {
@@ -937,7 +932,6 @@
         }
       }
 
-      // Check against obstacles
       for (const obstacle of game.obstacles) {
         const dist = distance(x, y, obstacle.x, obstacle.y);
         if (dist < radius + obstacle.radius + clearance) {
@@ -1401,7 +1395,6 @@
           }
         }
 
-        // Check static structure clearance (exits, gates, signs, etc.)
         if (valid && game.staticStructures && game.staticStructures.length > 0) {
           for (const structure of game.staticStructures) {
             const distFromStructure = distance(x, y, structure.x, structure.y);
@@ -1413,7 +1406,6 @@
           }
         }
 
-        // Check against all existing entities using centralized collision checker
         if (valid) {
           valid = isValidPosition(x, y, radius, game);
         }
@@ -1710,7 +1702,6 @@
 
       // Instance method: physics update, bounce logic, and collection detection
       pickup.update = function(player, difficulty, playSound, stateAccumulator, createFloatingText) {
-        // Apply gravity to vertical velocity
         this.y += this.vy;
         this.vy += GAME_CONSTANTS.CORE.PHYSICS.AMMO_GRAVITY;
 
@@ -1750,13 +1741,11 @@
       pickup.draw = function(ctx, cameraX, cameraY) {
         const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
 
-        // Draw the ammo ball
         ctx.fillStyle = GAME_CONSTANTS.WORLD.AMMO_PICKUP.COLOR;
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw the ammo amount badge
         ctx.fillStyle = '#000';
         ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
@@ -1900,22 +1889,18 @@
         const screenX = this.x - cameraX;
         const screenY = this.y - cameraY;
 
-        // Draw exit background
         ctx.fillStyle = this.locked ? this.structureType.lockedFillColor : this.structureType.unlockedFillColor;
         ctx.fillRect(screenX, screenY, this.structureType.width, this.structureType.height);
 
-        // Draw exit border
         ctx.strokeStyle = this.locked ? this.structureType.lockedStrokeColor : this.structureType.unlockedStrokeColor;
         ctx.lineWidth = this.structureType.borderWidth;
         ctx.strokeRect(screenX, screenY, this.structureType.width, this.structureType.height);
 
-        // Draw "EXIT" text
         ctx.fillStyle = this.structureType.textColor;
         ctx.font = this.structureType.textFont;
         ctx.textAlign = 'center';
         ctx.fillText('EXIT', screenX + this.structureType.width / 2, screenY + this.structureType.height / 2 + this.structureType.textOffsetY);
 
-        // Draw lock icon if exit is locked
         if (this.locked) {
           ctx.font = `${this.structureType.lockIconSize}px Arial`;
           ctx.textAlign = 'center';
@@ -1967,7 +1952,6 @@
       const maxAttempts = GAME_CONSTANTS.AI.TERRITORY_SPAWN_MAX_ATTEMPTS;
       const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * GAME_CONSTANTS.AI.TERRITORY_SPACING_MULTIPLIER;
 
-      // Try to find non-overlapping position
       while (attempts < maxAttempts) {
         let overlapping = false;
 
@@ -1980,7 +1964,6 @@
           }
         }
 
-        // Check territory center clearance from obstacles
         if (!overlapping) {
           for (const obstacle of game.obstacles) {
             const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
@@ -4997,7 +4980,6 @@
 
             let overlapping = false;
 
-            // Check against other tar pits
             for (const existingTar of game.tarPits) {
               const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
               if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.minSpacing) {
