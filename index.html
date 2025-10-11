@@ -1027,6 +1027,101 @@
     };
 
     /**
+     * Spawn multiple hazards of a given type with collision avoidance
+     * @param {Object} params - Spawn parameters
+     * @param {number} params.count - Number of hazards to spawn
+     * @param {Object} params.hazardType - Hazard type configuration (e.g., TAR_PIT, POND)
+     * @param {Function} params.createFn - Factory function (e.g., createTarPit, createPond)
+     * @param {Array} params.targetArray - Array to push created hazards to
+     * @param {Array[]} params.existingArrays - Arrays of existing hazards to check spacing against
+     * @param {Object} params.game - Game state object
+     *
+     * @remarks
+     * Consolidates repetitive hazard spawning logic:
+     * - Random position generation within safe zones
+     * - Collision checking against existing hazards of same/different types
+     * - Retry logic with max attempts
+     * - Follows DRY principle by extracting common pattern
+     */
+    const spawnHazards = ({ count, hazardType, createFn, targetArray, existingArrays, game }) => {
+      const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+
+      for (let i = 0; i < count; i++) {
+        let x, y;
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+          x = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN +
+              Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+          y = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN +
+              Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+
+          let overlapping = false;
+
+          // Check spacing against all existing hazard arrays
+          for (const existingArray of existingArrays) {
+            for (const existing of existingArray) {
+              const dist = distance(x, y, existing.x, existing.y);
+              const minSpacing = existing.hazardType?.minSpacing || hazardType.minSpacing;
+              if (dist < minSpacing) {
+                overlapping = true;
+                break;
+              }
+            }
+            if (overlapping) break;
+          }
+
+          if (!overlapping) break;
+          attempts++;
+        }
+
+        targetArray.push(createFn(x, y));
+      }
+    };
+
+    /**
+     * Spawn decoration patches (mushrooms or grass) with collision avoidance
+     * @param {Object} params - Spawn parameters
+     * @param {number} params.count - Number of patches to spawn
+     * @param {Function} params.createFn - Factory function (e.g., createMushroomPatch, createGrassPatch)
+     * @param {number} params.spread - Spread radius for collision checking
+     * @param {Array} params.targetArray - Array to push created decorations to
+     * @param {Object} params.game - Game state object
+     * @param {Function} [params.getExtraArgs] - Optional function to generate extra args per patch
+     *
+     * @remarks
+     * Consolidates repetitive decoration spawning logic:
+     * - Random position generation within obstacle margins
+     * - Player spawn clearance checking
+     * - Collision validation via isValidPosition
+     * - Supports extra arguments (e.g., color index for mushrooms)
+     */
+    const spawnDecorationPatches = ({ count, createFn, spread, targetArray, game, getExtraArgs }) => {
+      for (let i = 0; i < count; i++) {
+        const x = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN +
+                  Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
+        const y = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN +
+                  Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
+
+        // Check clearance from player spawn
+        const distFromPlayer = distance(x, y, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
+        if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
+          continue;
+        }
+
+        // Use unified collision validator
+        if (!isValidPosition(x, y, spread, game, 0)) {
+          continue;
+        }
+
+        // Create patch with optional extra arguments
+        const extraArgs = getExtraArgs ? getExtraArgs() : [];
+        const patch = createFn(x, y, ...extraArgs);
+        targetArray.push(...patch);
+      }
+    };
+
+    /**
      * Apply canvas rendering styles in batch
      *
      * @param {CanvasRenderingContext2D} ctx - Canvas context
@@ -5293,129 +5388,50 @@
         setCurrentWeapon(GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR);
         setSpeedBoostActive(false);
 
-        // Create tar pits first (so obstacles can avoid them)
-        for (let i = 0; i < config.tarPits; i++) {
-          let tarX, tarY;
-          let attempts = 0;
-          const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+        // Create hazards (tar pits and ponds) using consolidated spawning logic
+        spawnHazards({
+          count: config.tarPits,
+          hazardType: GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT,
+          createFn: createTarPit,
+          targetArray: game.tarPits,
+          existingArrays: [game.tarPits],
+          game
+        });
 
-          while (attempts < maxAttempts) {
-            tarX = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            tarY = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-
-            let overlapping = false;
-
-            for (const existingTar of game.tarPits) {
-              const dist = distance(tarX, tarY, existingTar.x, existingTar.y);
-              if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.TAR_PIT.minSpacing) {
-                overlapping = true;
-                break;
-              }
-            }
-
-            if (!overlapping) break;
-            attempts++;
-          }
-
-          game.tarPits.push(createTarPit(tarX, tarY));
-        }
-
-        // Create ponds (with collision avoidance from tar pits and other ponds)
-        for (let i = 0; i < config.ponds; i++) {
-          let pondX, pondY;
-          let attempts = 0;
-          const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
-
-          while (attempts < maxAttempts) {
-            pondX = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            pondY = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-
-            let overlapping = false;
-
-            // Check spacing from tar pits
-            for (const tarPit of game.tarPits) {
-              const dist = distance(pondX, pondY, tarPit.x, tarPit.y);
-              if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.POND.minSpacing) {
-                overlapping = true;
-                break;
-              }
-            }
-
-            // Check spacing from other ponds
-            if (!overlapping) {
-              for (const existingPond of game.ponds) {
-                const dist = distance(pondX, pondY, existingPond.x, existingPond.y);
-                if (dist < GAME_CONSTANTS.ENTITIES.HAZARDS.POND.minSpacing) {
-                  overlapping = true;
-                  break;
-                }
-              }
-            }
-
-            if (!overlapping) break;
-            attempts++;
-          }
-
-          game.ponds.push(createPond(pondX, pondY));
-        }
+        spawnHazards({
+          count: config.ponds,
+          hazardType: GAME_CONSTANTS.ENTITIES.HAZARDS.POND,
+          createFn: createPond,
+          targetArray: game.ponds,
+          existingArrays: [game.tarPits, game.ponds], // Check against both tar pits and other ponds
+          game
+        });
 
         // Create obstacles (blocking: trees, bushes, boulders, rock clusters)
         for (let i = 0; i < config.obstacles; i++) {
           game.obstacles.push(createObstacle(game));
         }
 
-        // Create decorations (walkable: mushroom patches and grass patches)
+        // Create decorations (walkable: mushroom patches and grass patches) using consolidated spawning
         const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_PERCENTAGE);
         const grassPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_PERCENTAGE);
 
-        // Spawn mushroom patches
-        for (let patchIndex = 0; patchIndex < mushroomPatchCount; patchIndex++) {
-          // Pick patch center location
-          const patchCenterX = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
-          const patchCenterY = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
+        spawnDecorationPatches({
+          count: mushroomPatchCount,
+          createFn: createMushroomPatch,
+          spread: GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SPREAD,
+          targetArray: game.decorations,
+          game,
+          getExtraArgs: () => [Math.floor(Math.random() * GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.colors.capColors.length)]
+        });
 
-          // Check clearance from player spawn (visual cleanliness, not collision)
-          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
-          if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
-            continue; // Skip this patch if too close to player
-          }
-
-          // Use unified collision validator (checks tar pits, obstacles, fences)
-          // Spread accounts for patch size to avoid partial overlaps
-          if (!isValidPosition(patchCenterX, patchCenterY, GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SPREAD, game, 0)) {
-            continue; // Skip this patch if overlapping hazards
-          }
-
-          // Pick a color for this patch (all mushrooms in patch share color)
-          const patchColorIndex = Math.floor(Math.random() * GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.colors.capColors.length);
-
-          // Create and add all mushrooms in patch
-          const patch = createMushroomPatch(patchCenterX, patchCenterY, patchColorIndex);
-          game.decorations.push(...patch);
-        }
-
-        // Spawn grass patches
-        for (let patchIndex = 0; patchIndex < grassPatchCount; patchIndex++) {
-          // Pick patch center location
-          const patchCenterX = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
-          const patchCenterY = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
-
-          // Check clearance from player spawn (visual cleanliness, not collision)
-          const distFromPlayer = distance(patchCenterX, patchCenterY, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
-          if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
-            continue; // Skip this patch if too close to player
-          }
-
-          // Use unified collision validator (checks tar pits, obstacles, fences)
-          // Spread accounts for patch size to avoid partial overlaps
-          if (!isValidPosition(patchCenterX, patchCenterY, GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SPREAD, game, 0)) {
-            continue; // Skip this patch if overlapping hazards
-          }
-
-          // Create and add all grass patches in cluster
-          const cluster = createGrassPatch(patchCenterX, patchCenterY);
-          game.decorations.push(...cluster);
-        }
+        spawnDecorationPatches({
+          count: grassPatchCount,
+          createFn: createGrassPatch,
+          spread: GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SPREAD,
+          targetArray: game.decorations,
+          game
+        });
 
         // Sort decorations by z-index for proper rendering order (grass first, mushrooms last)
         game.decorations.sort((a, b) => {

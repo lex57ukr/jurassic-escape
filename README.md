@@ -185,6 +185,11 @@ This provides two debug configurations:
   - Affects both player and dinosaurs
   - No damage, but makes it harder to escape from predators
   - Can be identified by dark brown/black coloring with bubbling animation (3 bubbles per pit)
+- **Ponds**: Large blue-green water bodies that slow down movement to 65% speed
+  - Affects both player and dinosaurs
+  - No damage, but provides less hindrance than tar pits
+  - Features animated ripples and vegetation (lily pads, cattails)
+  - Prominent water features that impact navigation
 - **Electric Fences**: High-voltage barriers that shock on contact
   - Player: Takes 1 damage (can jump over to avoid)
   - Dinosaurs: Knocked back and stunned temporarily
@@ -205,7 +210,7 @@ This provides two debug configurations:
   - Exit shows 🔒 lock icon when guards are active
   - Guards patrol 300-pixel territory around exit (larger than normal territories)
   - Defeat all guards to unlock the golden exit
-- **Environmental hazards**: Tar pits that slow movement and electric fences that damage/stun
+- **Environmental hazards**: Tar pits and ponds that slow movement, electric fences that damage/stun
 - **Dual weapon system**: Regular gun and tranquilizer dart
   - **Tranquilizer**: Non-lethal option that puts dinosaurs to sleep
   - Multi-shot mechanic: larger dinosaurs need more shots

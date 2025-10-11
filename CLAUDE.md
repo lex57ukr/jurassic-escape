@@ -212,6 +212,11 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `transitionToState(newState, playSound, stateAccumulator, setGameState)` - Unified state transition with auto sound playback
 - `fireWeapon(weapon, player, targetX, targetY, game, playSound, stateAccumulator, setters)` - Unified weapon firing logic
 
+**Spawning Utilities:**
+
+- `spawnHazards({ count, hazardType, createFn, targetArray, existingArrays, game })` - Consolidated hazard spawning with collision avoidance
+- `spawnDecorationPatches({ count, createFn, spread, targetArray, game, getExtraArgs })` - Consolidated decoration patch spawning with player clearance
+
 **Collision & Positioning:**
 
 - `isInBounds(x, y, mapWidth, mapHeight)` - Check if position is within map bounds
@@ -231,7 +236,8 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `createTranqDepot(game)` - Tranquilizer ammo crates (uses `isValidPosition()`, guaranteed to succeed)
 - `createAmmoDepot()` - Regular ammo crates (fixed positions)
 - `createAmmoPickup()` - Bouncing ammo drops from defeated dinosaurs
-- `createTarPit()` - Movement-slowing hazards
+- `createTarPit()` - Movement-slowing tar hazards
+- `createPond()` - Water hazards with ripples and vegetation (lily pads, cattails)
 - `createElectricFence(game)` - Damage/stun hazards (uses `isValidPosition()` + custom fence spacing, guaranteed to succeed)
 - `createExit(x, y)` - Level exit (static structure with locked state)
 - `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (handles collision avoidance)
@@ -303,6 +309,7 @@ useEffect(() => {
 6. **Use specialized arrays for entity categories**
    - `staticStructures` array: static map objects (exits, gates, signs, etc.)
    - `tarPits` array: tar pit hazards
+   - `ponds` array: pond hazards
    - `electricFences` array: electric fence hazards
    - `territories` array: territory markers for dinosaurs
    - Enables clean batch rendering via `drawEntities()` with proper z-index layering
