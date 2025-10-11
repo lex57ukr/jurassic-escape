@@ -723,16 +723,22 @@
           STATES: {
             WANDER: {
               id: 'wander',
-              directionChangeFrequency: 120, // Change direction every 2 seconds
-              angleVariance: Math.PI / 3,    // ±60° when changing direction
+              avoidsHazards: true,             // Use navigation mixin for obstacle avoidance
+              speedMultiplier: 1,
+              directionDuration: 120,          // Change direction every 2 seconds
+              directionChangeFrequency: 120,   // Change direction every 2 seconds
+              angleVariance: Math.PI / 3,      // ±60° when changing direction
             },
             SEEK_POND: {
               id: 'seek_pond',
+              avoidsHazards: true,             // Use navigation mixin for obstacle avoidance
+              speedMultiplier: 1,
               detectionRange: 350,             // How far ducks can see ponds
               steeringForce: 0.08,             // How strongly ducks steer toward target
             },
             SWIMMING: {
               id: 'swimming',
+              avoidsHazards: false,            // No avoidance while swimming in pond
               minDuration: 1800,               // Minimum 30 seconds at 60fps
               maxDuration: 3600,               // Maximum 60 seconds at 60fps
               baseSwimRadius: 0.6,             // Base radius as fraction of pond radius (60%)
@@ -743,11 +749,12 @@
             },
             EXIT_POND: {
               id: 'exit_pond',
+              avoidsHazards: false,            // No avoidance, focused on exiting pond
               exitDuration: 90,                // 1.5 seconds to swim to edge
             },
           },
           AVOIDANCE: {
-            obstacleDetectionRange: 35,        // How far ahead to check for obstacles
+            detectionRange: 35,                // How far ahead to check for obstacles (mixin compatible)
             steeringAngle: Math.PI / 3,        // Turn 60° when obstacle detected
             wallMargin: 20,                    // Distance to maintain from map edges
           },
@@ -2404,13 +2411,13 @@
       const broodSize = spawnConfig.MIN_BROOD_SIZE +
                        Math.floor(Math.random() * (spawnConfig.MAX_BROOD_SIZE - spawnConfig.MIN_BROOD_SIZE + 1));
 
-      // Create mama duck
+      // Create mama duck using navigation mixin for obstacle avoidance
       const mama = {
-        x: mamaX,
-        y: mamaY,
-        vx: 0,
-        vy: 0,
+        ...createNavigatingEntity(mamaX, mamaY, mamaType.collisionRadius, aiConfig.AVOIDANCE),
+        // Duck-specific properties
         angle: Math.random() * Math.PI * 2,
+        motionAngle: Math.random() * Math.PI * 2, // Alias for navigation mixin (synced with angle)
+        speed: mamaType.waddleSpeed,
         size: mamaType.size,
         animationFrame: 0,
         facingLeft: false,
@@ -2431,11 +2438,19 @@
         });
       }
 
-      // Duck family state
+      // Override navigation mixin: specify what mama duck should avoid
+      // Ducks avoid obstacles, fences, and tar pits - but NOT ponds (they swim in ponds!)
+      mama.getHazardsToCheck = function(game) {
+        return [...game.obstacles, ...game.electricFences, ...game.tarPits];
+      };
+
+      // Set initial state on mama (she's the leader!)
+      mama.state = aiConfig.STATES.WANDER;
+
+      // Duck family object - mama.state is the source of truth
       const family = {
         mama,
         ducklings,
-        state: aiConfig.STATES.WANDER,
         targetPond: null,
         lastPond: null,
         visitedPonds: [], // Track which ponds have been visited
@@ -2447,6 +2462,12 @@
         swimCenterY: 0,
         rippleTimer: 0,
       };
+
+      // Convenience getter: family.state reads from mama (she's in charge!)
+      Object.defineProperty(family, 'state', {
+        get() { return this.mama.state; },
+        set(newState) { this.mama.state = newState; }
+      });
 
       // Update instance method - AI state machine
       family.update = function(game) {
@@ -2474,17 +2495,21 @@
 
               if (!isPondOccupied) {
                 this.targetPond = pond;
-                this.state = aiConfig.STATES.SEEK_POND;
+                this.state = aiConfig.STATES.SEEK_POND; // Sets mama.state via getter
                 break;
               }
             }
           }
 
           // Move mama in wander direction
-          const avoidanceAngle = this.checkObstacles(game);
-          if (avoidanceAngle !== null) {
-            this.mama.angle = avoidanceAngle;
-          }
+          // Sync angle properties for mixin compatibility
+          this.mama.motionAngle = this.mama.angle;
+
+          // Apply obstacle avoidance (mixin automatically checks state.avoidsHazards)
+          this.mama.applyAvoidance(game);
+
+          // Sync back to angle (mixin updates motionAngle)
+          this.mama.angle = this.mama.motionAngle;
 
           this.mama.vx = Math.cos(this.mama.angle) * mamaType.waddleSpeed;
           this.mama.vy = Math.sin(this.mama.angle) * mamaType.waddleSpeed;
@@ -2492,7 +2517,7 @@
         } else if (this.state === aiConfig.STATES.SEEK_POND) {
           // Seek pond behavior: move toward target pond
           if (!this.targetPond) {
-            this.state = aiConfig.STATES.WANDER;
+            this.state = aiConfig.STATES.WANDER; // Sets mama.state via getter
             return;
           }
 
@@ -2506,11 +2531,14 @@
           while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
           this.mama.angle += angleDiff * aiConfig.STATES.SEEK_POND.steeringForce;
 
-          // Obstacle avoidance
-          const avoidanceAngle = this.checkObstacles(game);
-          if (avoidanceAngle !== null) {
-            this.mama.angle = avoidanceAngle;
-          }
+          // Sync angle properties for mixin compatibility
+          this.mama.motionAngle = this.mama.angle;
+
+          // Apply obstacle avoidance (mixin automatically checks state.avoidsHazards)
+          this.mama.applyAvoidance(game);
+
+          // Sync back to angle (mixin updates motionAngle)
+          this.mama.angle = this.mama.motionAngle;
 
           this.mama.vx = Math.cos(this.mama.angle) * mamaType.waddleSpeed;
           this.mama.vy = Math.sin(this.mama.angle) * mamaType.waddleSpeed;
@@ -2518,7 +2546,7 @@
           // Check if reached pond
           const dist = distance(this.mama.x, this.mama.y, this.targetPond.x, this.targetPond.y);
           if (dist < this.targetPond.radius * 0.8) {
-            this.state = aiConfig.STATES.SWIMMING;
+            this.state = aiConfig.STATES.SWIMMING; // Sets mama.state via getter
             this.swimTimer = aiConfig.STATES.SWIMMING.minDuration +
                            Math.random() * (aiConfig.STATES.SWIMMING.maxDuration - aiConfig.STATES.SWIMMING.minDuration);
 
@@ -2574,7 +2602,7 @@
 
           if (this.swimTimer <= 0) {
             // Exit pond after timer expires
-            this.state = aiConfig.STATES.EXIT_POND;
+            this.state = aiConfig.STATES.EXIT_POND; // Sets mama.state via getter
 
             // Always find a different pond to visit next (don't return to same pond immediately)
             this.targetPond = this.findNearestPond(game, this.lastPond);
@@ -2594,10 +2622,10 @@
             if (dist > this.lastPond.radius + 30) {
               // Fully exited, head to next pond (or wander if no other pond available)
               if (this.targetPond && this.targetPond !== this.lastPond) {
-                this.state = aiConfig.STATES.SEEK_POND;
+                this.state = aiConfig.STATES.SEEK_POND; // Sets mama.state via getter
               } else {
                 // No other pond available, wander instead
-                this.state = aiConfig.STATES.WANDER;
+                this.state = aiConfig.STATES.WANDER; // Sets mama.state via getter
                 this.wanderTimer = aiConfig.STATES.WANDER.directionChangeFrequency * 3;
               }
             }
@@ -2634,40 +2662,6 @@
 
         // Update ducklings (each follows the one in front in a chain)
         this.updateDucklings();
-      };
-
-      // Helper: Check for obstacles ahead and return avoidance angle if needed
-      family.checkObstacles = function(game) {
-        const checkDist = aiConfig.AVOIDANCE.obstacleDetectionRange;
-        const checkX = this.mama.x + Math.cos(this.mama.angle) * checkDist;
-        const checkY = this.mama.y + Math.sin(this.mama.angle) * checkDist;
-
-        // Check obstacles
-        for (const obstacle of game.obstacles) {
-          if (circleCollision(checkX, checkY, mamaType.collisionRadius, obstacle.x, obstacle.y, obstacle.radius)) {
-            return this.mama.angle + aiConfig.AVOIDANCE.steeringAngle;
-          }
-        }
-
-        // Check electric fences
-        for (const fence of game.electricFences) {
-          const fenceType = fence.hazardType;
-          if (circleRectCollision(
-            checkX, checkY, mamaType.collisionRadius,
-            fence.x, fence.y, fenceType.width, fenceType.height, fence.rotation
-          )) {
-            return this.mama.angle + aiConfig.AVOIDANCE.steeringAngle;
-          }
-        }
-
-        // Check tar pits (ducks should avoid getting stuck!)
-        for (const tarPit of game.tarPits) {
-          if (circleCollision(checkX, checkY, mamaType.collisionRadius, tarPit.x, tarPit.y, tarPit.radius)) {
-            return this.mama.angle + aiConfig.AVOIDANCE.steeringAngle;
-          }
-        }
-
-        return null; // No obstacles detected
       };
 
       // Helper: Find nearest unoccupied pond (excluding specific pond)

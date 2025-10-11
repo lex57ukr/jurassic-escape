@@ -384,6 +384,11 @@ Duck families demonstrate a complete implementation of the architectural pattern
 
 - WANDER → SEEK_POND → SWIMMING → EXIT_POND cycle
 - Each state defined in `GAME_CONSTANTS.AI.AMBIENT_DUCKS.STATES` with full configuration
+- States include `avoidsHazards` property for navigation mixin integration
+  - WANDER: `avoidsHazards: true` - avoid obstacles while wandering
+  - SEEK_POND: `avoidsHazards: true` - avoid obstacles while seeking
+  - SWIMMING: `avoidsHazards: false` - no avoidance while in pond
+  - EXIT_POND: `avoidsHazards: false` - no avoidance while exiting
 - Transitions based on proximity, timers, and pond availability
 
 **Chain Following Pattern:**
@@ -401,18 +406,25 @@ Duck families demonstrate a complete implementation of the architectural pattern
 - Prevents multiple families clustering in same pond
 - Natural distribution across map
 
+**Navigation Mixin Integration:**
+
+- Mama duck uses `createNavigatingEntity()` mixin for obstacle avoidance
+- States configured with `avoidsHazards` property (WANDER/SEEK_POND=true, SWIMMING/EXIT_POND=false)
+- Overrides `getHazardsToCheck()` to avoid obstacles, fences, and tar pits (but NOT ponds!)
+- Unconditional `applyAvoidance(game)` call - mixin automatically reads `mama.state.avoidsHazards`
+- Syncs `angle` ↔ `motionAngle` for mixin compatibility
+
 **Physics & Behavior:**
 
 - Swimming: constant linear speed with variable radius (ω = v/r)
-- Obstacle avoidance: raycast detection for trees, fences, tar pits
 - Visited pond tracking: explores all ponds before repeating
 
 **Instance Methods:**
 
 - `family.update(game)` - Main AI state machine
-- `family.checkObstacles(game)` - Collision detection
 - `family.findNearestPond(game, excludePond)` - Pathfinding
 - `family.updateDucklings()` - Chain following logic
+- `mama.applyAvoidance(game)` - Navigation mixin method (inherited from `createNavigatingEntity`)
 
 ## Code Organization Rules
 
