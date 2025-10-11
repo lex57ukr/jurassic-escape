@@ -74,7 +74,21 @@ exit.structureType = STATIC_STRUCTURES.EXIT;       // Full structure config
 - Better IDE autocomplete
 - Direct property access: `dino.type.tranqShots`, `obstacle.obstacleType.colors.trunkBase`
 
+**Type Checking Pattern:**
+
+Use object identity comparison (===) NOT string ID comparison:
+
+```javascript
+// ✅ GOOD: Object identity check (fast, type-safe)
+if (bullet.weaponType === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER) { ... }
+if (powerup.powerupType === GAME_CONSTANTS.ENTITIES.POWERUPS.HEALTH) { ... }
+
+// ❌ BAD: String ID comparison (brittle, requires maintaining separate ID strings)
+if (bullet.weaponType.id === 'tranquilizer') { ... }
+```
+
 **Capability System:**
+
 Use nullable objects for optional features:
 
 ```javascript
