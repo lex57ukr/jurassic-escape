@@ -557,43 +557,71 @@
       // ========================================================================
       WORLD: {
         SPAWN: {
-          PLAYER_SPAWN_CLEARANCE: 150, // Minimum distance obstacles must be from player spawn
-          OBSTACLE_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid obstacle position
-          OBSTACLE_MIN_RADIUS: 15,
-          OBSTACLE_MAX_RADIUS: 35, // 15 + 20
-          OBSTACLE_PADDING: 100,
-          OBSTACLE_MIN_MARGIN: 50,
-          MUSHROOM_MIN_RADIUS: 8,       // Minimum mushroom radius (smaller than regular obstacles)
-          MUSHROOM_MAX_RADIUS: 15,      // Maximum mushroom radius
-          MUSHROOM_PATCH_SIZE: 5,       // Number of mushrooms per patch
-          MUSHROOM_PATCH_SPREAD: 80,    // Spread radius for patch members
-          MUSHROOM_PATCH_PERCENTAGE: 0.2, // 20% of obstacles spawn as mushroom patches
-          GRASS_MIN_RADIUS: 12,         // Minimum grass patch radius
-          GRASS_MAX_RADIUS: 20,         // Maximum grass patch radius
-          GRASS_PATCH_SIZE: 8,          // Number of grass patches per cluster
-          GRASS_PATCH_SPREAD: 100,      // Spread radius for grass cluster members
-          GRASS_PATCH_PERCENTAGE: 0.3,  // 30% of obstacles spawn as grass patch clusters
-          ROCK_CLUSTER_MIN_SPREAD: 20,  // Minimum spacing between rocks in cluster
-          ROCK_CLUSTER_MAX_SPREAD: 60,  // Maximum spacing between rocks in cluster (wider spread for no overlap)
-          ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN: 12,  // Minimum radius for individual rocks (larger than boulder circles)
-          ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX: 20, // Maximum radius for individual rocks
-          DINOSAUR_GRID_START_X: 300,
-          DINOSAUR_GRID_START_Y: 200,
-          DINOSAUR_GRID_SPACING_X: 250,
-          DINOSAUR_GRID_SPACING_Y: 300,
-          DINOSAUR_GRID_RANDOM_OFFSET: 100,
-          DINOSAUR_SPAWN_MAX_ATTEMPTS: 50,
-          DINOSAUR_SPAWN_SEARCH_RANGE: 400, // ±200 pixels
-          POWERUP_SAFE_ZONE_MARGIN: 400,
-          POWERUP_SAFE_ZONE_PADDING: 800,
-          POWERUP_RADIUS: 12,
-          TRANQ_DEPOT_COUNT_BASE: 3, // Base number of tranq depots per level
-          TRANQ_DEPOT_RADIUS: 15,
-          TRANQ_DEPOT_AMMO: 5, // Amount of tranquilizer ammo per depot
-          AMMO_DEPOT_COUNT_PER_LEVEL: 2, // Number of regular ammo depots per level
-          AMMO_DEPOT_RADIUS: 15, // Same size as tranq depot
+          PLAYER: {
+            SPAWN_CLEARANCE: 150, // Minimum distance obstacles must be from player spawn
+          },
+
+          DEPOTS: {
+            TRANQ: {
+              COUNT_BASE: 3, // Base number of tranq depots per level
+              RADIUS: 15,
+              AMMO: 5, // Amount of tranquilizer ammo per depot
+            },
+            AMMO: {
+              RADIUS: 15, // Same size as tranq depot
+            },
+          },
+
+          OBSTACLES: {
+            BLOCKING: {
+              SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid obstacle position
+              MIN_RADIUS: 15,
+              MAX_RADIUS: 35, // 15 + 20
+              PADDING: 100,
+              MIN_MARGIN: 50,
+            },
+            MUSHROOMS: {
+              MIN_RADIUS: 8, // Minimum mushroom radius (smaller than regular obstacles)
+              MAX_RADIUS: 15, // Maximum mushroom radius
+              PATCH_SIZE: 5, // Number of mushrooms per patch
+              PATCH_SPREAD: 80, // Spread radius for patch members
+              PATCH_PERCENTAGE: 0.2, // 20% of obstacles spawn as mushroom patches
+            },
+            GRASS: {
+              MIN_RADIUS: 12, // Minimum grass patch radius
+              MAX_RADIUS: 20, // Maximum grass patch radius
+              PATCH_SIZE: 8, // Number of grass patches per cluster
+              PATCH_SPREAD: 100, // Spread radius for grass cluster members
+              PATCH_PERCENTAGE: 0.3, // 30% of obstacles spawn as grass patch clusters
+            },
+            ROCK_CLUSTERS: {
+              MIN_SPREAD: 20, // Minimum spacing between rocks in cluster
+              MAX_SPREAD: 60, // Maximum spacing between rocks in cluster (wider spread for no overlap)
+              INDIVIDUAL_RADIUS_MIN: 12, // Minimum radius for individual rocks (larger than boulder circles)
+              INDIVIDUAL_RADIUS_MAX: 20, // Maximum radius for individual rocks
+            },
+          },
+
+          DINOSAURS: {
+            GRID_START_X: 300,
+            GRID_START_Y: 200,
+            GRID_SPACING_X: 250,
+            GRID_SPACING_Y: 300,
+            GRID_RANDOM_OFFSET: 100,
+            SPAWN_MAX_ATTEMPTS: 50,
+            SPAWN_SEARCH_RANGE: 400, // ±200 pixels
+          },
+
+          POWERUPS: {
+            SAFE_ZONE_MARGIN: 400,
+            SAFE_ZONE_PADDING: 800,
+          },
+
+          HAZARDS: {
+            SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
+          },
+
           DEFAULT_ENTITY_CLEARANCE: 50, // Default clearance between different entity types during spawn
-          HAZARD_SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
         },
 
         AMMO_PICKUP: {
@@ -1044,17 +1072,17 @@
      * - Follows DRY principle by extracting common pattern
      */
     const spawnHazards = ({ count, hazardType, createFn, targetArray, existingArrays, game }) => {
-      const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
+      const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARDS.SPAWN_MAX_ATTEMPTS;
 
       for (let i = 0; i < count; i++) {
         let x, y;
         let attempts = 0;
 
         while (attempts < maxAttempts) {
-          x = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN +
-              Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-          y = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN +
-              Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+          x = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN +
+              Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
+          y = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN +
+              Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
 
           let overlapping = false;
 
@@ -1098,14 +1126,14 @@
      */
     const spawnDecorationPatches = ({ count, createFn, spread, targetArray, game, getExtraArgs }) => {
       for (let i = 0; i < count; i++) {
-        const x = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN +
-                  Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
-        const y = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN +
-                  Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING);
+        const x = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN +
+                  Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING);
+        const y = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN +
+                  Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING);
 
         // Check clearance from player spawn
         const distFromPlayer = distance(x, y, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y);
-        if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE) {
+        if (distFromPlayer < GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE) {
           continue;
         }
 
@@ -1521,9 +1549,9 @@
       let attempts = 0;
 
       do {
-        x = Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN;
-        y = Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_MARGIN;
-        radius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_MIN_RADIUS);
+        x = Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN;
+        y = Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN;
+        radius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_RADIUS);
         attempts++;
 
         let valid = true;
@@ -1531,7 +1559,7 @@
         // Check player clearance
         if (player) {
           const distFromPlayer = distance(x, y, player.x, player.y);
-          const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
+          const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE + radius;
           if (distFromPlayer < requiredClearance) {
             valid = false;
           }
@@ -1540,7 +1568,7 @@
         if (valid && game.staticStructures && game.staticStructures.length > 0) {
           for (const structure of game.staticStructures) {
             const distFromStructure = distance(x, y, structure.x, structure.y);
-            const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
+            const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE + radius;
             if (distFromStructure < requiredClearance) {
               valid = false;
               break;
@@ -1553,7 +1581,7 @@
         }
 
         if (valid) break;
-      } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
+      } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.SPAWN_MAX_ATTEMPTS);
 
       // Select obstacle type: 25% trees, 25% bushes, 15% tall trees, 20% boulders, 15% rock clusters
       const rand = Math.random();
@@ -1618,12 +1646,12 @@
 
         while (!validPosition && attempts < maxAttempts) {
           const angle = Math.random() * Math.PI * 2;
-          const minSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MIN_SPREAD;
-          const maxSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MAX_SPREAD;
+          const minSpread = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.ROCK_CLUSTERS.MIN_SPREAD;
+          const maxSpread = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.ROCK_CLUSTERS.MAX_SPREAD;
           const dist = minSpread + Math.random() * (maxSpread - minSpread);
-          rockRadius = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN +
-                       Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX -
-                       GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN);
+          rockRadius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.ROCK_CLUSTERS.INDIVIDUAL_RADIUS_MIN +
+                       Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.ROCK_CLUSTERS.INDIVIDUAL_RADIUS_MAX -
+                       GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.ROCK_CLUSTERS.INDIVIDUAL_RADIUS_MIN);
 
           offsetX = Math.cos(angle) * dist;
           offsetY = Math.sin(angle) * dist;
@@ -1665,15 +1693,15 @@
      */
     const createMushroomPatch = (centerX, centerY, colorIndex) => {
       const mushrooms = [];
-      const patchSize = GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SIZE;
-      const spread = GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SPREAD;
+      const patchSize = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.PATCH_SIZE;
+      const spread = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.PATCH_SPREAD;
 
       for (let i = 0; i < patchSize; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * spread;
         const x = centerX + Math.cos(angle) * dist;
         const y = centerY + Math.sin(angle) * dist;
-        const radius = GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_MIN_RADIUS);
+        const radius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.MIN_RADIUS);
         const spotOptions = GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.sizes.spotsCountOptions;
         const spotCount = spotOptions[Math.floor(Math.random() * spotOptions.length)];
 
@@ -1706,15 +1734,15 @@
      */
     const createGrassPatch = (centerX, centerY) => {
       const patches = [];
-      const patchSize = GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SIZE;
-      const spread = GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SPREAD;
+      const patchSize = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.PATCH_SIZE;
+      const spread = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.PATCH_SPREAD;
 
       for (let i = 0; i < patchSize; i++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * spread;
         const x = centerX + Math.cos(angle) * dist;
         const y = centerY + Math.sin(angle) * dist;
-        const radius = GAME_CONSTANTS.WORLD.SPAWN.GRASS_MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.GRASS_MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.GRASS_MIN_RADIUS);
+        const radius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.MIN_RADIUS);
 
         const patch = {
           x,
@@ -1745,8 +1773,8 @@
     const spawnWithCollisionCheck = (game, radiusGetter, factory) => {
       // Keep trying until we find a valid position (guaranteed to succeed eventually)
       while (true) {
-        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
+        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
 
         const radius = radiusGetter();
         // Use unified collision validator (checks tar pits, obstacles, fences)
@@ -1793,13 +1821,13 @@
     const createTranqDepot = (game) => {
       return spawnWithCollisionCheck(
         game,
-        () => GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_RADIUS,
+        () => GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.TRANQ.RADIUS,
         (x, y) => {
           const depot = {
             x,
             y,
-            radius: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_RADIUS,
-            ammo: GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_AMMO,
+            radius: GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.TRANQ.RADIUS,
+            ammo: GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.TRANQ.AMMO,
             active: true
           };
 
@@ -1822,7 +1850,7 @@
       const depot = {
         x,
         y,
-        radius: GAME_CONSTANTS.WORLD.SPAWN.AMMO_DEPOT_RADIUS,
+        radius: GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.AMMO.RADIUS,
         amount,
         active: true
       };
@@ -2065,8 +2093,8 @@
 
       // Keep trying until we find a valid position (guaranteed to succeed eventually)
       while (true) {
-        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
+        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
         const rotation = Math.random() * Math.PI * 2; // Random rotation
 
         // Check fence-to-fence spacing (custom validation for electric fences)
@@ -2208,8 +2236,8 @@
         }
 
         // Retry with random position
-        territoryX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X * 2);
-        territoryY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y * 2);
+        territoryX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X * 2);
+        territoryY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y * 2);
         attempts++;
       }
 
@@ -3863,7 +3891,7 @@
      * - Ensures physics/collision systems always have valid positions
      * - Radius padding prevents half-off-screen spawns
      */
-    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_MAX_ATTEMPTS) => {
+    const findValidSpawnPosition = (x, y, radius, obstacles, game, maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.SPAWN_MAX_ATTEMPTS) => {
       // Fast path: initial position is valid
       if (!checkObstacleCollision(x, y, radius, obstacles)) {
         return { x, y };
@@ -3871,8 +3899,8 @@
 
       // Localized search around desired spawn point
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const randomX = x + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
-        const randomY = y + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_SPAWN_SEARCH_RANGE);
+        const randomX = x + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.SPAWN_SEARCH_RANGE);
+        const randomY = y + randomCentered(GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.SPAWN_SEARCH_RANGE);
 
         // Clamp to map bounds with radius padding
         const clampedX = clamp(randomX, radius, game.mapWidth - radius);
@@ -5413,13 +5441,13 @@
         }
 
         // Create decorations (walkable: mushroom patches and grass patches) using consolidated spawning
-        const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_PERCENTAGE);
-        const grassPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_PERCENTAGE);
+        const mushroomPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.PATCH_PERCENTAGE);
+        const grassPatchCount = Math.floor(config.obstacles * GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.PATCH_PERCENTAGE);
 
         spawnDecorationPatches({
           count: mushroomPatchCount,
           createFn: createMushroomPatch,
-          spread: GAME_CONSTANTS.WORLD.SPAWN.MUSHROOM_PATCH_SPREAD,
+          spread: GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.MUSHROOMS.PATCH_SPREAD,
           targetArray: game.decorations,
           game,
           getExtraArgs: () => [Math.floor(Math.random() * GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.colors.capColors.length)]
@@ -5428,7 +5456,7 @@
         spawnDecorationPatches({
           count: grassPatchCount,
           createFn: createGrassPatch,
-          spread: GAME_CONSTANTS.WORLD.SPAWN.GRASS_PATCH_SPREAD,
+          spread: GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.GRASS.PATCH_SPREAD,
           targetArray: game.decorations,
           game
         });
@@ -5450,8 +5478,8 @@
 
           for (let i = 0; i < count; i++) {
             // Calculate initial spawn position
-            const initialX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_SPACING_X + Math.random() * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
-            const initialY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.WORLD.SPAWN.DINOSAUR_GRID_RANDOM_OFFSET;
+            const initialX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X + (dinoIndex % 4) * GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_SPACING_X + Math.random() * GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_RANDOM_OFFSET;
+            const initialY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y + Math.floor(dinoIndex / 4) * GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_SPACING_Y + Math.random() * GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_RANDOM_OFFSET;
 
             // Find collision-free spawn position
             const spawnPos = findValidSpawnPosition(
@@ -5554,7 +5582,7 @@
         }
 
         // Create tranquilizer depots
-        const depotCount = GAME_CONSTANTS.WORLD.SPAWN.TRANQ_DEPOT_COUNT_BASE + level;
+        const depotCount = GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.TRANQ.COUNT_BASE + level;
         for (let i = 0; i < depotCount; i++) {
           game.tranqDepots.push(createTranqDepot(game));
         }
