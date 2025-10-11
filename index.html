@@ -1837,24 +1837,48 @@
     };
 
     /**
-     * Create an electric fence object
+     * Create an electric fence object with guaranteed valid position
+     * @param {Object} game - Game state object (for collision checking)
+     * @returns {Object} Electric fence object (always succeeds)
      */
-    const createElectricFence = (x, y, rotation) => {
+    const createElectricFence = (game) => {
       const type = GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE;
-      const fence = {
-        x,
-        y,
-        rotation,
-        hazardType: type,
-        sparkTimer: Math.random() * type.spark.frequency,
-        playerDamageCooldown: 0
-      };
+      const fenceRadius = type.width / 2;
 
-      fence.draw = function(ctx, cameraX, cameraY) {
-        this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
-      };
+      // Keep trying until we find a valid position (guaranteed to succeed eventually)
+      while (true) {
+        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
+        const rotation = Math.random() * Math.PI * 2; // Random rotation
 
-      return fence;
+        // Check fence-to-fence spacing (custom validation for electric fences)
+        let validSpacing = true;
+        for (const existingFence of game.electricFences) {
+          const dist = distance(x, y, existingFence.x, existingFence.y);
+          if (dist < type.minSpacing) {
+            validSpacing = false;
+            break;
+          }
+        }
+
+        // Check general collision (tar pits, obstacles, other hazards)
+        if (validSpacing && isValidPosition(x, y, fenceRadius, game, type.obstacleClearance)) {
+          const fence = {
+            x,
+            y,
+            rotation,
+            hazardType: type,
+            sparkTimer: Math.random() * type.spark.frequency,
+            playerDamageCooldown: 0
+          };
+
+          fence.draw = function(ctx, cameraX, cameraY) {
+            this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+          };
+
+          return fence;
+        }
+      }
     };
 
     /**
@@ -5181,38 +5205,7 @@
 
         // Create electric fences
         for (let i = 0; i < config.electricFences; i++) {
-          let fenceX, fenceY, fenceRotation;
-          let attempts = 0;
-          const fenceType = GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE;
-          const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARD_SPAWN_MAX_ATTEMPTS;
-          const fenceRadius = fenceType.width / 2;
-
-          while (attempts < maxAttempts) {
-            fenceX = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            fenceY = GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUP_SAFE_ZONE_PADDING);
-            fenceRotation = Math.random() * Math.PI * 2; // Random rotation
-
-            let valid = true;
-
-            // Check against other fences (minimum spacing)
-            for (const existingFence of game.electricFences) {
-              const dist = distance(fenceX, fenceY, existingFence.x, existingFence.y);
-              if (dist < fenceType.minSpacing) {
-                valid = false;
-                break;
-              }
-            }
-
-            // Check against all other entities using centralized collision checker
-            if (valid) {
-              valid = isValidPosition(fenceX, fenceY, fenceRadius, game, fenceType.obstacleClearance);
-            }
-
-            if (valid) break;
-            attempts++;
-          }
-
-          game.electricFences.push(createElectricFence(fenceX, fenceY, fenceRotation));
+          game.electricFences.push(createElectricFence(game));
         }
       }, [difficulty]);
 
