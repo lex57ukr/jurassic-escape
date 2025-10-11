@@ -279,6 +279,7 @@
           TREE: {
             id: 'tree',
             blocksMovement: true,
+            canJumpOver: true,
             zIndex: 2,
             colors: {
               trunkBase: '#5C4033',
@@ -292,9 +293,27 @@
             },
             foliageLayers: 3, // Number of foliage layers
           },
+          TALL_TREE: {
+            id: 'tall_tree',
+            blocksMovement: true,
+            canJumpOver: false,
+            zIndex: 2,
+            colors: {
+              trunkBase: '#4A3528',
+              trunkHighlight: '#7A5F42',
+              trunkShadow: '#2D1F1A',
+              foliageDark: '#0F4F0F',     // Deeper dark green
+              foliageBase: '#1F7A1F',     // Richer medium green
+              foliageLight: '#2F8A2F',    // Vibrant leafy green
+              foliageHighlight: '#4FA84F', // Bright light green
+              groundShadow: 'rgba(0, 0, 0, 0.3)', // Darker shadow
+            },
+            foliageLayers: 4, // More foliage layers for fuller appearance
+          },
           BUSH: {
             id: 'bush',
             blocksMovement: true,
+            canJumpOver: true,
             zIndex: 2,
             colors: {
               base: '#2F4F2F',
@@ -1073,10 +1092,14 @@
      * Check if entity collides with any obstacle
      */
     const checkObstacleCollision = (x, y, radius, obstacles, jumpHeight = 0) => {
-      // Jump over obstacles if high enough
-      if (jumpHeight >= GAME_CONSTANTS.CORE.PLAYER.JUMP_CLEAR_HEIGHT) return false;
+      const canJumpOverObstacles = jumpHeight >= GAME_CONSTANTS.CORE.PLAYER.JUMP_CLEAR_HEIGHT;
 
       for (const obs of obstacles) {
+        // Skip jumpable obstacles when jumping high enough
+        if (canJumpOverObstacles && obs.obstacleType.canJumpOver) {
+          continue;
+        }
+
         if (circleCollision(x, y, radius, obs.x, obs.y, obs.radius)) {
           return true;
         }
@@ -1352,11 +1375,22 @@
         if (valid) break;
       } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
 
+      // Select obstacle type: 40% trees, 40% bushes, 20% tall trees
+      const rand = Math.random();
+      let obstacleType;
+      if (rand < 0.4) {
+        obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE;
+      } else if (rand < 0.8) {
+        obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH;
+      } else {
+        obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE;
+      }
+
       const obstacle = {
         x,
         y,
         radius,
-        obstacleType: Math.random() > 0.5 ? GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE : GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH
+        obstacleType
       };
 
       obstacle.draw = function(ctx, cameraX, cameraY) {
@@ -2724,6 +2758,84 @@
     };
 
     /**
+     * Draw tall tree (cannot be jumped over)
+     * Taller trunk and fuller foliage than regular trees
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position
+     * @param {number} screenY - Screen Y position
+     * @param {number} radius - Tree radius
+     * @param {Object} obstacle - Obstacle object
+     */
+    const drawTallTree = (ctx, screenX, screenY, radius, obstacle) => {
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE.colors;
+
+      // Draw larger ground shadow for tall tree
+      ctx.fillStyle = colors.groundShadow;
+      ctx.beginPath();
+      ctx.ellipse(screenX, screenY + radius * 0.35, radius * 0.75, radius * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw taller, thicker trunk
+      const trunkWidth = 18; // Thicker trunk
+      const trunkHeight = radius * 1.4; // 75% taller trunk
+
+      // Trunk shadow (left side)
+      ctx.fillStyle = colors.trunkShadow;
+      ctx.fillRect(screenX - trunkWidth / 2, screenY - trunkHeight / 2, trunkWidth / 3, trunkHeight);
+
+      // Trunk base color
+      ctx.fillStyle = colors.trunkBase;
+      ctx.fillRect(screenX - trunkWidth / 2, screenY - trunkHeight / 2, trunkWidth, trunkHeight);
+
+      // Trunk highlight (right side)
+      ctx.fillStyle = colors.trunkHighlight;
+      ctx.fillRect(screenX + trunkWidth / 6, screenY - trunkHeight / 2, trunkWidth / 4, trunkHeight);
+
+      // Draw fuller layered foliage crown (4 layers)
+      const foliageY = screenY - trunkHeight;
+
+      // Deepest back layer
+      ctx.fillStyle = colors.foliageDark;
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.4, foliageY - radius * 0.3, radius * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Secondary back layer
+      ctx.fillStyle = colors.foliageDark;
+      ctx.beginPath();
+      ctx.arc(screenX + radius * 0.3, foliageY - radius * 0.4, radius * 0.75, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Middle layer (larger and fuller)
+      ctx.fillStyle = colors.foliageBase;
+      ctx.beginPath();
+      ctx.arc(screenX, foliageY, radius * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Front layer (lighter green)
+      ctx.fillStyle = colors.foliageLight;
+      ctx.beginPath();
+      ctx.arc(screenX + radius * 0.35, foliageY + radius * 0.15, radius * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Additional front layer (left side)
+      ctx.fillStyle = colors.foliageLight;
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.35, foliageY + radius * 0.1, radius * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Highlights (brightest spots - multiple for fuller look)
+      ctx.fillStyle = colors.foliageHighlight;
+      ctx.beginPath();
+      ctx.arc(screenX + radius * 0.45, foliageY - radius * 0.25, radius * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(screenX - radius * 0.3, foliageY - radius * 0.15, radius * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    /**
      * Draw bush with multiple overlapping clusters
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} screenX - Screen X position
@@ -3951,6 +4063,7 @@
 
     // Obstacle draw functions
     GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE.drawFunction = drawTree;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE.drawFunction = drawTallTree;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH.drawFunction = drawBush;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.drawFunction = drawMushroom;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS.drawFunction = drawGrass;
