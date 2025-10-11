@@ -4303,33 +4303,35 @@
                   {isTouchDevice ? 'Always enabled on mobile' : 'Helpful for trackpad users'}
                 </div>
               </div>
-              <div className="bg-gray-700 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">🐛</span>
-                    <span className="text-white font-semibold text-lg">Debug Mode</span>
+              {!isTouchDevice && (
+                <div className="bg-gray-700 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🐛</span>
+                      <span className="text-white font-semibold text-lg">Debug Mode</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const isDebug = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true';
+                        localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE, !isDebug);
+                        window.location.reload();
+                      }}
+                      className={`px-6 py-2 font-bold rounded-lg transition-colors ${
+                        localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true'
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                      }`}
+                    >
+                      {localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true' ? 'ON' : 'OFF'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      const isDebug = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true';
-                      localStorage.setItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE, !isDebug);
-                      window.location.reload();
-                    }}
-                    className={`px-6 py-2 font-bold rounded-lg transition-colors ${
-                      localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true'
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                    }`}
-                  >
-                    {localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true' ? 'ON' : 'OFF'}
-                  </button>
+                  <div className="text-xs text-gray-400 mt-2 space-y-1">
+                    <div>• Loads React dev builds (unminified, better stack traces)</div>
+                    <div>• Enables React DevTools in browser</div>
+                    <div>• ⚠️ Toggling this setting will reload the game</div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-400 mt-2 space-y-1">
-                  <div>• Loads React dev builds (unminified, better stack traces)</div>
-                  <div>• Enables React DevTools in browser</div>
-                  <div>• ⚠️ Toggling this setting will reload the game</div>
-                </div>
-              </div>
+              )}
               <button
                 onClick={onClose}
                 className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg"
