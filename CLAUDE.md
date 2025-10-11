@@ -218,7 +218,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `createAmmoDepot()` - Regular ammo crates (fixed positions)
 - `createAmmoPickup()` - Bouncing ammo drops from defeated dinosaurs
 - `createTarPit()` - Movement-slowing hazards
-- `createElectricFence()` - Damage/stun hazards
+- `createElectricFence(game)` - Damage/stun hazards (uses `isValidPosition()` + custom fence spacing, guaranteed to succeed)
 - `createExit(x, y)` - Level exit (static structure with locked state)
 - `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (handles collision avoidance)
 - `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone
