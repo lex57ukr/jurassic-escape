@@ -135,7 +135,7 @@ if (bullet.update(mapWidth, mapHeight)) {
 // 2. Instance method assignment (draw, etc.)
 // 3. Initialization logic (collision avoidance, positioning)
 
-const obstacle = createObstacle(mapWidth, mapHeight, playerX, playerY, game);
+const obstacle = createObstacle(game);
 const territory = createTerritoryForDino(dino, spawnPos, game);
 const guard = createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty);
 ```
@@ -210,7 +210,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 
 **Entity Factories** (all add `draw()` instance method):
 
-- `createObstacle()` - Trees/bushes (blocking obstacles)
+- `createObstacle(game)` - Trees/bushes/boulders/rock clusters (blocking obstacles)
 - `createMushroomPatch()` - Mushroom decorations (non-blocking)
 - `createGrassPatch()` - Grass decorations (non-blocking)
 - `createPowerup()` - Health packs, speed boosts
