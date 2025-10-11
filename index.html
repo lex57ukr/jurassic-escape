@@ -2415,10 +2415,14 @@
       ctx.fillRect(-3 * scale, (22 - backLegSwing) * scale, 10 * scale, 3 * scale);
 
       // Front legs (shorter) - animated by stretching/compressing height
-      // Moved back (lower X values) to be better hidden under body
       ctx.fillStyle = '#6A1B9A';
-      ctx.fillRect(5 * scale, 12 * scale, 6 * scale, (10 + frontLegSwing) * scale);
-      ctx.fillRect(12 * scale, 12 * scale, 6 * scale, (10 - frontLegSwing) * scale);
+      ctx.fillRect(8 * scale, 12 * scale, 6 * scale, (10 + frontLegSwing) * scale);
+      ctx.fillRect(15 * scale, 12 * scale, 6 * scale, (10 - frontLegSwing) * scale);
+
+      // Front feet - positioned at leg bottoms
+      ctx.fillStyle = '#4A148C';
+      ctx.fillRect(7 * scale, (22 + frontLegSwing) * scale, 8 * scale, 3 * scale);
+      ctx.fillRect(14 * scale, (22 - frontLegSwing) * scale, 8 * scale, 3 * scale);
 
       // Belly (lighter) - drawn on top to hide leg tops better
       ctx.fillStyle = '#BA68C8';
