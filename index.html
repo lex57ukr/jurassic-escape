@@ -644,25 +644,33 @@
           FLEE: 'flee',
           TERRITORY_RETURN: 'return',
         },
-        PATROL_ANGLE_CHANGE_RATE: 0.1,
-        PATROL_SPEED_MULTIPLIER: 0.5,
-        HERBIVORE_FLEE_RANGE: 150,     // Distance at which herbivores flee
-        HERBIVORE_FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
-        HERBIVORE_FLEE_DIRECTION_DURATION: 90, // Frames to maintain flee direction before recalculating
-        HERBIVORE_FLEE_RECALC_ANGLE_RANGE: Math.PI / 4, // ±45° adjustment when recalculating flee direction
-        TERRITORY_RADIUS: 200,         // Radius of territorial zone
-        TERRITORY_AGGRO_RANGE: 250,    // Chase range within territory
-        TERRITORY_MARGIN: 30,          // Buffer zone to prevent state flipping at boundaries
-        TERRITORY_RETURN_THRESHOLD_ACTIVE: 0.8, // Return threshold when not already returning
-        TERRITORY_RETURN_THRESHOLD_RETURNING: 0.5, // Return threshold when already returning (closer to center)
-        TERRITORY_SPACING_MULTIPLIER: 2.2, // Minimum spacing between territories (as multiple of radius)
-        TERRITORY_OBSTACLE_CLEARANCE: 20, // Extra clearance from obstacles for territory center
-        TERRITORY_SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid territory position
+        PATROL: {
+          ANGLE_CHANGE_RATE: 0.1,
+          SPEED_MULTIPLIER: 0.5,
+        },
+        HERBIVORE: {
+          FLEE_RANGE: 150,     // Distance at which herbivores flee
+          FLEE_SPEED_MULTIPLIER: 1.5, // Speed boost when fleeing
+          FLEE_DIRECTION_DURATION: 90, // Frames to maintain flee direction before recalculating
+          FLEE_RECALC_ANGLE_RANGE: Math.PI / 4, // ±45° adjustment when recalculating flee direction
+        },
+        TERRITORY: {
+          RADIUS: 200,         // Radius of territorial zone
+          AGGRO_RANGE: 250,    // Chase range within territory
+          MARGIN: 30,          // Buffer zone to prevent state flipping at boundaries
+          RETURN_THRESHOLD_ACTIVE: 0.8, // Return threshold when not already returning
+          RETURN_THRESHOLD_RETURNING: 0.5, // Return threshold when already returning (closer to center)
+          SPACING_MULTIPLIER: 2.2, // Minimum spacing between territories (as multiple of radius)
+          OBSTACLE_CLEARANCE: 20, // Extra clearance from obstacles for territory center
+          SPAWN_MAX_ATTEMPTS: 50, // Max attempts to find valid territory position
+          MARKER_ICON: '💀',   // Icon for territory center marker
+        },
+        EXIT: {
+          TERRITORY_RADIUS: 300,    // Larger radius for exit protection zone
+          GUARD_AGGRO_RANGE: 350,   // Guard chase range at exit
+          GUARD_SPAWN_RADIUS_MULTIPLIER: 0.7, // Multiplier for guard spawn distance from exit center
+        },
         FACING_DIRECTION_THRESHOLD: 0.3, // Minimum horizontal velocity to update facing direction
-        TERRITORY_MARKER_ICON: '💀',   // Icon for territory center marker
-        EXIT_TERRITORY_RADIUS: 300,    // Larger radius for exit protection zone
-        EXIT_GUARD_AGGRO_RANGE: 350,   // Guard chase range at exit
-        EXIT_GUARD_SPAWN_RADIUS_MULTIPLIER: 0.7, // Multiplier for guard spawn distance from exit center
       },
 
       // ========================================================================
@@ -2206,8 +2214,8 @@
       let territoryX = spawnPos.x;
       let territoryY = spawnPos.y;
       let attempts = 0;
-      const maxAttempts = GAME_CONSTANTS.AI.TERRITORY_SPAWN_MAX_ATTEMPTS;
-      const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY_RADIUS * GAME_CONSTANTS.AI.TERRITORY_SPACING_MULTIPLIER;
+      const maxAttempts = GAME_CONSTANTS.AI.TERRITORY.SPAWN_MAX_ATTEMPTS;
+      const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY.RADIUS * GAME_CONSTANTS.AI.TERRITORY.SPACING_MULTIPLIER;
 
       while (attempts < maxAttempts) {
         let overlapping = false;
@@ -2224,7 +2232,7 @@
         if (!overlapping) {
           for (const obstacle of game.obstacles) {
             const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
-            if (dist < obstacle.radius + dinoType.baseSize + GAME_CONSTANTS.AI.TERRITORY_OBSTACLE_CLEARANCE) {
+            if (dist < obstacle.radius + dinoType.baseSize + GAME_CONSTANTS.AI.TERRITORY.OBSTACLE_CLEARANCE) {
               overlapping = true;
               break;
             }
@@ -2245,7 +2253,7 @@
       const territory = {
         x: territoryX,
         y: territoryY,
-        radius: GAME_CONSTANTS.AI.TERRITORY_RADIUS,
+        radius: GAME_CONSTANTS.AI.TERRITORY.RADIUS,
         dinoIndex: game.dinosaurs.length // Track owning dinosaur by array index
       };
 
@@ -2260,7 +2268,7 @@
       const territory = {
         x: exitX,
         y: exitY,
-        radius: GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS,
+        radius: GAME_CONSTANTS.AI.EXIT.TERRITORY_RADIUS,
         isExitTerritory: true,
         guardCount: totalGuards
       };
@@ -2286,7 +2294,7 @@
       const angleRad = (angle * Math.PI) / 180;
 
       // Position guard in circle around exit
-      const spawnRadius = GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS * GAME_CONSTANTS.AI.EXIT_GUARD_SPAWN_RADIUS_MULTIPLIER;
+      const spawnRadius = GAME_CONSTANTS.AI.EXIT.TERRITORY_RADIUS * GAME_CONSTANTS.AI.EXIT.GUARD_SPAWN_RADIUS_MULTIPLIER;
       const x = exitX + Math.cos(angleRad) * spawnRadius;
       const y = exitY + Math.sin(angleRad) * spawnRadius;
 
@@ -2311,9 +2319,9 @@
         territorial: true, // Exit guards are always territorial
         territoryX: exitX,
         territoryY: exitY,
-        territoryRadius: GAME_CONSTANTS.AI.EXIT_TERRITORY_RADIUS, // Territory radius for AI
+        territoryRadius: GAME_CONSTANTS.AI.EXIT.TERRITORY_RADIUS, // Territory radius for AI
         territoryIndex,
-        aggroRange: GAME_CONSTANTS.AI.EXIT_GUARD_AGGRO_RANGE, // Aggro range for territorial behavior
+        aggroRange: GAME_CONSTANTS.AI.EXIT.GUARD_AGGRO_RANGE, // Aggro range for territorial behavior
         state: GAME_CONSTANTS.AI.STATES.PATROL,
         patrolAngle: Math.random() * Math.PI * 2,
         fleeAngle: 0, // Persistent flee direction to prevent oscillation
@@ -3738,7 +3746,7 @@
         ctx.font = '24px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(GAME_CONSTANTS.AI.TERRITORY_MARKER_ICON, screenX, screenY);
+        ctx.fillText(GAME_CONSTANTS.AI.TERRITORY.MARKER_ICON, screenX, screenY);
       }
 
       // Draw territory circle outline (faint)
@@ -4418,13 +4426,13 @@
         const distFromTerritory = distance(dino.x, dino.y, dino.territoryX, dino.territoryY);
         const playerDistFromTerritory = distance(player.x, player.y, dino.territoryX, dino.territoryY);
 
-        const territoryMargin = GAME_CONSTANTS.AI.TERRITORY_MARGIN;
+        const territoryMargin = GAME_CONSTANTS.AI.TERRITORY.MARGIN;
         // Hysteresis: different thresholds based on current state prevents oscillation
         const returnThreshold = dino.state === GAME_CONSTANTS.AI.STATES.TERRITORY_RETURN
-          ? GAME_CONSTANTS.AI.TERRITORY_RETURN_THRESHOLD_RETURNING
-          : GAME_CONSTANTS.AI.TERRITORY_RETURN_THRESHOLD_ACTIVE;
+          ? GAME_CONSTANTS.AI.TERRITORY.RETURN_THRESHOLD_RETURNING
+          : GAME_CONSTANTS.AI.TERRITORY.RETURN_THRESHOLD_ACTIVE;
 
-        if (playerDistFromTerritory < dino.territoryRadius + territoryMargin && dist < GAME_CONSTANTS.AI.TERRITORY_AGGRO_RANGE) {
+        if (playerDistFromTerritory < dino.territoryRadius + territoryMargin && dist < GAME_CONSTANTS.AI.TERRITORY.AGGRO_RANGE) {
           // Chase: player invaded territory
           dino.state = GAME_CONSTANTS.AI.STATES.CHASE;
           const { dx, dy } = normalize(player.x - dino.x, player.y - dino.y);
@@ -4445,9 +4453,9 @@
         } else {
           // Patrol: calm state, wander near territory
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL.ANGLE_CHANGE_RATE);
+          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
+          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
         }
 
         // Tick down spit attack cooldown
@@ -4463,9 +4471,9 @@
           dino.vy = dy * dino.speed;
         } else {
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL.ANGLE_CHANGE_RATE);
+          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
+          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
         }
       } else {
         // Herbivore AI: flee from player when close with persistent direction
@@ -4473,7 +4481,7 @@
           // Entering or continuing flee state
           const wasAlreadyFleeing = dino.state === GAME_CONSTANTS.AI.STATES.FLEE;
           dino.state = GAME_CONSTANTS.AI.STATES.FLEE;
-          dino.speed = dino.baseSpeed * GAME_CONSTANTS.AI.HERBIVORE_FLEE_SPEED_MULTIPLIER * diffMod.enemySpeedMultiplier;
+          dino.speed = dino.baseSpeed * GAME_CONSTANTS.AI.HERBIVORE.FLEE_SPEED_MULTIPLIER * diffMod.enemySpeedMultiplier;
 
           // Set or update flee direction with persistence to prevent oscillation
           if (!wasAlreadyFleeing || dino.fleeDurationTimer <= 0) {
@@ -4488,9 +4496,9 @@
               const angleToPlayer = Math.atan2(dino.y - player.y, dino.x - player.x);
               const currentRelativeAngle = dino.fleeAngle - angleToPlayer;
               // Keep roughly away from player but add variation (±45°)
-              dino.fleeAngle = angleToPlayer + currentRelativeAngle + randomCentered(GAME_CONSTANTS.AI.HERBIVORE_FLEE_RECALC_ANGLE_RANGE);
+              dino.fleeAngle = angleToPlayer + currentRelativeAngle + randomCentered(GAME_CONSTANTS.AI.HERBIVORE.FLEE_RECALC_ANGLE_RANGE);
             }
-            dino.fleeDurationTimer = GAME_CONSTANTS.AI.HERBIVORE_FLEE_DIRECTION_DURATION;
+            dino.fleeDurationTimer = GAME_CONSTANTS.AI.HERBIVORE.FLEE_DIRECTION_DURATION;
           }
 
           // Maintain persistent flee direction
@@ -4501,9 +4509,9 @@
           // Return to patrol when player is far enough
           dino.state = GAME_CONSTANTS.AI.STATES.PATROL;
           dino.fleeDurationTimer = 0; // Reset timer
-          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL_ANGLE_CHANGE_RATE);
-          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
-          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL_SPEED_MULTIPLIER;
+          dino.patrolAngle += randomCentered(GAME_CONSTANTS.AI.PATROL.ANGLE_CHANGE_RATE);
+          dino.vx = Math.cos(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
+          dino.vy = Math.sin(dino.patrolAngle) * dino.speed * GAME_CONSTANTS.AI.PATROL.SPEED_MULTIPLIER;
         }
       }
     };
@@ -4733,7 +4741,7 @@
             } else {
               // FLEE state: update flee angle and reset timer for immediate recalculation
               dino.fleeAngle = Math.atan2(dino.vy, dino.vx);
-              dino.fleeDurationTimer = GAME_CONSTANTS.AI.HERBIVORE_FLEE_DIRECTION_DURATION;
+              dino.fleeDurationTimer = GAME_CONSTANTS.AI.HERBIVORE.FLEE_DIRECTION_DURATION;
             }
           }
         }
@@ -5506,7 +5514,7 @@
               aggressive: dinoConfig.type.aggressive,
               territorial: dinoConfig.type.territorial,
               aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
-              fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE_FLEE_RANGE,
+              fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.HERBIVORE.FLEE_RANGE,
               state: GAME_CONSTANTS.AI.STATES.PATROL,
               patrolAngle: Math.random() * Math.PI * 2,
               fleeAngle: 0, // Persistent flee direction to prevent oscillation
