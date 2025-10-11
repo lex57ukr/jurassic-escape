@@ -1041,6 +1041,115 @@
     };
 
     /**
+     * Generic retry mechanism for spawning entities with validation
+     *
+     * @param {Function} positionGenerator - Function that returns {x, y} position
+     * @param {Function} validator - Function (x, y) => boolean (true = valid position)
+     * @param {number} maxAttempts - Maximum spawn attempts (Infinity = retry until success)
+     * @param {boolean} allowFallback - If true, returns last position when max attempts reached
+     * @returns {Object|null} {x, y} position object, or null if failed and no fallback
+     *
+     * @remarks
+     * Consolidates repetitive spawn retry patterns found in multiple factories:
+     * - `spawnWithCollisionCheck`: infinite retries, no fallback
+     * - `createElectricFence`: infinite retries, no fallback
+     * - `createObstacle`: max attempts, no fallback (returns null)
+     * - `createTerritoryForDino`: max attempts, with fallback (returns last attempt)
+     *
+     * Design decision - validator pattern:
+     * - Validator receives (x, y) and returns boolean
+     * - Enables composable validation (combine multiple validators with &&)
+     * - Keeps position generation separate from validation logic
+     * - Allows custom position generation strategies (random, grid, radial, etc.)
+     */
+    const retryUntilValid = (positionGenerator, validator, maxAttempts = Infinity, allowFallback = false) => {
+      let lastX, lastY;
+      let attempts = 0;
+
+      while (attempts < maxAttempts) {
+        const pos = positionGenerator();
+        lastX = pos.x;
+        lastY = pos.y;
+
+        if (validator(pos.x, pos.y)) {
+          return { x: pos.x, y: pos.y };
+        }
+
+        attempts++;
+      }
+
+      // Max attempts reached - return fallback or null
+      return allowFallback ? { x: lastX, y: lastY } : null;
+    };
+
+    /**
+     * Check if position maintains minimum spacing from entities in array
+     *
+     * @param {number} x - X position to check
+     * @param {number} y - Y position to check
+     * @param {Array} entityArray - Array of entities with x/y properties
+     * @param {number} minDistance - Minimum required distance
+     * @returns {boolean} True if spacing is valid (all entities are far enough)
+     *
+     * @remarks
+     * Reusable spacing validator for:
+     * - Electric fences: fence-to-fence minSpacing
+     * - Territories: territory-to-territory spacing (prevents clustering)
+     * - Any entity type requiring minimum spacing from same-type entities
+     */
+    const checkMinimumSpacing = (x, y, entityArray, minDistance) => {
+      for (const entity of entityArray) {
+        const dist = distance(x, y, entity.x, entity.y);
+        if (dist < minDistance) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    /**
+     * Check if position maintains clearance from player spawn and static structures
+     *
+     * @param {number} x - X position to check
+     * @param {number} y - Y position to check
+     * @param {number} radius - Entity radius
+     * @param {Object} game - Game state with player and staticStructures
+     * @returns {boolean} True if clearance is valid
+     *
+     * @remarks
+     * Used by obstacle spawning to ensure player has clear starting area.
+     * Prevents obstacles from blocking player spawn or static structures (exits, etc.).
+     *
+     * Why this is separate from isValidPosition:
+     * - Player clearance is spawn-time only (not runtime collision)
+     * - Only needed for obstacles, not for all entity types
+     * - Different clearance radius (SPAWN_CLEARANCE vs DEFAULT_ENTITY_CLEARANCE)
+     */
+    const checkPlayerClearance = (x, y, radius, game) => {
+      // Check player clearance
+      if (game.player) {
+        const distFromPlayer = distance(x, y, game.player.x, game.player.y);
+        const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE + radius;
+        if (distFromPlayer < requiredClearance) {
+          return false;
+        }
+      }
+
+      // Check static structure clearance
+      if (game.staticStructures && game.staticStructures.length > 0) {
+        for (const structure of game.staticStructures) {
+          const distFromStructure = distance(x, y, structure.x, structure.y);
+          const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE + radius;
+          if (distFromStructure < requiredClearance) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    };
+
+    /**
      * Normalize a vector (dx, dy) and return unit vector with magnitude
      */
     const normalize = (dx, dy) => {
@@ -1554,48 +1663,30 @@
      * @returns {Object} Obstacle object with draw() instance method
      */
     const createObstacle = (game) => {
-      // Extract values from game object
-      const mapWidth = game.mapWidth;
-      const mapHeight = game.mapHeight;
-      const player = game.player;
+      let obstacleRadius;
 
-      let x, y, radius;
-      let attempts = 0;
+      // Position generator: random position with random radius
+      const generatePosition = () => {
+        obstacleRadius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_RADIUS);
+        return {
+          x: Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN,
+          y: Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN
+        };
+      };
 
-      do {
-        x = Math.random() * (mapWidth - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN;
-        y = Math.random() * (mapHeight - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.PADDING) + GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_MARGIN;
-        radius = GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_RADIUS + Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MAX_RADIUS - GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.MIN_RADIUS);
-        attempts++;
+      // Validator: player clearance + static structure clearance + general collision
+      const isValid = (x, y) => {
+        return checkPlayerClearance(x, y, obstacleRadius, game) &&
+               isValidPosition(x, y, obstacleRadius, game);
+      };
 
-        let valid = true;
-
-        // Check player clearance
-        if (player) {
-          const distFromPlayer = distance(x, y, player.x, player.y);
-          const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE + radius;
-          if (distFromPlayer < requiredClearance) {
-            valid = false;
-          }
-        }
-
-        if (valid && game.staticStructures && game.staticStructures.length > 0) {
-          for (const structure of game.staticStructures) {
-            const distFromStructure = distance(x, y, structure.x, structure.y);
-            const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER.SPAWN_CLEARANCE + radius;
-            if (distFromStructure < requiredClearance) {
-              valid = false;
-              break;
-            }
-          }
-        }
-
-        if (valid) {
-          valid = isValidPosition(x, y, radius, game);
-        }
-
-        if (valid) break;
-      } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.SPAWN_MAX_ATTEMPTS);
+      // Retry with max attempts, no fallback (can return null if all attempts fail)
+      const pos = retryUntilValid(
+        generatePosition,
+        isValid,
+        GAME_CONSTANTS.WORLD.SPAWN.OBSTACLES.BLOCKING.SPAWN_MAX_ATTEMPTS,
+        false
+      );
 
       // Select obstacle type: 25% trees, 25% bushes, 15% tall trees, 20% boulders, 15% rock clusters
       const rand = Math.random();
@@ -1613,9 +1704,9 @@
       }
 
       const obstacle = {
-        x,
-        y,
-        radius,
+        x: pos.x,
+        y: pos.y,
+        radius: obstacleRadius,
         obstacleType
       };
 
@@ -2105,40 +2196,35 @@
       const type = GAME_CONSTANTS.ENTITIES.HAZARDS.ELECTRIC_FENCE;
       const fenceRadius = type.width / 2;
 
-      // Keep trying until we find a valid position (guaranteed to succeed eventually)
-      while (true) {
-        const x = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
-        const y = GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING);
-        const rotation = Math.random() * Math.PI * 2; // Random rotation
+      // Position generator: random position within safe zone
+      const generatePosition = () => ({
+        x: GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING),
+        y: GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_MARGIN + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.POWERUPS.SAFE_ZONE_PADDING)
+      });
 
-        // Check fence-to-fence spacing (custom validation for electric fences)
-        let validSpacing = true;
-        for (const existingFence of game.electricFences) {
-          const dist = distance(x, y, existingFence.x, existingFence.y);
-          if (dist < type.minSpacing) {
-            validSpacing = false;
-            break;
-          }
-        }
+      // Validator: fence-to-fence spacing + general collision
+      const isValid = (x, y) => {
+        return checkMinimumSpacing(x, y, game.electricFences, type.minSpacing) &&
+               isValidPosition(x, y, fenceRadius, game, type.obstacleClearance);
+      };
 
-        // Check general collision (tar pits, obstacles, other hazards)
-        if (validSpacing && isValidPosition(x, y, fenceRadius, game, type.obstacleClearance)) {
-          const fence = {
-            x,
-            y,
-            rotation,
-            hazardType: type,
-            sparkTimer: Math.random() * type.spark.frequency,
-            playerDamageCooldown: 0
-          };
+      // Retry until valid position found (infinite attempts, no fallback)
+      const pos = retryUntilValid(generatePosition, isValid);
 
-          fence.draw = function(ctx, cameraX, cameraY) {
-            this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
-          };
+      const fence = {
+        x: pos.x,
+        y: pos.y,
+        rotation: Math.random() * Math.PI * 2, // Random rotation
+        hazardType: type,
+        sparkTimer: Math.random() * type.spark.frequency,
+        playerDamageCooldown: 0
+      };
 
-          return fence;
-        }
-      }
+      fence.draw = function(ctx, cameraX, cameraY) {
+        this.hazardType.drawFunction(ctx, cameraX, cameraY, this);
+      };
+
+      return fence;
     };
 
     /**
@@ -2217,48 +2303,52 @@
      */
     const createTerritoryForDino = (dino, spawnPos, game) => {
       const dinoType = dino.type;
-      let territoryX = spawnPos.x;
-      let territoryY = spawnPos.y;
-      let attempts = 0;
-      const maxAttempts = GAME_CONSTANTS.AI.TERRITORY.SPAWN_MAX_ATTEMPTS;
       const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY.RADIUS * GAME_CONSTANTS.AI.TERRITORY.SPACING_MULTIPLIER;
 
-      while (attempts < maxAttempts) {
-        let overlapping = false;
+      let isFirstAttempt = true;
 
+      // Position generator: first attempt uses spawn position, then random positions
+      const generatePosition = () => {
+        if (isFirstAttempt) {
+          isFirstAttempt = false;
+          return { x: spawnPos.x, y: spawnPos.y };
+        }
+        return {
+          x: GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X * 2),
+          y: GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y * 2)
+        };
+      };
+
+      // Validator: territory-to-territory spacing + obstacle clearance
+      const isValid = (x, y) => {
         // Check against existing territories (prevent clustering)
-        for (const existingTerritory of game.territories) {
-          const dist = distance(territoryX, territoryY, existingTerritory.x, existingTerritory.y);
-          if (dist < minTerritorySpacing) {
-            overlapping = true;
-            break;
+        if (!checkMinimumSpacing(x, y, game.territories, minTerritorySpacing)) {
+          return false;
+        }
+
+        // Check obstacle clearance
+        for (const obstacle of game.obstacles) {
+          const dist = distance(x, y, obstacle.x, obstacle.y);
+          if (dist < obstacle.radius + dinoType.baseSize + GAME_CONSTANTS.AI.TERRITORY.OBSTACLE_CLEARANCE) {
+            return false;
           }
         }
 
-        if (!overlapping) {
-          for (const obstacle of game.obstacles) {
-            const dist = distance(territoryX, territoryY, obstacle.x, obstacle.y);
-            if (dist < obstacle.radius + dinoType.baseSize + GAME_CONSTANTS.AI.TERRITORY.OBSTACLE_CLEARANCE) {
-              overlapping = true;
-              break;
-            }
-          }
-        }
+        return true;
+      };
 
-        if (!overlapping) {
-          break; // Found valid position
-        }
-
-        // Retry with random position
-        territoryX = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X + Math.random() * (game.mapWidth - GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_X * 2);
-        territoryY = GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y + Math.random() * (game.mapHeight - GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.GRID_START_Y * 2);
-        attempts++;
-      }
+      // Retry with max attempts, use fallback (accepts last position if all attempts fail)
+      const pos = retryUntilValid(
+        generatePosition,
+        isValid,
+        GAME_CONSTANTS.AI.TERRITORY.SPAWN_MAX_ATTEMPTS,
+        true
+      );
 
       // Create territory (even if overlapping after max attempts)
       const territory = {
-        x: territoryX,
-        y: territoryY,
+        x: pos.x,
+        y: pos.y,
         radius: GAME_CONSTANTS.AI.TERRITORY.RADIUS,
         dinoIndex: game.dinosaurs.length // Track owning dinosaur by array index
       };

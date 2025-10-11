@@ -219,31 +219,36 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 
 - `spawnHazards({ count, hazardType, createFn, targetArray, existingArrays, game })` - Consolidated hazard spawning with collision avoidance
 - `spawnDecorationPatches({ count, createFn, spread, targetArray, game, getExtraArgs })` - Consolidated decoration patch spawning with player clearance
+- `spawnWithCollisionCheck(game, radiusGetter, factory)` - Generic spawn helper with infinite retries for simple cases (powerups, depots)
+- `retryUntilValid(positionGenerator, validator, maxAttempts, allowFallback)` - Generic retry mechanism with configurable attempts/fallback
+- `checkMinimumSpacing(x, y, entityArray, minDistance)` - Reusable spacing validator for same-type entities
+- `checkPlayerClearance(x, y, radius, game)` - Validate spawn doesn't block player/structures
 
 **Collision & Positioning:**
 
 - `isInBounds(x, y, mapWidth, mapHeight)` - Check if position is within map bounds
+- `isValidPosition(x, y, radius, game, clearance)` - Check if position has no collisions with existing entities
 - `circleCollision(x1, y1, r1, x2, y2, r2)` - Circle-vs-circle collision
 - `circleRectCollision(...)` - Circle-vs-rotated-rectangle (for electric fences)
 - `distance(x1, y1, x2, y2)` - Euclidean distance
-- `findValidSpawnPosition(...)` - Collision-free spawn positioning
+- `findValidSpawnPosition(...)` - Collision-free spawn positioning for dinosaurs
 
 ## Key Factory Functions
 
 **Entity Factories** (all add `draw()` instance method):
 
-- `createObstacle(game)` - Trees/bushes/boulders/rock clusters (blocking obstacles, uses `isValidPosition()`)
+- `createObstacle(game)` - Trees/bushes/boulders/rock clusters (uses `retryUntilValid` + `checkPlayerClearance`)
 - `createMushroomPatch()` - Mushroom decorations (non-blocking)
 - `createGrassPatch()` - Grass decorations (non-blocking)
-- `createPowerup(game)` - Health packs, speed boosts (uses `isValidPosition()`, guaranteed to succeed)
-- `createTranqDepot(game)` - Tranquilizer ammo crates (uses `isValidPosition()`, guaranteed to succeed)
+- `createPowerup(game)` - Health packs, speed boosts (uses `spawnWithCollisionCheck`, guaranteed to succeed)
+- `createTranqDepot(game)` - Tranquilizer ammo crates (uses `spawnWithCollisionCheck`, guaranteed to succeed)
 - `createAmmoDepot()` - Regular ammo crates (fixed positions)
 - `createAmmoPickup()` - Bouncing ammo drops from defeated dinosaurs
 - `createTarPit()` - Movement-slowing tar hazards
 - `createPond()` - Water hazards with ripples and vegetation (lily pads, cattails)
-- `createElectricFence(game)` - Damage/stun hazards (uses `isValidPosition()` + custom fence spacing, guaranteed to succeed)
+- `createElectricFence(game)` - Damage/stun hazards (uses `retryUntilValid` + `checkMinimumSpacing`, guaranteed to succeed)
 - `createExit(x, y)` - Level exit (static structure with locked state)
-- `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (handles collision avoidance)
+- `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (uses `retryUntilValid` with fallback)
 - `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)` - Guard dinosaurs around exit
 
