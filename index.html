@@ -683,6 +683,13 @@
           GRASS_PATCHES: 50,
           GRASS_PATCH_SIZE: 20,
         },
+
+        ANIMATION: {
+          // Animation speed multiplier (higher = faster leg movement)
+          SPEED_MULTIPLIER: 0.15,
+          // Minimum velocity to trigger animation (prevents jittering when nearly still)
+          MIN_VELOCITY_THRESHOLD: 0.1,
+        },
       },
 
       // ========================================================================
@@ -2067,7 +2074,10 @@
         spitCooldown: 0, // Cooldown for spit attacks
         facingLeft: false,
         zapTimer: 0,
-        avoidFences: []
+        avoidFences: [],
+        // Animation properties
+        animationFrame: 0, // Counter incremented each frame when moving
+        legCycle: 0 // Sine wave value for leg positions (-1 to 1)
       };
 
       guard.draw = function(ctx) {
@@ -2223,6 +2233,10 @@
      * @param {Object} dino - Dinosaur object
      */
     const drawVelociraptor = (ctx, scale, dino) => {
+      // Animation: leg swing for bipedal raptor
+      const legSwing = 3 * dino.legCycle; // ±3 pixels (subtle)
+      const armSwing = 1 * dino.legCycle; // Very subtle arm movement
+
       // Tail (long and curved upward)
       ctx.fillStyle = '#CD7F32';
       ctx.beginPath();
@@ -2232,23 +2246,23 @@
       ctx.quadraticCurveTo(-28 * scale, -3 * scale, -15 * scale, 4 * scale);
       ctx.fill();
 
-      // Back leg (powerful haunches)
+      // Back leg (powerful haunches) - animated
       ctx.fillStyle = '#B8860B';
       ctx.beginPath();
-      ctx.ellipse(-8 * scale, 8 * scale, 6 * scale, 10 * scale, Math.PI * 0.2, 0, Math.PI * 2);
+      ctx.ellipse(-8 * scale, (8 + legSwing) * scale, 6 * scale, 10 * scale, Math.PI * 0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Lower leg
+      // Lower leg - animated
       ctx.fillStyle = '#CD7F32';
-      ctx.fillRect(-10 * scale, 15 * scale, 3 * scale, 8 * scale);
+      ctx.fillRect(-10 * scale, (15 + legSwing) * scale, 3 * scale, 8 * scale);
 
-      // Clawed foot
+      // Clawed foot - animated
       ctx.fillStyle = '#8B4513';
       ctx.beginPath();
-      ctx.moveTo(-12 * scale, 23 * scale);
-      ctx.lineTo(-10 * scale, 20 * scale);
-      ctx.lineTo(-8 * scale, 23 * scale);
-      ctx.lineTo(-10 * scale, 24 * scale);
+      ctx.moveTo(-12 * scale, (23 + legSwing) * scale);
+      ctx.lineTo(-10 * scale, (20 + legSwing) * scale);
+      ctx.lineTo(-8 * scale, (23 + legSwing) * scale);
+      ctx.lineTo(-10 * scale, (24 + legSwing) * scale);
       ctx.fill();
 
       // Body (lean and muscular)
@@ -2295,10 +2309,10 @@
         ctx.stroke();
       }
 
-      // Small arms
+      // Small arms - animated (subtle movement)
       ctx.fillStyle = '#CD7F32';
       ctx.beginPath();
-      ctx.ellipse(8 * scale, 4 * scale, 3 * scale, 5 * scale, Math.PI * 0.5, 0, Math.PI * 2);
+      ctx.ellipse(8 * scale, (4 + armSwing) * scale, 3 * scale, 5 * scale, Math.PI * 0.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Stripes on back
@@ -2319,6 +2333,10 @@
      * @param {Object} dino - Dinosaur object
      */
     const drawStegosaurus = (ctx, scale, dino) => {
+      // Animation: alternating leg pairs for quadrupedal walk (very subtle to avoid detachment)
+      const backLegSwing = 1.5 * dino.legCycle; // ±1.5 pixels for back legs
+      const frontLegSwing = 1.5 * -dino.legCycle; // ±1.5 pixels for front legs (opposite phase)
+
       // Tail with spikes
       ctx.fillStyle = '#7B1FA2';
       ctx.beginPath();
@@ -2342,27 +2360,29 @@
         ctx.stroke();
       }
 
-      // Back legs (sturdy)
-      ctx.fillStyle = '#6A1B9A';
-      ctx.fillRect(-12 * scale, 10 * scale, 8 * scale, 12 * scale);
-      ctx.fillRect(-2 * scale, 10 * scale, 8 * scale, 12 * scale);
-
-      // Feet
-      ctx.fillStyle = '#4A148C';
-      ctx.fillRect(-13 * scale, 22 * scale, 10 * scale, 3 * scale);
-      ctx.fillRect(-3 * scale, 22 * scale, 10 * scale, 3 * scale);
-
-      // Front legs (shorter)
-      ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
-      ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
-
-      // Body (large and rounded)
+      // Body (large and rounded) - background
       ctx.fillStyle = '#9C27B0';
       ctx.beginPath();
       ctx.ellipse(0, 0, 28 * scale, 14 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Belly (lighter)
+      // Back legs (sturdy) - animated by stretching/compressing height
+      ctx.fillStyle = '#6A1B9A';
+      ctx.fillRect(-12 * scale, 10 * scale, 8 * scale, (12 + backLegSwing) * scale);
+      ctx.fillRect(-2 * scale, 10 * scale, 8 * scale, (12 - backLegSwing) * scale);
+
+      // Feet - positioned at leg bottoms
+      ctx.fillStyle = '#4A148C';
+      ctx.fillRect(-13 * scale, (22 + backLegSwing) * scale, 10 * scale, 3 * scale);
+      ctx.fillRect(-3 * scale, (22 - backLegSwing) * scale, 10 * scale, 3 * scale);
+
+      // Front legs (shorter) - animated by stretching/compressing height
+      // Moved back (lower X values) to be better hidden under body
+      ctx.fillStyle = '#6A1B9A';
+      ctx.fillRect(5 * scale, 12 * scale, 6 * scale, (10 + frontLegSwing) * scale);
+      ctx.fillRect(12 * scale, 12 * scale, 6 * scale, (10 - frontLegSwing) * scale);
+
+      // Belly (lighter) - drawn on top to hide leg tops better
       ctx.fillStyle = '#BA68C8';
       ctx.beginPath();
       ctx.ellipse(0, 6 * scale, 22 * scale, 10 * scale, 0, 0, Math.PI * 2);
@@ -2440,6 +2460,10 @@
      * @param {Object} dino - Dinosaur object
      */
     const drawParasaurolophus = (ctx, scale, dino) => {
+      // Animation: alternating leg pairs for quadrupedal walk (very subtle to avoid detachment)
+      const backLegSwing = 1.5 * dino.legCycle; // ±1.5 pixels for back legs
+      const frontLegSwing = 1.5 * -dino.legCycle; // ±1.5 pixels for front legs (opposite phase)
+
       // Tail
       ctx.fillStyle = '#D2691E';
       ctx.beginPath();
@@ -2449,22 +2473,23 @@
       ctx.quadraticCurveTo(-23 * scale, 4 * scale, -12 * scale, 2 * scale);
       ctx.fill();
 
-      // Hind legs
-      ctx.fillStyle = '#CD853F';
-      ctx.fillRect(-10 * scale, 8 * scale, 5 * scale, 10 * scale);
-      ctx.fillRect(-2 * scale, 8 * scale, 5 * scale, 10 * scale);
-
-      // Front legs
-      ctx.fillRect(8 * scale, 10 * scale, 4 * scale, 8 * scale);
-      ctx.fillRect(14 * scale, 10 * scale, 4 * scale, 8 * scale);
-
-      // Body
+      // Body - background
       ctx.fillStyle = '#DEB887';
       ctx.beginPath();
       ctx.ellipse(0, 0, 20 * scale, 12 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Belly
+      // Hind legs - animated by stretching/compressing height
+      ctx.fillStyle = '#CD853F';
+      ctx.fillRect(-10 * scale, 8 * scale, 5 * scale, (10 + backLegSwing) * scale);
+      ctx.fillRect(-2 * scale, 8 * scale, 5 * scale, (10 - backLegSwing) * scale);
+
+      // Front legs - animated by stretching/compressing height
+      // Moved back (lower X values) to be better hidden under body
+      ctx.fillRect(4 * scale, 10 * scale, 4 * scale, (8 + frontLegSwing) * scale);
+      ctx.fillRect(10 * scale, 10 * scale, 4 * scale, (8 - frontLegSwing) * scale);
+
+      // Belly - drawn on top to hide leg tops better
       ctx.fillStyle = '#F4A460';
       ctx.beginPath();
       ctx.ellipse(0, 5 * scale, 15 * scale, 8 * scale, 0, 0, Math.PI * 2);
@@ -2512,6 +2537,10 @@
      * @param {Object} dino - Dinosaur object
      */
     const drawTriceratops = (ctx, scale, dino) => {
+      // Animation: alternating leg pairs for quadrupedal walk (very subtle to avoid detachment)
+      const backLegSwing = 1.5 * dino.legCycle; // ±1.5 pixels for back legs
+      const frontLegSwing = 1.5 * -dino.legCycle; // ±1.5 pixels for front legs (opposite phase)
+
       // Tail
       ctx.fillStyle = '#A0826D';
       ctx.beginPath();
@@ -2521,22 +2550,23 @@
       ctx.quadraticCurveTo(-26 * scale, 2 * scale, -15 * scale, 4 * scale);
       ctx.fill();
 
-      // Hind legs (sturdy)
-      ctx.fillStyle = '#8B7355';
-      ctx.fillRect(-12 * scale, 10 * scale, 7 * scale, 12 * scale);
-      ctx.fillRect(-2 * scale, 10 * scale, 7 * scale, 12 * scale);
-
-      // Front legs (shorter, sturdier)
-      ctx.fillRect(10 * scale, 12 * scale, 6 * scale, 10 * scale);
-      ctx.fillRect(18 * scale, 12 * scale, 6 * scale, 10 * scale);
-
-      // Body (massive)
+      // Body (massive) - background
       ctx.fillStyle = '#D2B48C';
       ctx.beginPath();
       ctx.ellipse(0, 0, 22 * scale, 14 * scale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Belly
+      // Hind legs (sturdy) - animated by stretching/compressing height
+      ctx.fillStyle = '#8B7355';
+      ctx.fillRect(-12 * scale, 10 * scale, 7 * scale, (12 + backLegSwing) * scale);
+      ctx.fillRect(-2 * scale, 10 * scale, 7 * scale, (12 - backLegSwing) * scale);
+
+      // Front legs (shorter, sturdier) - animated by stretching/compressing height
+      // Moved back (lower X values) to be better hidden under body
+      ctx.fillRect(5 * scale, 12 * scale, 6 * scale, (10 + frontLegSwing) * scale);
+      ctx.fillRect(12 * scale, 12 * scale, 6 * scale, (10 - frontLegSwing) * scale);
+
+      // Belly - drawn on top to hide leg tops better
       ctx.fillStyle = '#F5DEB3';
       ctx.beginPath();
       ctx.ellipse(0, 6 * scale, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
@@ -2612,6 +2642,11 @@
      */
     const drawDilophosaurus = (ctx, scale, dino) => {
       const aiState = dino.state;
+
+      // Animation: bipedal walk with alternating legs
+      const legSwing = 3 * dino.legCycle; // ±3 pixels for legs (subtle)
+      const armSwing = 1 * dino.legCycle; // Very subtle arm movement
+
       // Tail
       ctx.fillStyle = '#7FFF00';
       ctx.beginPath();
@@ -2621,16 +2656,16 @@
       ctx.quadraticCurveTo(-20 * scale, 0, -10 * scale, 2 * scale);
       ctx.fill();
 
-      // Hind legs
+      // Hind legs - animated by stretching/compressing height
       ctx.fillStyle = '#9ACD32';
-      ctx.fillRect(-8 * scale, 6 * scale, 4 * scale, 10 * scale);
-      ctx.fillRect(-2 * scale, 6 * scale, 4 * scale, 10 * scale);
+      ctx.fillRect(-8 * scale, 6 * scale, 4 * scale, (10 + legSwing) * scale);
+      ctx.fillRect(-2 * scale, 6 * scale, 4 * scale, (10 - legSwing) * scale);
 
-      // Front legs (shorter)
-      ctx.fillRect(6 * scale, 8 * scale, 3 * scale, 8 * scale);
-      ctx.fillRect(11 * scale, 8 * scale, 3 * scale, 8 * scale);
+      // Front legs (shorter) - animated by stretching/compressing height
+      ctx.fillRect(6 * scale, 8 * scale, 3 * scale, (8 + armSwing) * scale);
+      ctx.fillRect(11 * scale, 8 * scale, 3 * scale, (8 - armSwing) * scale);
 
-      // Body (lean predator)
+      // Body (lean predator) - drawn on top to hide leg tops
       ctx.fillStyle = '#ADFF2F';
       ctx.beginPath();
       ctx.ellipse(0, 0, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
@@ -4263,6 +4298,18 @@
           dino.facingLeft = effectiveVx < 0;
         }
 
+        // Update animation properties
+        const velocity = Math.sqrt(dino.vx * dino.vx + dino.vy * dino.vy);
+        if (velocity > GAME_CONSTANTS.VISUALS.ANIMATION.MIN_VELOCITY_THRESHOLD) {
+          // Moving - animate legs
+          dino.animationFrame += velocity * GAME_CONSTANTS.VISUALS.ANIMATION.SPEED_MULTIPLIER;
+          dino.legCycle = Math.sin(dino.animationFrame);
+        } else {
+          // Stationary - reset animation to neutral pose
+          dino.animationFrame = 0;
+          dino.legCycle = 0;
+        }
+
         // Clamp to bounds
         const preClampX = dino.x;
         const preClampY = dino.y;
@@ -5109,7 +5156,10 @@
               spitCooldown: 0,
               facingLeft: false, // Track facing direction to prevent rapid flipping
               zapTimer: 0, // Electric shock animation timer
-              avoidFences: [] // Array of {fence, timer} objects for learned fence avoidance
+              avoidFences: [], // Array of {fence, timer} objects for learned fence avoidance
+              // Animation properties
+              animationFrame: 0, // Counter incremented each frame when moving
+              legCycle: 0 // Sine wave value for leg positions (-1 to 1)
             };
 
             dino.draw = function(ctx) {
