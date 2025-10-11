@@ -337,6 +337,20 @@
             },
             clusters: 4, // Number of overlapping circles for rocky texture
           },
+          ROCK_CLUSTER: {
+            id: 'rock_cluster',
+            blocksMovement: true,
+            canJumpOver: false, // Too wide to jump over
+            zIndex: 2,
+            colors: {
+              base: '#707070',       // Slightly darker gray than boulders
+              dark: '#3A3A3A',       // Very dark gray
+              light: '#909090',      // Light gray
+              highlight: '#B0B0B0',  // Light gray highlights
+              groundShadow: 'rgba(0, 0, 0, 0.3)', // Darker shadow for cluster
+            },
+            rocksPerCluster: { min: 5, max: 8 }, // More rocks to ensure visible cluster
+          },
           MUSHROOM: {
             id: 'mushroom',
             blocksMovement: false,
@@ -531,6 +545,10 @@
           GRASS_PATCH_SIZE: 8,          // Number of grass patches per cluster
           GRASS_PATCH_SPREAD: 100,      // Spread radius for grass cluster members
           GRASS_PATCH_PERCENTAGE: 0.3,  // 30% of obstacles spawn as grass patch clusters
+          ROCK_CLUSTER_MIN_SPREAD: 15,  // Minimum spacing between rocks in cluster
+          ROCK_CLUSTER_MAX_SPREAD: 45,  // Maximum spacing between rocks in cluster (wider than boulders)
+          ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN: 12,  // Minimum radius for individual rocks (larger than boulder circles)
+          ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX: 20, // Maximum radius for individual rocks
           DINOSAUR_GRID_START_X: 300,
           DINOSAUR_GRID_START_Y: 200,
           DINOSAUR_GRID_SPACING_X: 250,
@@ -1359,8 +1377,10 @@
      * @param {number} playerX - Player spawn X position to avoid
      * @param {number} playerY - Player spawn Y position to avoid
      * @param {Object} game - Game state object with existing entities
+     * @param {number} exitX - Exit X position to avoid (optional)
+     * @param {number} exitY - Exit Y position to avoid (optional)
      */
-    const createObstacle = (mapWidth, mapHeight, playerX = null, playerY = null, game = null) => {
+    const createObstacle = (mapWidth, mapHeight, playerX = null, playerY = null, game = null, exitX = null, exitY = null) => {
       let x, y, radius;
       let attempts = 0;
 
@@ -1381,6 +1401,15 @@
           }
         }
 
+        // Check exit clearance (use same clearance as player to keep exit accessible)
+        if (valid && exitX !== null && exitY !== null) {
+          const distFromExit = distance(x, y, exitX, exitY);
+          const requiredClearance = GAME_CONSTANTS.WORLD.SPAWN.PLAYER_SPAWN_CLEARANCE + radius;
+          if (distFromExit < requiredClearance) {
+            valid = false;
+          }
+        }
+
         // Check against all existing entities using centralized collision checker
         if (valid && game !== null) {
           valid = isValidPosition(x, y, radius, game);
@@ -1389,17 +1418,19 @@
         if (valid) break;
       } while (attempts < GAME_CONSTANTS.WORLD.SPAWN.OBSTACLE_SPAWN_MAX_ATTEMPTS);
 
-      // Select obstacle type: 30% trees, 30% bushes, 15% tall trees, 25% boulders
+      // Select obstacle type: 25% trees, 25% bushes, 15% tall trees, 20% boulders, 15% rock clusters
       const rand = Math.random();
       let obstacleType;
-      if (rand < 0.3) {
+      if (rand < 0.25) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE;
-      } else if (rand < 0.6) {
+      } else if (rand < 0.5) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH;
-      } else if (rand < 0.75) {
+      } else if (rand < 0.65) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE;
-      } else {
+      } else if (rand < 0.85) {
         obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.BOULDER;
+      } else {
+        obstacleType = GAME_CONSTANTS.ENTITIES.OBSTACLES.ROCK_CLUSTER;
       }
 
       const obstacle = {
@@ -1409,6 +1440,11 @@
         obstacleType
       };
 
+      // For rock clusters, generate individual rock positions
+      if (obstacleType === GAME_CONSTANTS.ENTITIES.OBSTACLES.ROCK_CLUSTER) {
+        obstacle.rocks = generateRockClusterRocks(obstacleType);
+      }
+
       obstacle.draw = function(ctx, cameraX, cameraY) {
         const screenX = this.x - cameraX;
         const screenY = this.y - cameraY;
@@ -1416,6 +1452,37 @@
       };
 
       return obstacle;
+    };
+
+    /**
+     * Generate rock positions for a rock cluster
+     * @param {Object} obstacleType - The ROCK_CLUSTER obstacle type object
+     * @returns {Array} Array of rock objects with offsetX, offsetY, radius properties
+     */
+    const generateRockClusterRocks = (obstacleType) => {
+      const rockCount = Math.floor(
+        Math.random() * (obstacleType.rocksPerCluster.max - obstacleType.rocksPerCluster.min + 1)
+      ) + obstacleType.rocksPerCluster.min;
+
+      const rocks = [];
+
+      for (let i = 0; i < rockCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const minSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MIN_SPREAD;
+        const maxSpread = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_MAX_SPREAD;
+        const dist = minSpread + Math.random() * (maxSpread - minSpread);
+        const rockRadius = GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN +
+                          Math.random() * (GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MAX -
+                          GAME_CONSTANTS.WORLD.SPAWN.ROCK_CLUSTER_INDIVIDUAL_RADIUS_MIN);
+
+        rocks.push({
+          offsetX: Math.cos(angle) * dist,
+          offsetY: Math.sin(angle) * dist,
+          radius: rockRadius
+        });
+      }
+
+      return rocks;
     };
 
     /**
@@ -2974,6 +3041,69 @@
     };
 
     /**
+     * Draw rock cluster with multiple individual rocks
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} screenX - Screen X position (cluster center)
+     * @param {number} screenY - Screen Y position (cluster center)
+     * @param {number} radius - Cluster radius (unused, rocks have individual radii)
+     * @param {Object} obstacle - Obstacle object with rocks array
+     */
+    const drawRockCluster = (ctx, screenX, screenY, radius, obstacle) => {
+      const colors = GAME_CONSTANTS.ENTITIES.OBSTACLES.ROCK_CLUSTER.colors;
+
+      // Draw each rock in the cluster with irregular shapes
+      obstacle.rocks.forEach(rock => {
+        const rockX = screenX + rock.offsetX;
+        const rockY = screenY + rock.offsetY;
+        const rockRadius = rock.radius;
+
+        // Draw ground shadow for each rock
+        ctx.fillStyle = colors.groundShadow;
+        ctx.beginPath();
+        ctx.ellipse(rockX, rockY + rockRadius * 0.7, rockRadius * 0.85, rockRadius * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Irregular rock shape (simplified compared to boulders for performance)
+        // Dark base layer (3 circles for irregular base)
+        ctx.fillStyle = colors.dark;
+        const darkCircles = [
+          { x: 0, y: 0, r: 0.9 },
+          { x: 0.4, y: -0.2, r: 0.55 },
+          { x: -0.4, y: 0.25, r: 0.5 },
+        ];
+        darkCircles.forEach(pt => {
+          ctx.beginPath();
+          ctx.arc(rockX + pt.x * rockRadius, rockY + pt.y * rockRadius, rockRadius * pt.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Medium gray body (2 circles)
+        ctx.fillStyle = colors.base;
+        const baseCircles = [
+          { x: -0.15, y: -0.1, r: 0.75 },
+          { x: 0.3, y: 0.15, r: 0.45 },
+        ];
+        baseCircles.forEach(pt => {
+          ctx.beginPath();
+          ctx.arc(rockX + pt.x * rockRadius, rockY + pt.y * rockRadius, rockRadius * pt.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Light highlight (1 circle)
+        ctx.fillStyle = colors.light;
+        ctx.beginPath();
+        ctx.arc(rockX - rockRadius * 0.25, rockY - rockRadius * 0.25, rockRadius * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Small bright highlight
+        ctx.fillStyle = colors.highlight;
+        ctx.beginPath();
+        ctx.arc(rockX - rockRadius * 0.35, rockY - rockRadius * 0.35, rockRadius * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    };
+
+    /**
      * Draw mushroom with colorful cap and spots
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} screenX - Screen X position
@@ -4153,6 +4283,7 @@
     GAME_CONSTANTS.ENTITIES.OBSTACLES.TALL_TREE.drawFunction = drawTallTree;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.BUSH.drawFunction = drawBush;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.BOULDER.drawFunction = drawBoulder;
+    GAME_CONSTANTS.ENTITIES.OBSTACLES.ROCK_CLUSTER.drawFunction = drawRockCluster;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.MUSHROOM.drawFunction = drawMushroom;
     GAME_CONSTANTS.ENTITIES.OBSTACLES.GRASS.drawFunction = drawGrass;
 
@@ -4803,9 +4934,9 @@
           game.tarPits.push(createTarPit(tarX, tarY));
         }
 
-        // Create obstacles (blocking: trees and bushes)
+        // Create obstacles (blocking: trees, bushes, boulders, rock clusters)
         for (let i = 0; i < config.obstacles; i++) {
-          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y, game));
+          game.obstacles.push(createObstacle(game.mapWidth, game.mapHeight, GAME_CONSTANTS.CORE.PLAYER.START_X, GAME_CONSTANTS.CORE.PLAYER.START_Y, game, config.exitX, config.exitY));
         }
 
         // Create decorations (walkable: mushroom patches and grass patches)
