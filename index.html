@@ -5999,12 +5999,12 @@
           {/* Stack contains 3 buttons: weapon cycle, fire (middle), jump */}
           {/* Fire button (middle of stack) should align with joystick center */}
           <div
-            className="absolute flex flex-col gap-4 pointer-events-auto transform"
+            className="absolute flex flex-col gap-4 pointer-events-auto"
             style={{
               right: buttonsRight,
-              top: verticalPosition.top,
-              // Offset upward by (button height + gap) so middle button aligns with joystick
-              transform: `${verticalPosition.transform} translateY(calc(-6rem - 1rem))`
+              top: '50%',
+              // Center the entire stack vertically so all buttons are properly positioned
+              transform: 'translateY(-50%)'
             }}
           >
             {/* Weapon Cycle Button */}
