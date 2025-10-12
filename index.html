@@ -5936,20 +5936,22 @@
       const useMarginLayout = isLandscape && horizontalMargin > 100;
 
       // Calculate control positions
+      // When using margin layout, position controls in the margins
+      // Otherwise, position relative to canvas edge (will be centered with canvas)
       const joystickLeft = useMarginLayout
-        ? `${Math.max(horizontalMargin - 140, 10)}px`  // In left margin, or fallback to 10px
-        : '1rem';  // On-canvas fallback
+        ? `${Math.max(horizontalMargin - 140, 10)}px`  // In left margin
+        : '1rem';  // Relative to canvas
 
       const buttonsRight = useMarginLayout
-        ? `${Math.max(horizontalMargin - 100, 10)}px`  // In right margin, or fallback to 10px
-        : '1rem';  // On-canvas fallback
+        ? `${Math.max(horizontalMargin - 100, 10)}px`  // In right margin
+        : '1rem';  // Relative to canvas
 
       const jumpButtonRight = useMarginLayout
-        ? `${Math.max(horizontalMargin - 100, 10) + 112}px`  // Right margin + 80px button + 32px gap
-        : '7rem';  // On-canvas fallback
+        ? `${Math.max(horizontalMargin - 100, 10) + 112}px`  // In right margin with gap
+        : '7rem';  // Relative to canvas
 
       return (
-        <div className="absolute inset-0 pointer-events-none">
+        <div className={`${useMarginLayout ? 'fixed' : 'absolute'} inset-0 pointer-events-none`} style={{ zIndex: 1000 }}>
           {/* Virtual Joystick Area (left side or left margin) */}
           <div
             className="absolute bottom-4 w-32 h-32 pointer-events-auto"
@@ -7372,35 +7374,33 @@
                 onPauseClick={handlePauseClick}
                 onSettingsClick={handleSettingsClick}
               />
-              <div className="relative">
-                <canvas
-                  ref={canvasRef}
-                  width={currentViewport.width}
-                  height={currentViewport.height}
-                  style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
-                  className="border-4 border-green-600 bg-green-900 cursor-crosshair"
-                  tabIndex={0}
-                />
+              <canvas
+                ref={canvasRef}
+                width={currentViewport.width}
+                height={currentViewport.height}
+                style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
+                className="border-4 border-green-600 bg-green-900 cursor-crosshair"
+                tabIndex={0}
+              />
 
-                {/* Touch Controls Overlay */}
-                {isTouchDevice && (
-                  <TouchControls
-                    joystickActive={gameRef.current.touch.joystick.active}
-                    joystickX={gameRef.current.touch.joystick.currentX}
-                    joystickY={gameRef.current.touch.joystick.currentY}
-                    currentWeapon={gameRef.current.player.currentWeapon}
-                    canvasSize={canvasSize}
-                    isLandscape={isLandscape}
-                    onJoystickStart={handleJoystickStart}
-                    onJoystickMove={handleJoystickMove}
-                    onJoystickEnd={handleJoystickEnd}
-                    onWeaponSwitch={handleWeaponSwitch}
-                    onJumpStart={handleJumpStart}
-                    onShootStart={handleShootStart}
-                    onShootEnd={handleShootEnd}
-                  />
-                )}
-              </div>
+              {/* Touch Controls Overlay - positioned at viewport level */}
+              {isTouchDevice && (
+                <TouchControls
+                  joystickActive={gameRef.current.touch.joystick.active}
+                  joystickX={gameRef.current.touch.joystick.currentX}
+                  joystickY={gameRef.current.touch.joystick.currentY}
+                  currentWeapon={gameRef.current.player.currentWeapon}
+                  canvasSize={canvasSize}
+                  isLandscape={isLandscape}
+                  onJoystickStart={handleJoystickStart}
+                  onJoystickMove={handleJoystickMove}
+                  onJoystickEnd={handleJoystickEnd}
+                  onWeaponSwitch={handleWeaponSwitch}
+                  onJumpStart={handleJumpStart}
+                  onShootStart={handleShootStart}
+                  onShootEnd={handleShootEnd}
+                />
+              )}
               <p className="text-gray-400 mt-2 text-center">
                 {isTouchDevice ? (
                   <span>Joystick to move • Tap {GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}/{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon} to switch weapon • FIRE to auto-aim • JUMP to escape!</span>
