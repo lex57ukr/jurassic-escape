@@ -1216,6 +1216,39 @@
     };
 
     /**
+     * Check if position maintains radius-based spacing from existing entities
+     *
+     * @param {number} x - X position to check
+     * @param {number} y - Y position to check
+     * @param {number} newRadius - Radius of entity being spawned
+     * @param {Array} entityArray - Array of existing entities with radius property
+     * @param {number} spacingMultiplier - Multiplier applied to combined radii (e.g., 2.2)
+     * @returns {boolean} True if spacing is valid (all entities are far enough)
+     *
+     * @remarks
+     * Used when entities have variable radii (e.g., territories with different sizes).
+     * Spacing is calculated as: (newRadius + existingRadius) * spacingMultiplier
+     *
+     * Example: Regular territory (200) vs Exit territory (300)
+     * - Combined radius: 200 + 300 = 500
+     * - Required spacing: 500 * 2.2 = 1100 pixels
+     *
+     * This ensures proper clearance regardless of entity size, unlike
+     * checkMinimumSpacing which uses fixed distance for uniform entities.
+     */
+    const checkRadiusBasedSpacing = (x, y, newRadius, entityArray, spacingMultiplier) => {
+      for (const entity of entityArray) {
+        const dist = distance(x, y, entity.x, entity.y);
+        const combinedRadius = newRadius + entity.radius;
+        const requiredSpacing = combinedRadius * spacingMultiplier;
+        if (dist < requiredSpacing) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    /**
      * Check if position maintains clearance from player spawn and static structures
      *
      * @param {number} x - X position to check
@@ -1304,6 +1337,10 @@
      */
     const spawnHazards = ({ count, hazardType, createFn, targetArray, existingArrays, game }) => {
       const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARDS.SPAWN_MAX_ATTEMPTS;
+      // Calculate maximum possible radius for this hazard type (baseRadius * max variance)
+      const maxNewRadius = hazardType.baseRadius * (0.5 + hazardType.sizeVariance);
+      // Spacing multiplier derived from minSpacing / (2 * baseRadius) for backwards compatibility
+      const spacingMultiplier = hazardType.minSpacing / (2 * hazardType.baseRadius);
 
       for (let i = 0; i < count; i++) {
         let x, y;
@@ -1318,22 +1355,18 @@
           let overlapping = false;
 
           // Check player and static structure clearance (prevents spawning over exit, etc.)
-          if (!checkPlayerClearance(x, y, hazardType.baseRadius, game)) {
+          if (!checkPlayerClearance(x, y, maxNewRadius, game)) {
             overlapping = true;
           }
 
-          // Check spacing against all existing hazard arrays
+          // Check radius-based spacing against all existing hazard arrays
+          // Uses worst-case (max) radius for new hazard to guarantee no overlap
           if (!overlapping) {
             for (const existingArray of existingArrays) {
-              for (const existing of existingArray) {
-                const dist = distance(x, y, existing.x, existing.y);
-                const minSpacing = existing.hazardType?.minSpacing || hazardType.minSpacing;
-                if (dist < minSpacing) {
-                  overlapping = true;
-                  break;
-                }
+              if (!checkRadiusBasedSpacing(x, y, maxNewRadius, existingArray, spacingMultiplier)) {
+                overlapping = true;
+                break;
               }
-              if (overlapping) break;
             }
           }
 
@@ -2818,7 +2851,7 @@
      */
     const createTerritoryForDino = (dino, spawnPos, game) => {
       const dinoType = dino.type;
-      const minTerritorySpacing = GAME_CONSTANTS.AI.TERRITORY.RADIUS * GAME_CONSTANTS.AI.TERRITORY.SPACING_MULTIPLIER;
+      const newTerritoryRadius = GAME_CONSTANTS.AI.TERRITORY.RADIUS;
 
       let isFirstAttempt = true;
 
@@ -2837,7 +2870,8 @@
       // Validator: territory-to-territory spacing + obstacle clearance
       const isValid = (x, y) => {
         // Check against existing territories (prevent clustering)
-        if (!checkMinimumSpacing(x, y, game.territories, minTerritorySpacing)) {
+        // Uses radius-based spacing to handle variable territory sizes (regular vs exit)
+        if (!checkRadiusBasedSpacing(x, y, newTerritoryRadius, game.territories, GAME_CONSTANTS.AI.TERRITORY.SPACING_MULTIPLIER)) {
           return false;
         }
 
@@ -6489,6 +6523,37 @@
           return aIndex - bIndex;
         });
 
+        // Create exit guards and territory FIRST (before regular dinosaurs)
+        // This ensures exit territory exists in game.territories array
+        // so regular territorial dinosaurs will avoid it during spawn
+        if (config.exitGuards && config.exitGuards.length > 0) {
+          // Calculate total number of guards
+          const totalGuards = config.exitGuards.reduce((sum, guardType) => sum + guardType.count, 0);
+
+          // Create exit territory
+          const exitTerritory = createExitTerritory(config.exitX, config.exitY, totalGuards);
+          game.territories.push(exitTerritory);
+          const exitTerritoryIndex = game.territories.length - 1;
+
+          // Set exit as locked
+          if (game.exit) game.exit.locked = true;
+
+          // Spawn guards in a circle around exit
+          let guardIndex = 0;
+          config.exitGuards.forEach(guardType => {
+            for (let i = 0; i < guardType.count; i++) {
+              // Calculate evenly spaced angle around exit
+              const angle = (guardIndex / totalGuards) * 360;
+              const guard = createExitGuard(guardType.type, angle, config.exitX, config.exitY, exitTerritoryIndex, difficulty);
+              game.dinosaurs.push(guard);
+              guardIndex++;
+            }
+          });
+        } else {
+          // No guards, exit is unlocked
+          if (game.exit) game.exit.locked = false;
+        }
+
         // Create dinosaurs
         let dinoIndex = 0;
         config.dinosaurs.forEach(dinoConfig => {
@@ -6569,35 +6634,6 @@
             dinoIndex++;
           }
         });
-
-        // Create exit guards and territory
-        if (config.exitGuards && config.exitGuards.length > 0) {
-          // Calculate total number of guards
-          const totalGuards = config.exitGuards.reduce((sum, guardType) => sum + guardType.count, 0);
-
-          // Create exit territory
-          const exitTerritory = createExitTerritory(config.exitX, config.exitY, totalGuards);
-          game.territories.push(exitTerritory);
-          const exitTerritoryIndex = game.territories.length - 1;
-
-          // Set exit as locked
-          if (game.exit) game.exit.locked = true;
-
-          // Spawn guards in a circle around exit
-          let guardIndex = 0;
-          config.exitGuards.forEach(guardType => {
-            for (let i = 0; i < guardType.count; i++) {
-              // Calculate evenly spaced angle around exit
-              const angle = (guardIndex / totalGuards) * 360;
-              const guard = createExitGuard(guardType.type, angle, config.exitX, config.exitY, exitTerritoryIndex, difficulty);
-              game.dinosaurs.push(guard);
-              guardIndex++;
-            }
-          });
-        } else {
-          // No guards, exit is unlocked
-          if (game.exit) game.exit.locked = false;
-        }
 
         // Create powerups
         for (let i = 0; i < config.powerups; i++) {
