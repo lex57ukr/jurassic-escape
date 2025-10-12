@@ -5931,6 +5931,8 @@
       currentWeapon,
       canvasSize,
       isLandscape,
+      showPauseMenu,
+      showSettingsMenu,
       onJoystickStart,
       onJoystickMove,
       onJoystickEnd,
@@ -5939,6 +5941,11 @@
       onShootStart,
       onShootEnd
     }) => {
+      // Hide controls when menus are open
+      if (showPauseMenu || showSettingsMenu) {
+        return null;
+      }
+
       // Calculate if we have enough margin space (>100px) to move controls outside canvas
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
       const horizontalMargin = (viewportWidth - canvasSize.width) / 2;
@@ -7393,6 +7400,8 @@
                   currentWeapon={gameRef.current.player.currentWeapon}
                   canvasSize={canvasSize}
                   isLandscape={isLandscape}
+                  showPauseMenu={showPauseMenu}
+                  showSettingsMenu={showSettingsMenu}
                   onJoystickStart={handleJoystickStart}
                   onJoystickMove={handleJoystickMove}
                   onJoystickEnd={handleJoystickEnd}
