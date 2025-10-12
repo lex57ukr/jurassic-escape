@@ -5840,7 +5840,8 @@
       isTouchDevice,
       debugMode,
       onPauseClick,
-      onSettingsClick
+      onSettingsClick,
+      onWeaponSwitch
     }) => {
       return (
         <div className="flex gap-2 md:gap-3 mb-4 text-white items-center justify-center">
@@ -5864,14 +5865,22 @@
             ))}
           </div>
 
-          {/* Regular Ammo - Fixed width with monospace */}
-          <div className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'}`}>
+          {/* Regular Ammo - Fixed width with monospace, clickable on mobile */}
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-gray-700'} ${isTouchDevice ? 'cursor-pointer active:scale-95 transition-transform' : ''}`}
+            onClick={isTouchDevice && currentWeapon !== GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? onWeaponSwitch : undefined}
+            style={isTouchDevice ? { touchAction: 'manipulation' } : {}}
+          >
             <span className="text-base">{GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon}</span>
             <span className="text-lg font-bold font-mono text-right flex-1">{ammo}</span>
           </div>
 
-          {/* Tranq Ammo - Fixed width with monospace */}
-          <div className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'}`}>
+          {/* Tranq Ammo - Fixed width with monospace, clickable on mobile */}
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER ? 'bg-green-600' : 'bg-gray-700'} ${isTouchDevice ? 'cursor-pointer active:scale-95 transition-transform' : ''}`}
+            onClick={isTouchDevice && currentWeapon !== GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER ? onWeaponSwitch : undefined}
+            style={isTouchDevice ? { touchAction: 'manipulation' } : {}}
+          >
             <span className="text-base">{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}</span>
             <span className="text-lg font-bold font-mono text-right flex-1">{tranqAmmo}</span>
           </div>
@@ -5946,16 +5955,12 @@
         ? `${Math.max(horizontalMargin - 100, 10)}px`  // In right margin
         : '1rem';  // Relative to canvas
 
-      const jumpButtonRight = useMarginLayout
-        ? `${Math.max(horizontalMargin - 100, 10) + 112}px`  // In right margin with gap
-        : '7rem';  // Relative to canvas
-
       return (
         <div className={`${useMarginLayout ? 'fixed' : 'absolute'} inset-0 pointer-events-none`} style={{ zIndex: 1000 }}>
-          {/* Virtual Joystick Area (left side or left margin) */}
+          {/* Virtual Joystick Area (left side or left margin, vertically centered) */}
           <div
-            className="absolute bottom-4 w-32 h-32 pointer-events-auto"
-            style={{ touchAction: 'none', left: joystickLeft }}
+            className="absolute w-32 h-32 pointer-events-auto transform -translate-y-1/2"
+            style={{ touchAction: 'none', left: joystickLeft, top: '50%' }}
             onTouchStart={onJoystickStart}
             onTouchMove={onJoystickMove}
             onTouchEnd={onJoystickEnd}
@@ -5974,37 +5979,32 @@
             )}
           </div>
 
-          {/* Weapon Switch Button (top margin or top-right) */}
+          {/* Action Button Stack (right side or right margin, vertically centered) */}
           <div
-            className="absolute right-4 top-4 w-16 h-16 pointer-events-auto"
-            style={{ touchAction: 'none' }}
-            onTouchStart={onWeaponSwitch}
+            className="absolute flex flex-col gap-3 pointer-events-auto transform -translate-y-1/2"
+            style={{ right: buttonsRight, top: '50%' }}
           >
-            <div className={`w-full h-full rounded-full ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'bg-yellow-600' : 'bg-green-600'} bg-opacity-70 border-2 ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? 'border-yellow-500' : 'border-green-500'} flex items-center justify-center text-white text-2xl font-bold shadow-lg`}>
-              {currentWeapon.icon}
+            {/* Fire Button */}
+            <div
+              className="w-18 h-18 pointer-events-auto"
+              style={{ touchAction: 'none' }}
+              onTouchStart={onShootStart}
+              onTouchEnd={onShootEnd}
+            >
+              <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-2 border-red-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                FIRE
+              </div>
             </div>
-          </div>
 
-          {/* Jump Button (right side or right margin) */}
-          <div
-            className="absolute bottom-4 w-20 h-20 pointer-events-auto"
-            style={{ touchAction: 'none', right: jumpButtonRight }}
-            onTouchStart={onJumpStart}
-          >
-            <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white font-bold shadow-lg">
-              JUMP
-            </div>
-          </div>
-
-          {/* Shoot Button (right side or right margin) */}
-          <div
-            className="absolute bottom-4 w-20 h-20 pointer-events-auto"
-            style={{ touchAction: 'none', right: buttonsRight }}
-            onTouchStart={onShootStart}
-            onTouchEnd={onShootEnd}
-          >
-            <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-2 border-red-500 flex items-center justify-center text-white font-bold shadow-lg">
-              FIRE
+            {/* Jump Button */}
+            <div
+              className="w-18 h-18 pointer-events-auto"
+              style={{ touchAction: 'none' }}
+              onTouchStart={onJumpStart}
+            >
+              <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                JUMP
+              </div>
             </div>
           </div>
         </div>
@@ -7373,6 +7373,7 @@
                 debugMode={debugMode}
                 onPauseClick={handlePauseClick}
                 onSettingsClick={handleSettingsClick}
+                onWeaponSwitch={handleWeaponSwitch}
               />
               <canvas
                 ref={canvasRef}
