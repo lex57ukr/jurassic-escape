@@ -5948,8 +5948,28 @@
 
       // Calculate if we have enough margin space (>100px) to move controls outside canvas
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
       const horizontalMargin = (viewportWidth - canvasSize.width) / 2;
       const useMarginLayout = isLandscape && horizontalMargin > 100;
+
+      // Calculate responsive vertical positioning based on screen size
+      // Small screens (phones): centered for one-handed use
+      // Medium screens (small tablets): slight shift toward bottom
+      // Large screens (iPads): firmly anchored near bottom for thumb reach
+      const getVerticalPosition = () => {
+        if (viewportHeight < 768) {
+          // Small screens (phones) - vertically centered
+          return { top: '50%', transform: '-translate-y-1/2' };
+        } else if (viewportHeight < 1024) {
+          // Medium screens (small tablets) - 70% from top
+          return { top: '70%', transform: '-translate-y-1/2' };
+        } else {
+          // Large screens (iPads) - anchored near bottom
+          return { bottom: '2rem', transform: 'none' };
+        }
+      };
+
+      const verticalPosition = getVerticalPosition();
 
       // Calculate control positions
       // When using margin layout, position controls in the margins
@@ -5964,10 +5984,16 @@
 
       return (
         <div className={`${useMarginLayout ? 'fixed' : 'absolute'} inset-0 pointer-events-none`} style={{ zIndex: 1000 }}>
-          {/* Virtual Joystick Area (left side or left margin, vertically centered) */}
+          {/* Virtual Joystick Area (left side or left margin) */}
           <div
-            className="absolute w-32 h-32 pointer-events-auto transform -translate-y-1/2"
-            style={{ touchAction: 'none', left: joystickLeft, top: '50%' }}
+            className={`absolute w-32 h-32 pointer-events-auto ${verticalPosition.transform !== 'none' ? 'transform' : ''}`}
+            style={{
+              touchAction: 'none',
+              left: joystickLeft,
+              ...(verticalPosition.top ? { top: verticalPosition.top } : {}),
+              ...(verticalPosition.bottom ? { bottom: verticalPosition.bottom } : {}),
+              ...(verticalPosition.transform !== 'none' ? { transform: verticalPosition.transform } : {})
+            }}
             onTouchStart={onJoystickStart}
             onTouchMove={onJoystickMove}
             onTouchEnd={onJoystickEnd}
@@ -5986,10 +6012,15 @@
             )}
           </div>
 
-          {/* Action Button Stack (right side or right margin, vertically centered) */}
+          {/* Action Button Stack (right side or right margin) */}
           <div
-            className="absolute flex flex-col gap-4 pointer-events-auto transform -translate-y-1/2"
-            style={{ right: buttonsRight, top: '50%' }}
+            className={`absolute flex flex-col gap-4 pointer-events-auto ${verticalPosition.transform !== 'none' ? 'transform' : ''}`}
+            style={{
+              right: buttonsRight,
+              ...(verticalPosition.top ? { top: verticalPosition.top } : {}),
+              ...(verticalPosition.bottom ? { bottom: verticalPosition.bottom } : {}),
+              ...(verticalPosition.transform !== 'none' ? { transform: verticalPosition.transform } : {})
+            }}
           >
             {/* Weapon Cycle Button */}
             <div
