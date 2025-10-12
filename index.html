@@ -913,6 +913,7 @@
         enemySpeedMultiplier: 0.8,        // 20% slower
         invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
         ammoDampingMultiplier: 1.14,      // 40% longer bouncing (-0.65 * 1.14 = -0.741)
+        restoreResourcesOnLevelUp: true,  // Full health/ammo restore each level
       },
       normal: {
         label: 'Normal',
@@ -922,6 +923,7 @@
         enemySpeedMultiplier: 1.0,        // Normal speed
         invincibilityMultiplier: 1.0,     // 60 frames
         ammoDampingMultiplier: 1.0,       // Baseline bouncing
+        restoreResourcesOnLevelUp: false, // Carry resources forward across levels
       },
       hard: {
         label: 'Hard',
@@ -931,6 +933,7 @@
         enemySpeedMultiplier: 1.3,        // 30% faster
         invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
         ammoDampingMultiplier: 0.86,      // 20% shorter bouncing (-0.65 * 0.86 = -0.559)
+        restoreResourcesOnLevelUp: false, // Carry resources forward across levels
       },
     };
 
@@ -6588,9 +6591,32 @@
       const nextLevel = useCallback(() => {
         const next = currentLevel + 1;
         setCurrentLevel(next);
+
+        // Capture current resources before reset
+        const game = gameRef.current;
+        const previousHealth = game.player.health;
+        const previousAmmo = game.player.ammo;
+        const previousTranqAmmo = game.player.tranqAmmo;
+
+        // Initialize new level (resets everything)
         initGame(next);
+
+        // Check if we should restore resources based on difficulty
+        const diffMod = DIFFICULTY_MODIFIERS[difficulty];
+        if (!diffMod.restoreResourcesOnLevelUp) {
+          // Preserve resources across levels (Normal/Hard difficulty)
+          game.player.health = previousHealth;
+          game.player.ammo = previousAmmo;
+          game.player.tranqAmmo = previousTranqAmmo;
+
+          // Update React state to match
+          setPlayerHealth(previousHealth);
+          setPlayerAmmo(previousAmmo);
+          setPlayerTranqAmmo(previousTranqAmmo);
+        }
+
         setGameState(GAME_CONSTANTS.CORE.GAME_STATES.PLAYING);
-      }, [currentLevel, initGame]);
+      }, [currentLevel, difficulty, initGame]);
 
       // Ammo setters mapping for fireWeapon function
       const ammoSetters = useMemo(() => ({

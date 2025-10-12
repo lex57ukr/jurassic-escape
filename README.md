@@ -238,7 +238,9 @@ This provides two debug configurations:
   - Sound control (mute/unmute)
   - Volume control (0-100% slider)
   - Viewport size (Small: 800x600, Medium: 1000x750, Large: 1200x900)
-  - Difficulty (Easy/Normal/Hard) - affects player health, ammo, enemy speed, invincibility duration, and ammo bouncing physics
+  - Difficulty (Easy/Normal/Hard) - affects player health, ammo, enemy speed, invincibility duration, ammo bouncing physics, and level transition behavior
+    - Easy: Full health/ammo restore between levels (forgiving)
+    - Normal/Hard: Resources carry forward across levels (strategic resource management required)
   - Auto-aim toggle (🎯) - helpful for trackpad users, enabled by default on Easy difficulty, always ON for mobile (read-only)
 - **Jump mechanic** to escape tight spots and stuck positions
 - **Pause menu** with options to continue, restart, or exit

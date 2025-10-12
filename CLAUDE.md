@@ -14,7 +14,7 @@ The codebase follows a strict 6-section organization pattern:
 
 1. **Constants Section** (~lines 39-778)
    - `GAME_CONSTANTS` - All game configuration (player stats, AI behavior, entity types, etc.)
-   - `DIFFICULTY_MODIFIERS` - Difficulty scaling multipliers
+   - `DIFFICULTY_MODIFIERS` - Difficulty scaling multipliers (includes `restoreResourcesOnLevelUp` setting)
    - `LEVEL_CONFIGS` - Level definitions
    - `SOUNDS` - Audio file paths
 
