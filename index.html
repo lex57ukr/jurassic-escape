@@ -5991,6 +5991,20 @@
             className="absolute flex flex-col gap-4 pointer-events-auto transform -translate-y-1/2"
             style={{ right: buttonsRight, top: '50%' }}
           >
+            {/* Weapon Cycle Button */}
+            <div
+              className="w-24 h-24 pointer-events-auto"
+              style={{ touchAction: 'none' }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                onWeaponSwitch();
+              }}
+            >
+              <div className="w-full h-full rounded-full bg-purple-600 bg-opacity-70 border-4 border-purple-500 flex items-center justify-center text-white text-4xl shadow-lg">
+                {currentWeapon.icon}
+              </div>
+            </div>
+
             {/* Fire Button */}
             <div
               className="w-24 h-24 pointer-events-auto"
