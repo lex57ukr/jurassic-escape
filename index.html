@@ -1317,17 +1317,24 @@
 
           let overlapping = false;
 
+          // Check player and static structure clearance (prevents spawning over exit, etc.)
+          if (!checkPlayerClearance(x, y, hazardType.baseRadius, game)) {
+            overlapping = true;
+          }
+
           // Check spacing against all existing hazard arrays
-          for (const existingArray of existingArrays) {
-            for (const existing of existingArray) {
-              const dist = distance(x, y, existing.x, existing.y);
-              const minSpacing = existing.hazardType?.minSpacing || hazardType.minSpacing;
-              if (dist < minSpacing) {
-                overlapping = true;
-                break;
+          if (!overlapping) {
+            for (const existingArray of existingArrays) {
+              for (const existing of existingArray) {
+                const dist = distance(x, y, existing.x, existing.y);
+                const minSpacing = existing.hazardType?.minSpacing || hazardType.minSpacing;
+                if (dist < minSpacing) {
+                  overlapping = true;
+                  break;
+                }
               }
+              if (overlapping) break;
             }
-            if (overlapping) break;
           }
 
           if (!overlapping) break;
