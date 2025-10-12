@@ -5968,42 +5968,12 @@
 
       return (
         <div className={`${useMarginLayout ? 'fixed' : 'absolute'} inset-0 pointer-events-none`} style={{ zIndex: 1000 }}>
-          {/* Virtual Joystick Area (left side or left margin) */}
+          {/* Left Side Controls - Joystick with Weapon Cycle Button above */}
           <div
-            className="absolute w-32 h-32 pointer-events-auto transform"
+            className="absolute flex flex-col items-center gap-4 pointer-events-none"
             style={{
-              touchAction: 'none',
               left: joystickLeft,
-              top: verticalPosition.top,
-              transform: verticalPosition.transform
-            }}
-            onTouchStart={onJoystickStart}
-            onTouchMove={onJoystickMove}
-            onTouchEnd={onJoystickEnd}
-          >
-            <div className="w-full h-full rounded-full bg-gray-800 bg-opacity-50 border-2 border-gray-600 flex items-center justify-center">
-              <div className="text-2xl">🕹️</div>
-            </div>
-            {joystickActive && (
-              <div
-                className="absolute w-12 h-12 rounded-full bg-green-500 bg-opacity-70 transform -translate-x-1/2 -translate-y-1/2"
-                style={{
-                  left: `${joystickX}px`,
-                  top: `${joystickY}px`
-                }}
-              />
-            )}
-          </div>
-
-          {/* Action Button Stack (right side or right margin) */}
-          {/* Stack contains 3 buttons: weapon cycle, fire (middle), jump */}
-          {/* Fire button (middle of stack) should align with joystick center */}
-          <div
-            className="absolute flex flex-col gap-4 pointer-events-auto"
-            style={{
-              right: buttonsRight,
               top: '50%',
-              // Center the entire stack vertically so all buttons are properly positioned
               transform: 'translateY(-50%)'
             }}
           >
@@ -6020,7 +5990,39 @@
               </div>
             </div>
 
-            {/* Fire Button - This aligns with joystick center */}
+            {/* Virtual Joystick */}
+            <div
+              className="w-32 h-32 pointer-events-auto relative"
+              style={{ touchAction: 'none' }}
+              onTouchStart={onJoystickStart}
+              onTouchMove={onJoystickMove}
+              onTouchEnd={onJoystickEnd}
+            >
+              <div className="w-full h-full rounded-full bg-gray-800 bg-opacity-50 border-2 border-gray-600 flex items-center justify-center">
+                <div className="text-2xl">🕹️</div>
+              </div>
+              {joystickActive && (
+                <div
+                  className="absolute w-12 h-12 rounded-full bg-green-500 bg-opacity-70 transform -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `${joystickX}px`,
+                    top: `${joystickY}px`
+                  }}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Right Side Controls - Fire and Jump buttons */}
+          <div
+            className="absolute flex flex-col gap-4 pointer-events-auto"
+            style={{
+              right: buttonsRight,
+              top: '50%',
+              transform: 'translateY(-50%)'
+            }}
+          >
+            {/* Fire Button */}
             <div
               className="w-24 h-24 pointer-events-auto"
               style={{ touchAction: 'none' }}
