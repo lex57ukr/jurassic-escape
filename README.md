@@ -258,7 +258,16 @@ This provides two debug configurations:
   - Mobile setting is read-only (button disabled, shows "Always enabled on mobile")
 - **Invincibility frames** after taking damage for fair gameplay
 
-## 🔊 Sound Files
+## 🔊 Sound System
+
+The game features a **dual audio system** that automatically optimizes for your environment:
+
+- **Web Audio API** (HTTP/HTTPS): Used when serving from a web server for superior mobile reliability and unlimited sound mixing
+- **HTML Audio API** (file://): Automatic fallback when opening locally for hassle-free testing
+
+**For local development:** Simply open `index.html` directly in your browser - the HTML Audio system will automatically activate (check console for `[Audio] Using HTML Audio`). All sounds work perfectly with no additional setup needed.
+
+**For production/mobile:** Deploy to any web server (GitHub Pages, Netlify, etc.) and the game automatically switches to Web Audio API for optimal mobile performance (check console for `[Audio] Using Web Audio API`).
 
 Place the following `.wav` files in the `./assets/` folder for full audio experience:
 

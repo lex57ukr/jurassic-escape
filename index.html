@@ -6342,53 +6342,225 @@
       const [showSettingsMenu, setShowSettingsMenu] = useState(false);
       const [debugMode] = useState(() => localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.DEBUG_MODE) === 'true');
 
-      // Sound system with cloneNode and requestAnimationFrame
-      const soundsRef = useRef({});
+      // Dual audio system: Web Audio API (HTTP/HTTPS) + HTML Audio (file://)
+      // HTML Audio refs (file:// protocol - local development)
+      const htmlAudioElementsRef = useRef({}); // Preloaded Audio elements for cloning
 
-      const playSound = useCallback((sound) => {
-        if (!soundEnabled) return;
+      // Web Audio refs (http/https protocols - production/mobile)
+      const webAudioContextRef = useRef(null);   // AudioContext for decoding/playback
+      const webAudioBuffersRef = useRef({});     // Decoded AudioBuffer objects
+      const webAudioUnlockedRef = useRef(false); // Mobile autoplay unlock status
 
-        // Extract id from sound object (e.g., SOUNDS.SHOOT has .id property)
-        const soundId = sound?.id || sound;
-        const soundData = soundsRef.current[soundId];
-        if (!soundData) return;
+      // System selector
+      const useWebAudioRef = useRef(false);      // true = Web Audio API, false = HTML Audio
 
-        // Use requestAnimationFrame to defer audio playback off main thread
+      /**
+       * Web Audio API playback strategy (HTTP/HTTPS - production/mobile)
+       * Uses AudioContext + AudioBuffer for unlimited concurrent sound mixing
+       *
+       * @param {string} soundId - Sound identifier from SOUNDS constant
+       * @param {number} volume - Volume level (0-1)
+       * @param {Object} refs - Web Audio references { context, buffers }
+       */
+      const playWebAudio = useCallback((soundId, volume, refs) => {
+        const buffer = refs.buffers.current[soundId];
+        const ctx = refs.context.current;
+        if (!buffer || !ctx) return;
+
+        requestAnimationFrame(() => {
+          try {
+            // Create source node for this playback instance
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+
+            // Create gain node for volume control
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = volume;
+
+            // Connect: source → gain → destination
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            // Play sound
+            source.start(0);
+          } catch (e) {
+            console.log('[Audio] Web Audio playback failed:', e);
+          }
+        });
+      }, []);
+
+      /**
+       * HTML Audio playback strategy (file:// - local development)
+       * Uses Audio element cloning for simultaneous playback (6-8 concurrent limit)
+       *
+       * @param {string} soundId - Sound identifier from SOUNDS constant
+       * @param {number} volume - Volume level (0-1)
+       * @param {Object} refs - HTML Audio references { elements }
+       */
+      const playHtmlAudio = useCallback((soundId, volume, refs) => {
+        const audioElement = refs.elements.current[soundId];
+        if (!audioElement) return;
+
         requestAnimationFrame(() => {
           // Clone the audio element for simultaneous playback
-          const audio = soundData.cloneNode();
+          const audio = audioElement.cloneNode();
           audio.volume = volume;
-          audio.play().catch(e => console.log('Audio play failed:', e));
+          audio.play().catch(e => console.log('[Audio] HTML Audio playback failed:', e));
 
           // Clean up after playing
           audio.addEventListener('ended', () => {
             audio.remove();
           });
         });
-      }, [soundEnabled, volume]);
+      }, []);
 
-      useEffect(() => {
-        // Preload all sounds as base templates using unified SOUNDS constant
-        const sounds = {};
+      /**
+       * Web Audio API initialization strategy (HTTP/HTTPS - production/mobile)
+       * Creates AudioContext and preloads all sounds as AudioBuffers
+       *
+       * @param {Object} refs - Web Audio references { context, buffers }
+       * @returns {Function} Cleanup function to close AudioContext
+       */
+      const initializeWebAudio = useCallback((refs) => {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        refs.context.current = ctx;
+
+        // Preload all sounds as AudioBuffers
+        const loadPromises = Object.entries(SOUNDS).map(([key, config]) => {
+          return fetch(config.path)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => ctx.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+              refs.buffers.current[config.id] = audioBuffer;
+            })
+            .catch(err => console.error(`[Audio] Failed to load ${config.id}:`, err));
+        });
+
+        Promise.all(loadPromises).then(() => {
+          console.log('[Audio] All Web Audio buffers loaded');
+        });
+
+        // Return cleanup function
+        return () => {
+          if (ctx.state !== 'closed') {
+            ctx.close();
+          }
+        };
+      }, []);
+
+      /**
+       * HTML Audio initialization strategy (file:// - local development)
+       * Creates Audio elements and preloads all sounds for cloning
+       *
+       * @param {Object} refs - HTML Audio references { elements }
+       * @returns {Function} Cleanup function to pause and clear audio elements
+       */
+      const initializeHtmlAudio = useCallback((refs) => {
+        const audioElements = {};
         Object.entries(SOUNDS).forEach(([key, config]) => {
-          sounds[config.id] = new Audio(config.path);
+          audioElements[config.id] = new Audio(config.path);
         });
 
         // Preload all audio files
-        Object.values(sounds).forEach(audio => {
+        Object.values(audioElements).forEach(audio => {
           audio.load();
         });
 
-        soundsRef.current = sounds;
+        refs.elements.current = audioElements;
 
-        // Cleanup function to prevent memory leaks
+        // Return cleanup function
         return () => {
-          Object.values(sounds).forEach(audio => {
+          Object.values(audioElements).forEach(audio => {
             audio.pause();
             audio.src = '';
           });
         };
       }, []);
+
+      /**
+       * Unlock Web Audio API on mobile browsers
+       * Required due to autoplay policies - must be called from user interaction
+       */
+      const unlockAudio = useCallback(() => {
+        if (webAudioUnlockedRef.current || !useWebAudioRef.current) return;
+
+        const ctx = webAudioContextRef.current;
+        if (!ctx) return;
+
+        // Resume context (required on iOS Safari)
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(() => {
+            console.log('[Audio] Web Audio Context unlocked');
+            webAudioUnlockedRef.current = true;
+          });
+        } else {
+          webAudioUnlockedRef.current = true;
+        }
+      }, []);
+
+      /**
+       * Audio strategy lookup
+       * Maps system type to corresponding playback strategy
+       */
+      const audioStrategies = useMemo(() => ({
+        webAudio: {
+          play: playWebAudio,
+          refs: { context: webAudioContextRef, buffers: webAudioBuffersRef }
+        },
+        htmlAudio: {
+          play: playHtmlAudio,
+          refs: { elements: htmlAudioElementsRef }
+        }
+      }), [playWebAudio, playHtmlAudio]);
+
+      /**
+       * Unified sound playback interface
+       * Delegates to appropriate strategy based on protocol (Web Audio vs HTML Audio)
+       */
+      const playSound = useCallback((sound) => {
+        if (!soundEnabled) return;
+
+        // Extract id from sound object (e.g., SOUNDS.SHOOT has .id property)
+        const soundId = sound?.id || sound;
+
+        // Select and execute strategy
+        const strategyKey = useWebAudioRef.current ? 'webAudio' : 'htmlAudio';
+        const strategy = audioStrategies[strategyKey];
+        strategy.play(soundId, volume, strategy.refs);
+      }, [soundEnabled, volume, audioStrategies]);
+
+      /**
+       * Audio initialization strategy lookup
+       * Maps system type to corresponding initialization strategy
+       */
+      const audioInitStrategies = useMemo(() => ({
+        webAudio: {
+          initialize: initializeWebAudio,
+          refs: { context: webAudioContextRef, buffers: webAudioBuffersRef }
+        },
+        htmlAudio: {
+          initialize: initializeHtmlAudio,
+          refs: { elements: htmlAudioElementsRef }
+        }
+      }), [initializeWebAudio, initializeHtmlAudio]);
+
+      /**
+       * Initialize audio system on mount
+       * Detects protocol and delegates to appropriate initialization strategy
+       */
+      useEffect(() => {
+        // Detect protocol and choose audio system
+        const isFileProtocol = window.location.protocol === 'file:';
+        useWebAudioRef.current = !isFileProtocol;
+
+        console.log(`[Audio] Using ${useWebAudioRef.current ? 'Web Audio API' : 'HTML Audio'} (protocol: ${window.location.protocol})`);
+
+        // Select and execute initialization strategy, return its cleanup function
+        const strategyKey = useWebAudioRef.current ? 'webAudio' : 'htmlAudio';
+        const strategy = audioInitStrategies[strategyKey];
+        return strategy.initialize(strategy.refs);
+      }, [audioInitStrategies]);
 
       // Helper to get the appropriate viewport config based on device and orientation
       const getViewportConfig = useCallback((scale) =>
@@ -6774,11 +6946,12 @@
 
       // Game Flow Handlers
       const startGame = useCallback(() => {
+        unlockAudio(); // Unlock Web Audio on game start
         setCurrentLevel(1);
         setScore(0);
         initGame(1);
         transitionToState(GAME_CONSTANTS.CORE.GAME_STATES.PLAYING, playSound, null, setGameState);
-      }, [initGame, playSound]);
+      }, [initGame, playSound, unlockAudio]);
 
       const nextLevel = useCallback(() => {
         const next = currentLevel + 1;

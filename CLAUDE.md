@@ -274,6 +274,47 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 // - WORLD.SPAWN (nested: PLAYER, DEPOTS, OBSTACLES, DINOSAURS, POWERUPS, HAZARDS)
 ```
 
+### 7. Dual Audio System
+
+**Protocol-aware audio implementation for reliable sound playback across environments.**
+
+The game uses two audio systems that auto-switch based on protocol:
+
+**Web Audio API (HTTP/HTTPS)** - Production/mobile-optimized:
+
+- Uses `AudioContext` + `AudioBuffer` for superior reliability
+- Unlimited concurrent sound mixing (no browser limits)
+- Single audio unlock on game start (mobile auto-play policy compliance)
+- Fetches audio as `ArrayBuffer` → decodes to `AudioBuffer`
+- Each `playSound()` creates `AudioBufferSourceNode` + `GainNode`
+- Better mobile performance (no concurrent Audio element limits)
+
+**HTML Audio API (file://)** - Local development fallback:
+
+- Uses `new Audio()` + `cloneNode()` for simultaneous playback
+- Works with file:// protocol (no CORS issues)
+- Sufficient for local testing workflow
+- ~6-8 concurrent sound limit (browser dependent)
+
+**Strategy Pattern Implementation:**
+
+The audio system uses the strategy pattern to avoid if/else type discrimination:
+
+- **Strategy functions**: `playWebAudio()`, `playHtmlAudio()`, `initializeWebAudio()`, `initializeHtmlAudio()`
+- **Strategy lookup tables**: `audioStrategies` (playback), `audioInitStrategies` (initialization)
+- **Unified interface**: `playSound()` delegates to strategy via object lookup
+- **Single selection point**: Protocol detection in initialization `useEffect`
+- **Self-documenting names**: `htmlAudioElementsRef`, `webAudioContextRef`, `webAudioBuffersRef`, `webAudioUnlockedRef`
+
+**Implementation details:**
+
+- Protocol detection: `window.location.protocol === 'file:'`
+- Single `playSound()` interface (transparent to game logic)
+- Audio unlock called once in `startGame()` handler
+- Console logs indicate active system: `[Audio] Using Web Audio API` or `[Audio] Using HTML Audio`
+- Volume control via `GainNode` (Web Audio) or `audio.volume` (HTML Audio)
+- Strategy selection: `const strategyKey = useWebAudioRef.current ? 'webAudio' : 'htmlAudio'`
+
 ## Key Utility Functions
 
 **Navigation & Avoidance Mixin:**
