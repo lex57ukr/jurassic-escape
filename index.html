@@ -6018,13 +6018,21 @@
           </div>
 
           {/* Action Button Stack (right side or right margin) */}
+          {/* Stack contains 3 buttons: weapon cycle, fire (middle), jump */}
+          {/* Fire button (middle of stack) should align with joystick center */}
           <div
             className={`absolute flex flex-col gap-4 pointer-events-auto ${verticalPosition.transform !== 'none' ? 'transform' : ''}`}
             style={{
               right: buttonsRight,
               ...(verticalPosition.top ? { top: verticalPosition.top } : {}),
               ...(verticalPosition.bottom ? { bottom: verticalPosition.bottom } : {}),
-              ...(verticalPosition.transform !== 'none' ? { transform: verticalPosition.transform } : {})
+              // Offset upward by (button height + gap) so middle button aligns with joystick
+              ...(verticalPosition.transform !== 'none' ? {
+                transform: `${verticalPosition.transform} translateY(calc(-6rem - 1rem))`
+              } : {
+                // When using bottom positioning, offset upward by one button + gap
+                transform: 'translateY(calc(-6rem - 1rem))'
+              })
             }}
           >
             {/* Weapon Cycle Button */}
@@ -6032,8 +6040,7 @@
               className="w-24 h-24 pointer-events-auto"
               style={{ touchAction: 'none' }}
               onTouchStart={(e) => {
-                e.preventDefault();
-                onWeaponSwitch();
+                onWeaponSwitch(e);
               }}
             >
               <div className="w-full h-full rounded-full bg-purple-600 bg-opacity-70 border-4 border-purple-500 flex items-center justify-center text-white text-4xl shadow-lg">
@@ -6041,7 +6048,7 @@
               </div>
             </div>
 
-            {/* Fire Button */}
+            {/* Fire Button - This aligns with joystick center */}
             <div
               className="w-24 h-24 pointer-events-auto"
               style={{ touchAction: 'none' }}
