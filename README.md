@@ -35,6 +35,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 - **⏸ PAUSE Button**: Access pause menu
 - **⚙️ Settings Button**: Access game settings
 - Touch controls automatically appear on mobile devices
+- **Landscape mode optimized**: Wider 16:9 canvas for maximum viewing area on phones
 
 ### Objective
 
@@ -230,6 +231,9 @@ This provides two debug configurations:
   - Territorial predators that defend marked zones with spit attacks
   - Peaceful herbivores that flee when approached
 - **Mobile and desktop support** with responsive canvas and touch controls
+  - Automatic orientation detection: portrait mode uses 4:3 canvas, landscape mode uses 16:9 widescreen
+  - Optimized vertical spacing to maximize play area in landscape on phones
+  - Seamless adaptation when rotating device
 - **Hand-drawn canvas graphics** for all game entities
 - **Dynamic camera system** that follows the player
 - **Floating text system** for score popups and feedback

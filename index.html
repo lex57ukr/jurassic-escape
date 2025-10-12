@@ -892,10 +892,18 @@
           large: { width: 1200, height: 900, label: 'Large' },
         },
 
+        // Landscape viewports for mobile devices (wider aspect ratios)
+        VIEWPORTS_LANDSCAPE: {
+          small: { width: 960, height: 540, label: 'Small' },   // 16:9 aspect ratio
+          medium: { width: 1200, height: 675, label: 'Medium' }, // 16:9 aspect ratio
+          large: { width: 1440, height: 810, label: 'Large' },   // 16:9 aspect ratio
+        },
+
         CANVAS_SIZING: {
           WINDOW_PADDING: 20, // Horizontal padding from window edges
           VERTICAL_SPACING_DESKTOP: 200, // Space for UI above/below canvas on desktop
-          VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile
+          VERTICAL_SPACING_MOBILE: 250, // Extra space for touch controls on mobile (portrait)
+          VERTICAL_SPACING_MOBILE_LANDSCAPE: 120, // Minimal spacing for landscape (maximize vertical space)
         },
       },
     };
@@ -6164,6 +6172,7 @@
       const [showPauseMenu, setShowPauseMenu] = useState(false);
       const [canvasSize, setCanvasSize] = useState(GAME_CONSTANTS.CONFIG.VIEWPORTS.medium);
       const [isTouchDevice, setIsTouchDevice] = useState(false);
+      const [isLandscape, setIsLandscape] = useState(false);
       const [soundEnabled, setSoundEnabled] = useState(() => {
         const saved = localStorage.getItem(GAME_CONSTANTS.CONFIG.LOCAL_STORAGE_KEYS.SOUND_ENABLED);
         return saved !== null ? JSON.parse(saved) : true;
@@ -6238,6 +6247,20 @@
         };
       }, []);
 
+      // Helper to get the appropriate viewport config based on device and orientation
+      const getViewportConfig = useCallback((scale) =>
+        (isTouchDevice && isLandscape)
+          ? GAME_CONSTANTS.CONFIG.VIEWPORTS_LANDSCAPE[scale]
+          : GAME_CONSTANTS.CONFIG.VIEWPORTS[scale],
+        [isTouchDevice, isLandscape]
+      );
+
+      // Current viewport dimensions (memoized for canvas element)
+      const currentViewport = useMemo(
+        () => getViewportConfig(viewportScale),
+        [viewportScale, getViewportConfig]
+      );
+
       // Detect touch device and responsive canvas sizing
       useEffect(() => {
         // Detect if touch is supported
@@ -6251,14 +6274,33 @@
         }
 
         const updateCanvasSize = () => {
-          const baseScale = GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale];
-          // Adjust spacing based on device type
-          const verticalSpacing = hasTouchSupport
-            ? GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_MOBILE
-            : GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_DESKTOP;
-          const maxWidth = Math.min(window.innerWidth - GAME_CONSTANTS.CONFIG.CANVAS_SIZING.WINDOW_PADDING, baseScale.width);
-          const maxHeight = Math.min(window.innerHeight - verticalSpacing, baseScale.height);
-          const aspectRatio = baseScale.width / baseScale.height;
+          // Detect orientation (landscape = width > height)
+          const isCurrentlyLandscape = window.innerWidth > window.innerHeight;
+          setIsLandscape(isCurrentlyLandscape);
+
+          // Select viewport config based on device type and orientation
+          let viewportConfig;
+          if (hasTouchSupport && isCurrentlyLandscape) {
+            // Mobile landscape: use wide aspect ratio
+            viewportConfig = GAME_CONSTANTS.CONFIG.VIEWPORTS_LANDSCAPE[viewportScale];
+          } else {
+            // Desktop or mobile portrait: use standard 4:3 aspect ratio
+            viewportConfig = GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale];
+          }
+
+          // Adjust spacing based on device type and orientation
+          let verticalSpacing;
+          if (!hasTouchSupport) {
+            verticalSpacing = GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_DESKTOP;
+          } else if (isCurrentlyLandscape) {
+            verticalSpacing = GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_MOBILE_LANDSCAPE;
+          } else {
+            verticalSpacing = GAME_CONSTANTS.CONFIG.CANVAS_SIZING.VERTICAL_SPACING_MOBILE;
+          }
+
+          const maxWidth = Math.min(window.innerWidth - GAME_CONSTANTS.CONFIG.CANVAS_SIZING.WINDOW_PADDING, viewportConfig.width);
+          const maxHeight = Math.min(window.innerHeight - verticalSpacing, viewportConfig.height);
+          const aspectRatio = viewportConfig.width / viewportConfig.height;
 
           let width = maxWidth;
           let height = maxWidth / aspectRatio;
@@ -6273,8 +6315,13 @@
 
         updateCanvasSize();
         window.addEventListener('resize', updateCanvasSize);
+        // Also listen for orientation changes on mobile devices
+        window.addEventListener('orientationchange', updateCanvasSize);
 
-        return () => window.removeEventListener('resize', updateCanvasSize);
+        return () => {
+          window.removeEventListener('resize', updateCanvasSize);
+          window.removeEventListener('orientationchange', updateCanvasSize);
+        };
       }, [viewportScale]);
 
       const gameRef = useRef({
@@ -7257,8 +7304,8 @@
               <div className="relative">
                 <canvas
                   ref={canvasRef}
-                  width={GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale].width}
-                  height={GAME_CONSTANTS.CONFIG.VIEWPORTS[viewportScale].height}
+                  width={currentViewport.width}
+                  height={currentViewport.height}
                   style={{ width: `${canvasSize.width}px`, height: `${canvasSize.height}px` }}
                   className="border-4 border-green-600 bg-green-900 cursor-crosshair"
                   tabIndex={0}

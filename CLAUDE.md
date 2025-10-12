@@ -478,6 +478,7 @@ When adding new entity types, weapons, or game mechanics:
 - Test level transitions (Level 1 → 2 → 3)
 - Test all difficulty settings (Easy/Normal/Hard)
 - Test both desktop (mouse/keyboard) and mobile (touch) controls
+- Test mobile orientation changes (portrait ↔ landscape) - canvas should adapt automatically
 - Verify settings persistence (localStorage)
 - Check canvas rendering at all viewport sizes (Small/Medium/Large)
 
