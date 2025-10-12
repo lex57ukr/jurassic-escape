@@ -5952,19 +5952,24 @@
       const horizontalMargin = (viewportWidth - canvasSize.width) / 2;
       const useMarginLayout = isLandscape && horizontalMargin > 100;
 
-      // Calculate responsive vertical positioning based on screen size
-      // Small screens (phones): centered for one-handed use
-      // Medium screens (small tablets): slight shift toward bottom
-      // Large screens (iPads): firmly anchored near bottom for thumb reach
+      // Calculate responsive vertical positioning based on orientation and screen size
+      // Portrait mode (all sizes): vertically centered - comfortable reach for both hands
+      // Landscape + large screen: move toward bottom - easier thumb reach when holding sides
       const getVerticalPosition = () => {
-        if (viewportHeight < 768) {
-          // Small screens (phones) - vertically centered
+        // Portrait mode: always vertically centered regardless of screen size
+        if (!isLandscape) {
           return { top: '50%', transform: '-translate-y-1/2' };
-        } else if (viewportHeight < 1024) {
-          // Medium screens (small tablets) - 70% from top
-          return { top: '70%', transform: '-translate-y-1/2' };
+        }
+
+        // Landscape mode: position based on screen height
+        if (viewportHeight < 768) {
+          // Small screens (phones in landscape) - vertically centered
+          return { top: '50%', transform: '-translate-y-1/2' };
+        } else if (viewportHeight < 900) {
+          // Medium screens (small tablets in landscape) - slight shift toward bottom
+          return { top: '65%', transform: '-translate-y-1/2' };
         } else {
-          // Large screens (iPads) - anchored near bottom
+          // Large screens (iPads in landscape) - anchored near bottom for thumb reach
           return { bottom: '2rem', transform: 'none' };
         }
       };
