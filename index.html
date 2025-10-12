@@ -202,13 +202,13 @@
           TYRANNOSAURUS_REX: {
             id: 'trex',
             baseSize: 35,
-            health: 4,
+            health: 6,
             speed: 1.0,
             color: '#654321',
             points: 300,
             aggressive: true,
             territorial: false,
-            tranqShots: 3,
+            tranqShots: 5,
             sleepDuration: 240, // 4 seconds at 60fps
             spitAttack: null, // No ranged attack
           },
@@ -595,9 +595,9 @@
 
           DEPOTS: {
             TRANQ: {
-              COUNT_BASE: 3, // Base number of tranq depots per level
+              COUNT_BASE: 4, // Base number of tranq depots per level
               RADIUS: 15,
-              AMMO: 5, // Amount of tranquilizer ammo per depot
+              AMMO: 7, // Amount of tranquilizer ammo per depot
             },
             AMMO: {
               RADIUS: 15, // Same size as tranq depot
@@ -1026,7 +1026,7 @@
         ponds: 10,
         electricFences: 10,
         duckFamilies: 4, // 4 duck families (largest map with most ponds)
-        ammoPerDepot: 5 // T-Rex (4 HP) + 1 buffer
+        ammoPerDepot: 7 // T-Rex (6 HP) + 1 buffer
       }
     };
 
