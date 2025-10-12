@@ -1296,6 +1296,39 @@
     };
 
     /**
+     * Check if a circular position collides with any entities in provided arrays
+     *
+     * @param {number} x - X position to check
+     * @param {number} y - Y position to check
+     * @param {number} radius - Radius of entity being checked
+     * @param {...Array} entityArrays - Variable number of arrays containing entities with x, y, radius
+     * @returns {boolean} True if collision detected with any entity
+     *
+     * @remarks
+     * Consolidates repetitive circle collision checking patterns across codebase.
+     * Used for spawn validation, territory placement, hazard detection, etc.
+     *
+     * Pattern consolidation:
+     * - Before: Multiple loops checking tarPits, ponds, obstacles separately
+     * - After: Single function accepting variable arrays
+     *
+     * Usage examples:
+     * - checkCircularCollision(x, y, r, game.tarPits, game.ponds)
+     * - checkCircularCollision(x, y, r, game.obstacles)
+     * - checkCircularCollision(player.x, player.y, player.radius, game.tarPits)
+     */
+    const checkCircularCollision = (x, y, radius, ...entityArrays) => {
+      for (const entityArray of entityArrays) {
+        for (const entity of entityArray) {
+          if (circleCollision(x, y, radius, entity.x, entity.y, entity.radius)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    /**
      * Normalize a vector (dx, dy) and return unit vector with magnitude
      */
     const normalize = (dx, dy) => {
@@ -2875,7 +2908,7 @@
         };
       };
 
-      // Validator: territory-to-territory spacing + obstacle clearance
+      // Validator: territory-to-territory spacing + obstacle clearance + hazard avoidance
       const isValid = (x, y) => {
         // Check against existing territories (prevent clustering)
         // Uses radius-based spacing to handle variable territory sizes (regular vs exit)
@@ -2891,7 +2924,8 @@
           }
         }
 
-        return true;
+        // Check hazard collision (prevent territory center from spawning inside tar pits or ponds)
+        return !checkCircularCollision(x, y, newTerritoryRadius, game.tarPits, game.ponds);
       };
 
       // Retry with max attempts, use fallback (accepts last position if all attempts fail)

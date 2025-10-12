@@ -313,6 +313,7 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `isInBounds(x, y, mapWidth, mapHeight)` - Check if position is within map bounds
 - `isValidPosition(x, y, radius, game, clearance)` - Check if position has no collisions with existing entities
 - `circleCollision(x1, y1, r1, x2, y2, r2)` - Circle-vs-circle collision
+- `checkCircularCollision(x, y, radius, ...entityArrays)` - Check if circular position collides with any entities in multiple arrays (consolidates repetitive loops)
 - `circleRectCollision(...)` - Circle-vs-rotated-rectangle (for electric fences)
 - `distance(x1, y1, x2, y2)` - Euclidean distance
 - `findValidSpawnPosition(...)` - Collision-free spawn positioning for dinosaurs
