@@ -5981,28 +5981,28 @@
 
           {/* Action Button Stack (right side or right margin, vertically centered) */}
           <div
-            className="absolute flex flex-col gap-3 pointer-events-auto transform -translate-y-1/2"
+            className="absolute flex flex-col gap-4 pointer-events-auto transform -translate-y-1/2"
             style={{ right: buttonsRight, top: '50%' }}
           >
             {/* Fire Button */}
             <div
-              className="w-18 h-18 pointer-events-auto"
+              className="w-24 h-24 pointer-events-auto"
               style={{ touchAction: 'none' }}
               onTouchStart={onShootStart}
               onTouchEnd={onShootEnd}
             >
-              <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-2 border-red-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+              <div className="w-full h-full rounded-full bg-red-600 bg-opacity-70 border-4 border-red-500 flex items-center justify-center text-white text-base font-bold shadow-lg">
                 FIRE
               </div>
             </div>
 
             {/* Jump Button */}
             <div
-              className="w-18 h-18 pointer-events-auto"
+              className="w-24 h-24 pointer-events-auto"
               style={{ touchAction: 'none' }}
               onTouchStart={onJumpStart}
             >
-              <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+              <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-4 border-yellow-500 flex items-center justify-center text-white text-base font-bold shadow-lg">
                 JUMP
               </div>
             </div>
