@@ -651,6 +651,8 @@
 
           HAZARDS: {
             SPAWN_MAX_ATTEMPTS: 100, // Maximum attempts to spawn hazards (tar pits, electric fences)
+            SIZE_VARIANCE_MIN: 0.5,  // Minimum size multiplier (50% of base radius)
+            RADIUS_MULTIPLIER: 2,    // Multiplier for radius-to-spacing conversion (2 radii = diameter)
           },
 
           AMBIENT_WILDLIFE: {
@@ -760,6 +762,7 @@
           },
           POND_CHOICE: {
             minimumPondDistance: 100,          // Don't seek ponds closer than this after exiting
+            exitClearance: 30,                 // Distance beyond pond radius to confirm exit
           },
           DUCKLING: {
             followDistance: 20,                // Distance ducklings trail behind their leader (chain pattern)
@@ -1200,10 +1203,12 @@
      * @returns {boolean} True if spacing is valid (all entities are far enough)
      *
      * @remarks
-     * Reusable spacing validator for:
+     * Reusable spacing validator for uniform-sized entities:
      * - Electric fences: fence-to-fence minSpacing
-     * - Territories: territory-to-territory spacing (prevents clustering)
-     * - Any entity type requiring minimum spacing from same-type entities
+     * - Any entity type requiring fixed minimum spacing
+     *
+     * For variable-sized entities (territories, hazards with size variance),
+     * use checkRadiusBasedSpacing instead.
      */
     const checkMinimumSpacing = (x, y, entityArray, minDistance) => {
       for (const entity of entityArray) {
@@ -1337,10 +1342,13 @@
      */
     const spawnHazards = ({ count, hazardType, createFn, targetArray, existingArrays, game }) => {
       const maxAttempts = GAME_CONSTANTS.WORLD.SPAWN.HAZARDS.SPAWN_MAX_ATTEMPTS;
+      const sizeVarMin = GAME_CONSTANTS.WORLD.SPAWN.HAZARDS.SIZE_VARIANCE_MIN;
+      const radiusMult = GAME_CONSTANTS.WORLD.SPAWN.HAZARDS.RADIUS_MULTIPLIER;
+
       // Calculate maximum possible radius for this hazard type (baseRadius * max variance)
-      const maxNewRadius = hazardType.baseRadius * (0.5 + hazardType.sizeVariance);
+      const maxNewRadius = hazardType.baseRadius * (sizeVarMin + hazardType.sizeVariance);
       // Spacing multiplier derived from minSpacing / (2 * baseRadius) for backwards compatibility
-      const spacingMultiplier = hazardType.minSpacing / (2 * hazardType.baseRadius);
+      const spacingMultiplier = hazardType.minSpacing / (radiusMult * hazardType.baseRadius);
 
       for (let i = 0; i < count; i++) {
         let x, y;
@@ -2670,7 +2678,7 @@
           // Check if exited pond
           if (this.lastPond) {
             const dist = distance(this.mama.x, this.mama.y, this.lastPond.x, this.lastPond.y);
-            if (dist > this.lastPond.radius + 30) {
+            if (dist > this.lastPond.radius + aiConfig.POND_CHOICE.exitClearance) {
               // Fully exited, head to next pond (or wander if no other pond available)
               if (this.targetPond && this.targetPond !== this.lastPond) {
                 this.state = aiConfig.STATES.SEEK_POND; // Sets mama.state via getter

@@ -300,11 +300,12 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 
 **Spawning Utilities:**
 
-- `spawnHazards({ count, hazardType, createFn, targetArray, existingArrays, game })` - Consolidated hazard spawning with collision avoidance
+- `spawnHazards({ count, hazardType, createFn, targetArray, existingArrays, game })` - Consolidated hazard spawning with radius-based collision avoidance
 - `spawnDecorationPatches({ count, createFn, spread, targetArray, game, getExtraArgs })` - Consolidated decoration patch spawning with player clearance
 - `spawnWithCollisionCheck(game, radiusGetter, factory)` - Generic spawn helper with infinite retries for simple cases (powerups, depots)
 - `retryUntilValid(positionGenerator, validator, maxAttempts, allowFallback)` - Generic retry mechanism with configurable attempts/fallback
-- `checkMinimumSpacing(x, y, entityArray, minDistance)` - Reusable spacing validator for same-type entities
+- `checkMinimumSpacing(x, y, entityArray, minDistance)` - Spacing validator for uniform-sized entities (electric fences)
+- `checkRadiusBasedSpacing(x, y, newRadius, entityArray, spacingMultiplier)` - Spacing validator for variable-sized entities (territories, hazards)
 - `checkPlayerClearance(x, y, radius, game)` - Validate spawn doesn't block player/structures
 
 **Collision & Positioning:**
@@ -327,12 +328,12 @@ if (stateAccumulator.playerHealth !== undefined) setPlayerHealth(stateAccumulato
 - `createTranqDepot(game)` - Tranquilizer ammo crates (uses `spawnWithCollisionCheck`, guaranteed to succeed)
 - `createAmmoDepot()` - Regular ammo crates (fixed positions)
 - `createAmmoPickup()` - Bouncing ammo drops from defeated dinosaurs
-- `createTarPit()` - Movement-slowing tar hazards
-- `createPond()` - Water hazards with ripples and vegetation (lily pads, cattails)
+- `createTarPit(x, y)` - Movement-slowing tar hazards (spawned via `spawnHazards` with radius-based spacing)
+- `createPond(x, y)` - Water hazards with ripples and vegetation (spawned via `spawnHazards` with radius-based spacing)
 - `createElectricFence(game)` - Damage/stun hazards (uses `retryUntilValid` + `checkMinimumSpacing`, guaranteed to succeed)
 - `createExit(x, y)` - Level exit (static structure with locked state)
-- `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (uses `retryUntilValid` with fallback)
-- `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone
+- `createTerritoryForDino(dino, spawnPos, game)` - Territory for territorial dinosaurs (uses `checkRadiusBasedSpacing` for mixed-size territories)
+- `createExitTerritory(exitX, exitY, totalGuards)` - Exit protection zone (spawned before regular dinosaurs to enable spacing validation)
 - `createExitGuard(dinoType, angle, exitX, exitY, territoryIndex, difficulty)` - Guard dinosaurs around exit
 - `createDuckFamily(game)` - Ambient wildlife: mama duck with 2-5 ducklings (uses collision-free spawn positioning)
 
