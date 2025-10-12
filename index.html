@@ -5920,6 +5920,8 @@
       joystickX,
       joystickY,
       currentWeapon,
+      canvasSize,
+      isLandscape,
       onJoystickStart,
       onJoystickMove,
       onJoystickEnd,
@@ -5928,12 +5930,30 @@
       onShootStart,
       onShootEnd
     }) => {
+      // Calculate if we have enough margin space (>100px) to move controls outside canvas
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+      const horizontalMargin = (viewportWidth - canvasSize.width) / 2;
+      const useMarginLayout = isLandscape && horizontalMargin > 100;
+
+      // Calculate control positions
+      const joystickLeft = useMarginLayout
+        ? `${Math.max(horizontalMargin - 140, 10)}px`  // In left margin, or fallback to 10px
+        : '1rem';  // On-canvas fallback
+
+      const buttonsRight = useMarginLayout
+        ? `${Math.max(horizontalMargin - 100, 10)}px`  // In right margin, or fallback to 10px
+        : '1rem';  // On-canvas fallback
+
+      const jumpButtonRight = useMarginLayout
+        ? `${Math.max(horizontalMargin - 100, 10) + 112}px`  // Right margin + 80px button + 32px gap
+        : '7rem';  // On-canvas fallback
+
       return (
         <div className="absolute inset-0 pointer-events-none">
-          {/* Virtual Joystick Area (left side) */}
+          {/* Virtual Joystick Area (left side or left margin) */}
           <div
-            className="absolute left-4 bottom-4 w-32 h-32 pointer-events-auto"
-            style={{ touchAction: 'none' }}
+            className="absolute bottom-4 w-32 h-32 pointer-events-auto"
+            style={{ touchAction: 'none', left: joystickLeft }}
             onTouchStart={onJoystickStart}
             onTouchMove={onJoystickMove}
             onTouchEnd={onJoystickEnd}
@@ -5952,7 +5972,7 @@
             )}
           </div>
 
-          {/* Weapon Switch Button */}
+          {/* Weapon Switch Button (top margin or top-right) */}
           <div
             className="absolute right-4 top-4 w-16 h-16 pointer-events-auto"
             style={{ touchAction: 'none' }}
@@ -5963,10 +5983,10 @@
             </div>
           </div>
 
-          {/* Jump Button */}
+          {/* Jump Button (right side or right margin) */}
           <div
-            className="absolute right-28 bottom-4 w-20 h-20 pointer-events-auto"
-            style={{ touchAction: 'none' }}
+            className="absolute bottom-4 w-20 h-20 pointer-events-auto"
+            style={{ touchAction: 'none', right: jumpButtonRight }}
             onTouchStart={onJumpStart}
           >
             <div className="w-full h-full rounded-full bg-yellow-600 bg-opacity-70 border-2 border-yellow-500 flex items-center justify-center text-white font-bold shadow-lg">
@@ -5974,10 +5994,10 @@
             </div>
           </div>
 
-          {/* Shoot Button */}
+          {/* Shoot Button (right side or right margin) */}
           <div
-            className="absolute right-4 bottom-4 w-20 h-20 pointer-events-auto"
-            style={{ touchAction: 'none' }}
+            className="absolute bottom-4 w-20 h-20 pointer-events-auto"
+            style={{ touchAction: 'none', right: buttonsRight }}
             onTouchStart={onShootStart}
             onTouchEnd={onShootEnd}
           >
@@ -7369,6 +7389,8 @@
                     joystickX={gameRef.current.touch.joystick.currentX}
                     joystickY={gameRef.current.touch.joystick.currentY}
                     currentWeapon={gameRef.current.player.currentWeapon}
+                    canvasSize={canvasSize}
+                    isLandscape={isLandscape}
                     onJoystickStart={handleJoystickStart}
                     onJoystickMove={handleJoystickMove}
                     onJoystickEnd={handleJoystickEnd}
