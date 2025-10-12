@@ -2439,9 +2439,9 @@
       }
 
       // Override navigation mixin: specify what mama duck should avoid
-      // Ducks avoid obstacles, fences, and tar pits - but NOT ponds (they swim in ponds!)
+      // Ducks avoid obstacles, fences, tar pits, dinosaurs, and player - but NOT ponds (they swim in ponds!)
       mama.getHazardsToCheck = function(game) {
-        return [...game.obstacles, ...game.electricFences, ...game.tarPits];
+        return [...game.obstacles, ...game.electricFences, ...game.tarPits, ...game.dinosaurs, game.player];
       };
 
       // Set initial state on mama (she's the leader!)
