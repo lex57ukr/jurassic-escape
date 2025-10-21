@@ -6145,37 +6145,30 @@
             <h2 className="text-3xl font-bold text-green-400 mb-6">SETTINGS</h2>
             <div className="flex flex-col gap-4">
               <div className="bg-gray-700 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{soundEnabled ? '🔊' : '🔇'}</span>
-                    <span className="text-white font-semibold text-lg">Sound</span>
-                  </div>
-                  <button
-                    onClick={onSoundToggle}
-                    className={`px-6 py-2 font-bold rounded-lg transition-colors ${
-                      soundEnabled
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                    }`}
-                  >
-                    {soundEnabled ? 'ON' : 'OFF'}
-                  </button>
-                </div>
-              </div>
-              <div className="bg-gray-700 p-4 rounded-lg">
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">🔊</span>
-                    <span className="text-white font-semibold text-lg">Volume</span>
+                    <span className="text-2xl">{soundEnabled ? '🔊' : '🔇'}</span>
+                    <span className="text-white font-semibold text-lg">Sound & Volume</span>
                   </div>
                   <div className="flex items-center gap-3">
+                    <button
+                      onClick={onSoundToggle}
+                      className={`px-4 py-2 font-bold rounded-lg transition-colors ${
+                        soundEnabled
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                      }`}
+                    >
+                      {soundEnabled ? 'ON' : 'OFF'}
+                    </button>
                     <input
                       type="range"
                       min="0"
                       max="100"
                       value={Math.round(volume * 100)}
                       onChange={onVolumeChange}
-                      className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                      disabled={!soundEnabled}
+                      className="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background: `linear-gradient(to right, #16a34a 0%, #16a34a ${volume * 100}%, #4b5563 ${volume * 100}%, #4b5563 100%)`
                       }}
