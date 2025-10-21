@@ -161,6 +161,7 @@
             bulletColor: '#ff0',
             speed: 8,
             radius: 4,
+            dropsAmmoOnKill: true, // Regular bullets drop ammo pickups
             ammoConfig: {
               playerKey: 'ammo', // Property name on player object
               stateKey: 'playerAmmo', // React state variable name for setters and stateAccumulator
@@ -176,12 +177,35 @@
             radius: 3,
             startAmmo: 15,
             scoreMultiplier: 0.5, // 50% of kill points
+            dropsAmmoOnKill: false, // Tranq darts don't kill, so no ammo drops (non-lethal)
             ammoConfig: {
               playerKey: 'tranqAmmo', // Property name on player object
               stateKey: 'playerTranqAmmo', // React state variable name for setters and stateAccumulator
             },
             soundEffect: null, // Set after SOUNDS is defined
             bulletFactory: null, // Set after createTranquilizer is defined
+          },
+          GUIDED_MISSILE: {
+            id: 'missile',
+            icon: '🚀',
+            bulletColor: '#FF4500',  // Orange-red
+            speed: 2.5,              // Slower than bullets but tracking
+            radius: 6,               // Larger projectile
+            damage: 999,             // Instant kill on flying targets
+            turnRate: 0.15,          // Radians per frame (agile tracking)
+            maxLifetime: 300,        // 5 seconds max flight time (60fps)
+            trailLength: 8,          // Number of smoke trail particles
+            lockOnRange: 400,        // Auto-targets flying enemies within range
+            dropsAmmoOnKill: false,  // Missiles don't drop ammo (precious one-time-use for flying targets)
+            ammoConfig: {
+              startAmmo: 0,          // No starting missiles (must find)
+              maxAmmo: 5,            // Low capacity (powerful but limited)
+              icon: '📦🚀',
+              playerKey: 'missileAmmo',
+              stateKey: 'playerMissileAmmo',
+            },
+            soundEffect: null,       // Set after SOUNDS is defined
+            bulletFactory: null,     // Set after createGuidedMissile is defined
           },
         },
 
@@ -273,6 +297,55 @@
               lineWidth: 1,            // Stroke width
             },
           },
+          PTERANODON: {
+            id: 'ptero',
+            baseSize: 22,
+            health: 2,
+            speed: 1.8,              // Air speed (increased from 1.4 for wider patrol coverage)
+            color: '#8B7355',        // Tan/brown body
+            points: 125,
+            aggressive: true,
+            territorial: false,
+            tranqShots: 1,
+            sleepDuration: 300,      // 5 seconds at 60fps
+            spitAttack: null,        // No spit attack
+            canFly: true,            // Flying capability flag
+            // Flight mechanics
+            maxAltitude: 100,        // Maximum flight height
+            cruiseAltitude: 80,      // Normal patrol altitude
+            flightDuration: 1800,    // Frames before exhaustion (30 seconds at 60fps - doubled from 15)
+            restDuration: 180,       // Frames to recover stamina (3 seconds at 60fps)
+            minTakeoffStamina: 0.3,  // Minimum 30% stamina to take off (prevents fleeing when exhausted)
+            ascentSpeed: 3,          // Pixels per frame when taking off
+            descentSpeed: 2,         // Pixels per frame when landing
+            pullUpSpeed: 2,          // Pixels per frame when recovering from dive
+            diveDescentSpeed: 2,     // Pixels per frame during attack dive (reduced for shallower dive angle)
+            landingProximity: 20,    // Distance threshold to snap to landing spot
+            vulnerableAltitude: 20,  // Below this altitude, can be hit by regular weapons
+            // Dive attack
+            diveSpeed: 6,            // Speed during dive (increased to cover distance before hitting ground)
+            diveAltitude: 80,        // Altitude from which dive starts
+            diveCooldown: 240,       // Frames between dives (4 seconds at 60fps)
+            diveTelegraph: 60,       // Warning frames before dive (1 second at 60fps)
+            diveRange: 200,          // Max distance to initiate dive
+            diveContactDamage: 1,    // Damage on successful dive hit
+            takeoffAlertRange: 100,  // Distance at which player triggers aggressive takeoff with screech
+            // Landing preferences (sorted by weight, descending)
+            landingPreferences: [
+              { obstacleTypes: ['TALL_TREE'], weight: 0.5, searchRadius: 350 },     // Highest perches
+              { obstacleTypes: ['ROCK_CLUSTER'], weight: 0.3, searchRadius: 300 },  // Rocky outcrops
+              { obstacleTypes: ['TREE'], weight: 0.15, searchRadius: 300 },         // Lower perches
+              { obstacleTypes: ['BOULDER'], weight: 0.05, searchRadius: 250 },      // Last resort
+              { groundLanding: true, weight: 0.01 }                                  // Emergency only
+            ],
+            // Sharing behavior
+            sharesLandingSpots: true,   // Will perch near other pterodons
+            respectsCapacity: true,     // Checks spot availability before landing
+            // Visual effects
+            shadowScaleFactor: 0.5,     // How much shadow shrinks at max altitude
+            shadowOpacityMax: 0.3,      // Maximum shadow opacity at ground level
+            shadowEllipseRatio: 0.3,    // Y-radius / X-radius for elliptical shadow
+          },
         },
 
         OBSTACLES: {
@@ -292,6 +365,8 @@
               groundShadow: 'rgba(0, 0, 0, 0.2)', // Semi-transparent black shadow
             },
             foliageLayers: 3, // Number of foliage layers
+            landingCapacity: 1,  // Can hold 1 flying creature
+            landingSpacing: 0,   // Single occupant, no spacing needed
           },
           TALL_TREE: {
             id: 'tall_tree',
@@ -309,6 +384,8 @@
               groundShadow: 'rgba(0, 0, 0, 0.3)', // Darker shadow
             },
             foliageLayers: 4, // More foliage layers for fuller appearance
+            landingCapacity: 2,  // Can hold 2 flying creatures
+            landingSpacing: 20,  // Minimum distance between perched creatures
           },
           BUSH: {
             id: 'bush',
@@ -336,6 +413,8 @@
               groundShadow: 'rgba(0, 0, 0, 0.25)', // Shadow under boulder
             },
             clusters: 4, // Number of overlapping circles for rocky texture
+            landingCapacity: 1,  // Can hold 1 flying creature
+            landingSpacing: 0,   // Single occupant, no spacing needed
           },
           ROCK_CLUSTER: {
             id: 'rock_cluster',
@@ -350,6 +429,8 @@
               groundShadow: 'rgba(0, 0, 0, 0.3)', // Darker shadow for cluster
             },
             rocksPerCluster: { min: 5, max: 8 }, // More rocks to ensure visible cluster
+            landingCapacity: 3,  // Can hold 3 flying creatures
+            landingSpacing: 25,  // Minimum distance between perched creatures
           },
           MUSHROOM: {
             id: 'mushroom',
@@ -602,6 +683,10 @@
             AMMO: {
               RADIUS: 15, // Same size as tranq depot
             },
+            MISSILE: {
+              RADIUS: 18, // Slightly larger than other depots (contains missiles)
+              AMMO: 3, // Three missiles per depot (enough for multiple pteranodons)
+            },
           },
 
           OBSTACLES: {
@@ -703,6 +788,47 @@
             id: 'return',
             avoidsHazards: false,            // Return ignores hazards to reach territory quickly
             // Return uses TERRITORY config for thresholds and behavior
+          },
+          // Flying states for aerial creatures (pterodons, future flying dinos)
+          FLYING_PATROL: {
+            id: 'flying_patrol',
+            avoidsHazards: false,            // Flying creatures avoid obstacles at altitude, not ground hazards
+            speedMultiplier: 0.8,            // Patrol speed while cruising (increased from 0.6 for wider coverage)
+          },
+          DIVE_TELEGRAPH: {
+            id: 'dive_telegraph',
+            avoidsHazards: false,            // Stationary warning phase before dive
+            // Duration defined in creature constants (e.g., PTERANODON.diveTelegraph)
+          },
+          DIVING: {
+            id: 'diving',
+            avoidsHazards: false,            // Focused attack, straight line to target
+            // Speed and vulnerability defined in creature constants
+          },
+          GROUNDED_STUNNED: {
+            id: 'grounded_stunned',
+            avoidsHazards: false,            // Brief recovery after missed dive
+            duration: 30,                    // Frames stunned on ground (0.5 seconds at 60fps)
+          },
+          PULL_UP: {
+            id: 'pull_up',
+            avoidsHazards: false,            // Climbing back to cruise altitude after successful dive
+            // Uses normal flight speed
+          },
+          GROUNDED_RESTING: {
+            id: 'grounded_resting',
+            avoidsHazards: false,            // Perched on landing spot, recovering stamina
+            // Stamina recovery rate defined in creature constants
+          },
+          ASCENDING: {
+            id: 'ascending',
+            avoidsHazards: false,            // Taking off animation
+            // Ascent speed defined in creature constants (e.g., PTERANODON.takeOffSpeed)
+          },
+          DESCENDING: {
+            id: 'descending',
+            avoidsHazards: false,            // Landing animation
+            // Descent speed defined in creature constants (e.g., PTERANODON.landingSpeed)
           },
         },
         TERRITORY: {
@@ -846,6 +972,17 @@
               ctx.fillText(GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.icon, screenX, screenY);
             },
           },
+          MISSILE: {
+            fillColor: '#8B0000',
+            strokeColor: '#DC143C',
+            lineWidth: 2,
+            drawIcon: (ctx, screenX, screenY) => {
+              ctx.font = '16px Arial';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.icon, screenX, screenY);
+            },
+          },
         },
 
         RENDER: {
@@ -925,6 +1062,11 @@
         invincibilityMultiplier: 1.5,     // 90 frames (60 * 1.5)
         ammoDampingMultiplier: 1.14,      // 40% longer bouncing (-0.65 * 1.14 = -0.741)
         restoreResourcesOnLevelUp: true,  // Full health/ammo restore each level
+        // Pteranodon difficulty scaling
+        pteranodonDiveCooldownMultiplier: 1.5,  // 50% longer between dives (easier)
+        pteranodonDiveRangeMultiplier: 0.8,     // 20% shorter dive range (easier)
+        pteranodonRestMultiplier: 1.3,          // 30% longer rest (easier to catch)
+        pteranodonFlightMultiplier: 0.85,       // 15% shorter flight time (lands more often)
       },
       normal: {
         label: 'Normal',
@@ -935,6 +1077,11 @@
         invincibilityMultiplier: 1.0,     // 60 frames
         ammoDampingMultiplier: 1.0,       // Baseline bouncing
         restoreResourcesOnLevelUp: false, // Carry resources forward across levels
+        // Pteranodon difficulty scaling
+        pteranodonDiveCooldownMultiplier: 1.0,
+        pteranodonDiveRangeMultiplier: 1.0,
+        pteranodonRestMultiplier: 1.0,
+        pteranodonFlightMultiplier: 1.0,
       },
       hard: {
         label: 'Hard',
@@ -945,6 +1092,11 @@
         invincibilityMultiplier: 0.75,    // 45 frames (60 * 0.75)
         ammoDampingMultiplier: 0.86,      // 20% shorter bouncing (-0.65 * 0.86 = -0.559)
         restoreResourcesOnLevelUp: false, // Carry resources forward across levels
+        // Pteranodon difficulty scaling
+        pteranodonDiveCooldownMultiplier: 0.7,  // 30% faster dive cooldown (harder)
+        pteranodonDiveRangeMultiplier: 1.3,     // 30% longer dive range (harder)
+        pteranodonRestMultiplier: 0.7,          // 30% faster recovery (harder to catch)
+        pteranodonFlightMultiplier: 1.2,        // 20% longer flight time (stays airborne more)
       },
     };
 
@@ -965,7 +1117,8 @@
         dinosaurs: [
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR, count: 3 },
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS, count: 2 },
-          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 2 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 2 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PTERANODON, count: 5 }
         ],
         obstacles: 40,
         powerups: 3,
@@ -973,7 +1126,8 @@
         ponds: 2,
         electricFences: 2,
         duckFamilies: 2, // 2 duck families (peaceful ambient wildlife)
-        ammoPerDepot: 3 // Raptor (2 HP) + 1 buffer
+        ammoPerDepot: 3, // Raptor (2 HP) + 1 buffer
+        missileDepots: 2 // 2 missile depots (6 missiles total for 5 pteranodons)
       },
       2: {
         name: "Deeper Danger",
@@ -991,7 +1145,8 @@
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS, count: 2 },
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS, count: 2 },
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 4 },
-          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS, count: 3 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS, count: 3 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PTERANODON, count: 10 }
         ],
         obstacles: 70,
         powerups: 4,
@@ -999,7 +1154,8 @@
         ponds: 5,
         electricFences: 6,
         duckFamilies: 3, // 3 duck families (more ponds = more ducks)
-        ammoPerDepot: 4 // Dilophosaurus (3 HP) + 1 buffer
+        ammoPerDepot: 4, // Dilophosaurus (3 HP) + 1 buffer
+        missileDepots: 4 // 4 missile depots (12 missiles total for 10 pteranodons)
       },
       3: {
         name: "Final Escape",
@@ -1018,7 +1174,8 @@
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.STEGOSAURUS, count: 5, speed: 0.9 }, // Slightly faster
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS, count: 5 },
           { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS, count: 6 },
-          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS, count: 5 }
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS, count: 5 },
+          { type: GAME_CONSTANTS.ENTITIES.DINOSAURS.PTERANODON, count: 15 }
         ],
         obstacles: 100,
         powerups: 5,
@@ -1026,7 +1183,8 @@
         ponds: 10,
         electricFences: 10,
         duckFamilies: 4, // 4 duck families (largest map with most ponds)
-        ammoPerDepot: 7 // T-Rex (6 HP) + 1 buffer
+        ammoPerDepot: 7, // T-Rex (6 HP) + 1 buffer
+        missileDepots: 5 // 5 missile depots (15 missiles total for 15 pteranodons)
       }
     };
 
@@ -1059,6 +1217,9 @@
       ELECTRIC_SHOCK: { id: 'electric_shock', path: './assets/electric_shock.wav' },
       UNPAUSE: { id: 'unpause', path: './assets/game_start.wav' }, // Alias to game_start
       DING: { id: 'ding', path: './assets/ding.wav' },
+      PTERANODON_SCREECH: { id: 'pteranodon_screech', path: './assets/alert.wav' },
+      MISSILE_LAUNCH: { id: 'missile_launch', path: './assets/missile_launch.wav' },
+      MISSILE_EXPLODE: { id: 'missile_explode', path: './assets/missile_explode.wav' },
     };
 
     // ============================================================================
@@ -1070,6 +1231,7 @@
     // Sound effects for weapon types
     GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.soundEffect = SOUNDS.SHOOT;
     GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.soundEffect = SOUNDS.TRANQ_SHOOT;
+    GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.soundEffect = SOUNDS.MISSILE_LAUNCH;
 
     // Sound effects for game state transitions
     GAME_CONSTANTS.CORE.GAME_STATES.PLAYING.soundEffect = SOUNDS.GAME_START;
@@ -1145,6 +1307,17 @@
         const fenceRadius = fence.width / 2;
         if (dist < radius + fenceRadius + clearance) {
           return false;
+        }
+      }
+
+      // Check against all depot types (tranq, missile, ammo) to prevent overlap
+      const depotArrays = [game.tranqDepots, game.missileDepots, game.ammoDepots];
+      for (const depotArray of depotArrays) {
+        for (const depot of depotArray) {
+          const dist = distance(x, y, depot.x, depot.y);
+          if (dist < radius + depot.radius + clearance) {
+            return false;
+          }
         }
       }
 
@@ -1698,6 +1871,119 @@
     };
 
     /**
+     * Create a guided missile projectile with tracking AI
+     *
+     * @param {number} fromX - Starting X position
+     * @param {number} fromY - Starting Y position
+     * @param {number} toX - Initial target X position
+     * @param {number} toY - Initial target Y position
+     * @param {Object} game - Game state object
+     * @returns {Object} Missile object with update and draw methods
+     *
+     * @remarks
+     * Tracking algorithm:
+     * - Auto-locks to nearest flying target within lockOnRange
+     * - Turns toward target each frame (limited by turnRate for smooth arcs)
+     * - Continues straight if target lost (lands/dies)
+     * - Expires after maxLifetime frames
+     *
+     * Visual effects:
+     * - Pointed missile shape (rotated toward velocity direction)
+     * - Smoke trail particles (fading gray circles)
+     * - Orange-red color (#FF4500)
+     */
+    const createGuidedMissile = (game) => (fromX, fromY, toX, toY) => {
+      const weapon = GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE;
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+
+      const missile = {
+        x: fromX,
+        y: fromY,
+        vx: Math.cos(angle) * weapon.speed,
+        vy: Math.sin(angle) * weapon.speed,
+        radius: weapon.radius,
+        weaponType: weapon,
+        target: findNearestFlyingTarget(fromX, fromY, game),
+        lifetime: 0,
+        trail: [] // Stores recent positions for smoke effect
+      };
+
+      missile.update = function(game) {
+        // Tracking logic: turn toward target
+        // Check if target is still flying and above vulnerable altitude
+        if (this.target && this.target.type.canFly && this.target.altitude > this.target.type.vulnerableAltitude && !this.target.isSleeping) {
+          const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+          const currentAngle = Math.atan2(this.vy, this.vx);
+
+          // Calculate angle difference (shortest path)
+          let angleDiff = targetAngle - currentAngle;
+          while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+          while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+          // Turn toward target (clamped by turnRate)
+          const turn = Math.max(-weapon.turnRate, Math.min(weapon.turnRate, angleDiff));
+          const newAngle = currentAngle + turn;
+
+          this.vx = Math.cos(newAngle) * weapon.speed;
+          this.vy = Math.sin(newAngle) * weapon.speed;
+        } else {
+          // Lost target: continue straight
+          this.target = null;
+        }
+
+        // Update smoke trail
+        this.trail.unshift({ x: this.x, y: this.y });
+        if (this.trail.length > weapon.trailLength) {
+          this.trail.pop();
+        }
+
+        // Update position
+        this.x += this.vx;
+        this.y += this.vy;
+        this.lifetime++;
+
+        // Check if still alive
+        return this.lifetime < weapon.maxLifetime && isInBounds(this.x, this.y, game.mapWidth, game.mapHeight);
+      };
+
+      missile.draw = function(ctx, cameraX, cameraY) {
+        // Draw smoke trail
+        this.trail.forEach((pos, i) => {
+          const alpha = 1 - (i / this.trail.length);
+          const screenPos = toScreenCoords(pos.x, pos.y, cameraX, cameraY);
+          ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.5})`;
+          ctx.beginPath();
+          ctx.arc(screenPos.x, screenPos.y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Draw missile body
+        const screenPos = toScreenCoords(this.x, this.y, cameraX, cameraY);
+        ctx.save();
+        ctx.translate(screenPos.x, screenPos.y);
+        ctx.rotate(Math.atan2(this.vy, this.vx));
+
+        // Pointed missile shape
+        ctx.fillStyle = this.weaponType.bulletColor;
+        ctx.beginPath();
+        ctx.moveTo(8, 0);        // Nose
+        ctx.lineTo(-4, -4);      // Top fin
+        ctx.lineTo(-4, 4);       // Bottom fin
+        ctx.closePath();
+        ctx.fill();
+
+        // Fins outline
+        ctx.strokeStyle = '#8B0000'; // Dark red
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.restore();
+      };
+
+      return missile;
+    };
+
+    /**
      * Transition to a new game state with automatic sound effect handling
      *
      * @param {Object} newState - State object from GAME_CONSTANTS.CORE.GAME_STATES
@@ -1799,6 +2085,31 @@
 
       playSound(weapon.soundEffect);
       return true;
+    };
+
+    /**
+     * Cycle to the next weapon in rotation
+     *
+     * @param {Object} currentWeapon - Current weapon from GAME_CONSTANTS.ENTITIES.WEAPONS
+     * @returns {Object} Next weapon in cycle
+     *
+     * @remarks
+     * Weapon cycling pattern: REGULAR → TRANQUILIZER → GUIDED_MISSILE → REGULAR
+     *
+     * Consolidates duplicate cycling logic used in:
+     * - Keyboard handler (Q key)
+     * - Touch handler (weapon switch button)
+     *
+     * Why this consolidation:
+     * - DRY principle: identical logic was duplicated in two places
+     * - Single source of truth for weapon order
+     * - Easy to extend: adding new weapons only requires editing one function
+     */
+    const cycleWeapon = (currentWeapon) => {
+      const { REGULAR, TRANQUILIZER, GUIDED_MISSILE } = GAME_CONSTANTS.ENTITIES.WEAPONS;
+      if (currentWeapon === REGULAR) return TRANQUILIZER;
+      if (currentWeapon === TRANQUILIZER) return GUIDED_MISSILE;
+      return REGULAR;
     };
 
     /**
@@ -2127,6 +2438,31 @@
 
           depot.draw = function(ctx, cameraX, cameraY) {
             drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.TRANQ);
+          };
+
+          return depot;
+        }
+      );
+    };
+
+    /**
+     * Create a missile depot object with collision-free spawning
+     */
+    const createMissileDepot = (game) => {
+      return spawnWithCollisionCheck(
+        game,
+        () => GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.MISSILE.RADIUS,
+        (x, y) => {
+          const depot = {
+            x,
+            y,
+            radius: GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.MISSILE.RADIUS,
+            ammo: GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.MISSILE.AMMO,
+            active: true
+          };
+
+          depot.draw = function(ctx, cameraX, cameraY) {
+            drawDepot(ctx, this, cameraX, cameraY, GAME_CONSTANTS.VISUALS.DEPOT_STYLES.MISSILE);
           };
 
           return depot;
@@ -2976,14 +3312,29 @@
      * @param {number} territoryIndex - Index of exit territory in territories array
      * @param {string} difficulty - Current difficulty setting
      */
-    const createExitGuard = (dinoType, angle, exitX, exitY, territoryIndex, difficulty) => {
+    const createExitGuard = (dinoType, angle, exitX, exitY, territoryIndex, difficulty, game) => {
       // Convert angle to radians
       const angleRad = (angle * Math.PI) / 180;
 
       // Position guard in circle around exit
       const spawnRadius = GAME_CONSTANTS.AI.EXIT.TERRITORY_RADIUS * GAME_CONSTANTS.AI.EXIT.GUARD_SPAWN_RADIUS_MULTIPLIER;
-      const x = exitX + Math.cos(angleRad) * spawnRadius;
-      const y = exitY + Math.sin(angleRad) * spawnRadius;
+      let x = exitX + Math.cos(angleRad) * spawnRadius;
+      let y = exitY + Math.sin(angleRad) * spawnRadius;
+
+      // Find collision-free position near intended spawn point
+      const guardRadius = dinoType.baseSize;
+      const spawnPos = findValidSpawnPosition(
+        x,
+        y,
+        guardRadius,
+        game.obstacles,
+        game,
+        GAME_CONSTANTS.WORLD.SPAWN.DINOSAURS.SPAWN_MAX_ATTEMPTS
+      );
+
+      // Use validated position (fallback to original if all attempts fail)
+      x = spawnPos.x;
+      y = spawnPos.y;
 
       // Apply difficulty modifiers
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
@@ -3047,6 +3398,36 @@
         if (dist < nearestDist) {
           nearestDist = dist;
           nearest = dino;
+        }
+      });
+
+      return nearest;
+    };
+
+    /**
+     * Find nearest flying target for missile tracking
+     * @param {number} x - Starting X position
+     * @param {number} y - Starting Y position
+     * @param {Object} game - Game state object
+     * @returns {Object|null} Nearest flying dinosaur or null
+     *
+     * @remarks
+     * Only targets flying creatures above vulnerable altitude within lockOnRange.
+     * Used by guided missiles for auto-targeting.
+     */
+    const findNearestFlyingTarget = (x, y, game) => {
+      const lockOnRange = GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.lockOnRange;
+      let nearest = null;
+      let nearestDist = Infinity;
+
+      game.dinosaurs.forEach(dino => {
+        // Only target flying creatures that are above their vulnerable altitude
+        if (dino.type.canFly && dino.altitude > dino.type.vulnerableAltitude && !dino.isSleeping) {
+          const dist = distance(x, y, dino.x, dino.y);
+          if (dist < nearestDist && dist <= lockOnRange) {
+            nearestDist = dist;
+            nearest = dino;
+          }
         }
       });
 
@@ -3719,6 +4100,211 @@
         ctx.lineTo(endX, endY);
         ctx.stroke();
       }
+    };
+
+    /**
+     * Draw Pteranodon with flying/grounded poses
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} scale - Scale factor for drawing
+     * @param {Object} ptero - Pteranodon object
+     *
+     * @remarks
+     * Two distinct poses:
+     * - Flying: extended wings with flap animation, no legs visible
+     * - Grounded: folded wings, legs visible, perched stance
+     *
+     * Wing flap animation:
+     * - Patrol: slow flap (period = 60 frames)
+     * - Dive/chase: fast flap (period = 30 frames)
+     *
+     * Color palette:
+     * - Body: #8B7355 (tan/brown)
+     * - Wings: #A0826D (lighter tan membrane)
+     * - Crest: #654321 (dark brown)
+     * - Beak: #FFD700 (golden yellow)
+     */
+    /**
+     * Draw pteranodon body (in local/transformed space)
+     * Shadow is drawn separately via drawPteranodonShadow
+     * @param {CanvasRenderingContext2D} ctx - Canvas context (already transformed)
+     * @param {number} scale - Size scale factor
+     * @param {Object} ptero - Pteranodon object
+     */
+    const drawPteranodon = (ctx, scale, ptero) => {
+      const colors = {
+        body: '#8B7355',
+        wingMembrane: '#A0826D',
+        wingBone: '#6F5F4F',
+        crest: '#654321',
+        beak: '#FFD700',
+        eye: '#000000'
+      };
+
+      if (ptero.isFlying || ptero.state === GAME_CONSTANTS.AI.STATES.ASCENDING || ptero.state === GAME_CONSTANTS.AI.STATES.DESCENDING) {
+        // Flying pose
+        const flapPeriod = (ptero.state === GAME_CONSTANTS.AI.STATES.DIVING || ptero.state === GAME_CONSTANTS.AI.STATES.DIVE_TELEGRAPH) ? 30 : 60;
+        const flapCycle = Math.sin((ptero.animationFrame || 0) / flapPeriod * Math.PI * 2);
+        const wingAngle = flapCycle * 0.3; // ±0.3 radians flap
+
+        // Body (elongated oval, tilted forward when diving)
+        const tilt = ptero.state === GAME_CONSTANTS.AI.STATES.DIVING ? 0.3 : 0;
+        ctx.save();
+        ctx.rotate(tilt);
+        ctx.fillStyle = colors.body;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 15 * scale, 10 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Wings (triangular membranes)
+        ctx.fillStyle = colors.wingMembrane;
+        ctx.strokeStyle = colors.wingBone;
+        ctx.lineWidth = 2;
+
+        // Left wing
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-25 * scale * Math.cos(wingAngle), -15 * scale + 10 * scale * Math.sin(wingAngle));
+        ctx.lineTo(-15 * scale, 5 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Right wing
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(25 * scale * Math.cos(wingAngle), -15 * scale + 10 * scale * Math.sin(wingAngle));
+        ctx.lineTo(15 * scale, 5 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Head with crest
+        ctx.fillStyle = colors.body;
+        ctx.beginPath();
+        ctx.arc(10 * scale, -5 * scale, 6 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crest (backward-pointing)
+        ctx.fillStyle = colors.crest;
+        ctx.beginPath();
+        ctx.moveTo(10 * scale, -8 * scale);
+        ctx.lineTo(18 * scale, -10 * scale);
+        ctx.lineTo(16 * scale, -5 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Beak
+        ctx.fillStyle = colors.beak;
+        ctx.beginPath();
+        ctx.moveTo(16 * scale, -5 * scale);
+        ctx.lineTo(22 * scale, -6 * scale);
+        ctx.lineTo(22 * scale, -4 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = colors.eye;
+        ctx.beginPath();
+        ctx.arc(13 * scale, -6 * scale, 1.5 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+      } else {
+        // Grounded pose (perched)
+        // Body (more upright)
+        ctx.fillStyle = colors.body;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 12 * scale, 10 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Folded wings (small triangles against body)
+        ctx.fillStyle = colors.wingBone;
+        ctx.beginPath();
+        ctx.moveTo(-5 * scale, -3 * scale);
+        ctx.lineTo(-10 * scale, -8 * scale);
+        ctx.lineTo(-8 * scale, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(5 * scale, -3 * scale);
+        ctx.lineTo(10 * scale, -8 * scale);
+        ctx.lineTo(8 * scale, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Legs (visible when grounded)
+        ctx.strokeStyle = colors.wingBone;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-3 * scale, 8 * scale);
+        ctx.lineTo(-3 * scale, 15 * scale);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(3 * scale, 8 * scale);
+        ctx.lineTo(3 * scale, 15 * scale);
+        ctx.stroke();
+
+        // Head with crest
+        ctx.fillStyle = colors.body;
+        ctx.beginPath();
+        ctx.arc(8 * scale, -8 * scale, 6 * scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crest
+        ctx.fillStyle = colors.crest;
+        ctx.beginPath();
+        ctx.moveTo(8 * scale, -11 * scale);
+        ctx.lineTo(15 * scale, -14 * scale);
+        ctx.lineTo(13 * scale, -9 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Beak
+        ctx.fillStyle = colors.beak;
+        ctx.beginPath();
+        ctx.moveTo(14 * scale, -8 * scale);
+        ctx.lineTo(19 * scale, -9 * scale);
+        ctx.lineTo(19 * scale, -7 * scale);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eye
+        ctx.fillStyle = colors.eye;
+        ctx.beginPath();
+        ctx.arc(11 * scale, -9 * scale, 1.5 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    };
+
+    /**
+     * Draw altitude-based shadow for flying creatures (in screen space)
+     * @param {CanvasRenderingContext2D} ctx - Canvas context (NOT transformed)
+     * @param {number} screenX - Screen X coordinate
+     * @param {number} screenY - Screen Y coordinate
+     * @param {Object} flyer - Flying creature object (pteranodon, etc.)
+     */
+    const drawFlyerShadow = (ctx, screenX, screenY, flyer) => {
+      if (flyer.altitude <= 0) return; // No shadow when grounded
+
+      const altitudeRatio = flyer.altitude / flyer.type.maxAltitude;
+      const shadowScale = 1 - altitudeRatio * flyer.type.shadowScaleFactor;
+      const shadowOpacity = flyer.type.shadowOpacityMax * (1 - altitudeRatio);
+      const shadowRadius = flyer.size * shadowScale;
+
+      ctx.save();
+      ctx.globalAlpha = shadowOpacity;
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.ellipse(
+        screenX,
+        screenY + flyer.size,
+        shadowRadius,
+        shadowRadius * flyer.type.shadowEllipseRatio,
+        0, 0, Math.PI * 2
+      );
+      ctx.fill();
+      ctx.restore();
     };
 
     /**
@@ -5034,6 +5620,22 @@
         }
       });
 
+      // Check missile depot collection
+      game.missileDepots.forEach(depot => {
+        if (!depot.active) return;
+
+        if (circleCollision(game.player.x, game.player.y, game.player.radius, depot.x, depot.y, depot.radius)) {
+          depot.active = false;
+          game.player.missileAmmo = Math.min(
+            (game.player.missileAmmo || 0) + depot.ammo,
+            GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.ammoConfig.maxAmmo
+          );
+          stateAccumulator.playerMissileAmmo = game.player.missileAmmo;
+          playSound(SOUNDS.PICKUP_AMMO);
+          game.floatingTexts.push(createFloatingText(depot.x, depot.y, `+${depot.ammo}`, '#FF4500'));
+        }
+      });
+
       // Update ammo pickups (using instance method)
       game.ammoPickups = game.ammoPickups.filter(pickup =>
         pickup.update(game.player, difficulty, playSound, stateAccumulator, createFloatingText)
@@ -5062,8 +5664,22 @@
         for (let i = 0; i < game.dinosaurs.length; i++) {
           const dino = game.dinosaurs[i];
 
+          // Flying creatures are invulnerable when at high altitude (except to missiles)
+          if (dino.type.canFly && dino.altitude > dino.type.vulnerableAltitude) {
+            // Missiles can hit flying targets at any altitude
+            if (bullet.weaponType !== GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE) {
+              continue; // Cannot hit flying targets with regular/tranq weapons
+            }
+          }
+
           if (circleCollision(bullet.x, bullet.y, bullet.radius, dino.x, dino.y, dino.size)) {
-            if (bullet.weaponType === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER) {
+            // Handle damage based on weapon type
+            if (bullet.weaponType === GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE) {
+              // Guided missile - instant kill on flying targets
+              dino.health = 0;
+              playSound(SOUNDS.EXPLOSION);
+              game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, 'MISSILE KILL!', '#FF4500'));
+            } else if (bullet.weaponType === GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER) {
               // Tranquilizer dart
               if (!dino.isSleeping) {
                 dino.tranqHits++;
@@ -5085,67 +5701,114 @@
               // Regular bullet
               dino.health--;
               playSound(SOUNDS.HIT);
+            }
 
-              if (dino.health <= 0) {
-                // Spawn single ammo pickup that restores all ammo at once (at dinosaur's feet)
-                const groundY = dino.y + dino.size; // Spawn at dinosaur's bottom
+            // Check if dinosaur died (applies to all weapon types)
+            if (dino.health <= 0) {
+              const groundY = dino.y + dino.size; // Spawn at dinosaur's bottom
+
+              // Spawn ammo pickup based on weapon configuration
+              if (bullet.weaponType.dropsAmmoOnKill) {
                 game.ammoPickups.push(createAmmoPickup(dino.x, groundY, groundY, dino.maxHealth));
+              }
 
-                stateAccumulator.score = (stateAccumulator.score || 0) + dino.points;
-                game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
+              stateAccumulator.score = (stateAccumulator.score || 0) + dino.points;
+              game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
 
-                // Territory cleanup on dinosaur death
-                // Complex logic handles both normal territories and exit guard territories
-                if (dino.territorial && dino.territoryIndex !== undefined) {
-                  const territory = game.territories[dino.territoryIndex];
-                  let shouldRemoveTerritory = false;
+              // Territory cleanup on dinosaur death
+              // Complex logic handles both normal territories and exit guard territories
+              if (dino.territorial && dino.territoryIndex !== undefined) {
+                const territory = game.territories[dino.territoryIndex];
+                let shouldRemoveTerritory = false;
 
-                  // Exit territory special case: multiple guards share one territory
-                  if (territory && territory.isExitTerritory) {
-                    territory.guardCount--;
+                // Exit territory special case: multiple guards share one territory
+                if (territory && territory.isExitTerritory) {
+                  territory.guardCount--;
 
-                    // All guards defeated: unlock exit and remove territory
-                    // Why guard counting:
-                    // - Multiple dinosaurs guard single exit territory
-                    // - Exit should only unlock when ALL guards dead
-                    // - Territory persists until last guard falls
-                    // - Creates "defend the gate" mechanic for final challenge
-                    if (territory.guardCount === 0) {
-                      if (game.exit) game.exit.locked = false;
-                      shouldRemoveTerritory = true;
-                    }
-                  } else {
-                    // Normal territory: 1:1 mapping with dinosaur, always removed
+                  // All guards defeated: unlock exit and remove territory
+                  // Why guard counting:
+                  // - Multiple dinosaurs guard single exit territory
+                  // - Exit should only unlock when ALL guards dead
+                  // - Territory persists until last guard falls
+                  // - Creates "defend the gate" mechanic for final challenge
+                  if (territory.guardCount === 0) {
+                    if (game.exit) game.exit.locked = false;
                     shouldRemoveTerritory = true;
                   }
-
-                  // Territory removal with index management
-                  if (shouldRemoveTerritory) {
-                    game.territories.splice(dino.territoryIndex, 1);
-
-                    // Critical: update territoryIndex for all remaining dinosaurs
-                    // Why this is necessary:
-                    // - territoryIndex stores array position, not ID
-                    // - Splicing shifts all subsequent indices down by 1
-                    // - Without update, dinosaurs would reference wrong territories
-                    // - Only affects dinosaurs with index > removed index
-                    game.dinosaurs.forEach(d => {
-                      if (d.territorial && d.territoryIndex !== undefined && d.territoryIndex > dino.territoryIndex) {
-                        d.territoryIndex--;
-                      }
-                    });
-                  }
+                } else {
+                  // Normal territory: 1:1 mapping with dinosaur, always removed
+                  shouldRemoveTerritory = true;
                 }
 
-                game.dinosaurs.splice(i, 1);
-                playSound(SOUNDS.DEATH);
+                // Territory removal with index management
+                if (shouldRemoveTerritory) {
+                  game.territories.splice(dino.territoryIndex, 1);
+
+                  // Critical: update territoryIndex for all remaining dinosaurs
+                  // Why this is necessary:
+                  // - territoryIndex stores array position, not ID
+                  // - Splicing shifts all subsequent indices down by 1
+                  // - Without update, dinosaurs would reference wrong territories
+                  // - Only affects dinosaurs with index > removed index
+                  game.dinosaurs.forEach(d => {
+                    if (d.territorial && d.territoryIndex !== undefined && d.territoryIndex > dino.territoryIndex) {
+                      d.territoryIndex--;
+                    }
+                  });
+                }
               }
+
+              game.dinosaurs.splice(i, 1);
+              playSound(SOUNDS.DEATH);
             }
+
             return false; // Remove bullet
           }
         }
 
         return true; // Keep bullet
+      });
+    };
+
+    /**
+     * Update guided missiles with tracking and collision detection
+     */
+    const updateMissiles = (game, playSound, stateAccumulator) => {
+      game.missiles = game.missiles.filter(missile => {
+        // Use instance method for physics update and tracking
+        if (!missile.update(game)) {
+          return false; // Remove if expired or out of bounds
+        }
+
+        // Check collision with flying dinosaurs
+        for (let i = 0; i < game.dinosaurs.length; i++) {
+          const dino = game.dinosaurs[i];
+
+          // Only hit flying creatures
+          if (!dino.type.canFly) {
+            continue;
+          }
+
+          if (circleCollision(missile.x, missile.y, missile.radius, dino.x, dino.y, dino.size)) {
+            // Instant kill on hit
+            playSound(SOUNDS.MISSILE_EXPLODE);
+
+            // Spawn ammo pickup
+            const groundY = dino.y + dino.size;
+            game.ammoPickups.push(createAmmoPickup(dino.x, groundY, groundY, dino.maxHealth));
+
+            // Award points
+            stateAccumulator.score = (stateAccumulator.score || 0) + dino.points;
+            game.floatingTexts.push(createFloatingText(dino.x, dino.y - dino.size, `+${dino.points}`, '#FFD700'));
+
+            // Remove dinosaur
+            game.dinosaurs.splice(i, 1);
+
+            return false; // Remove missile
+          }
+        }
+
+        return true; // Keep missile
       });
     };
 
@@ -5411,12 +6074,150 @@
     };
 
     /**
+     * Create a flying entity mixin with aerial navigation capabilities
+     *
+     * @param {number} x - Initial X position
+     * @param {number} y - Initial Y position
+     * @param {number} radius - Entity radius for collision
+     * @param {Object} flyingConfig - Flying creature configuration (from ENTITIES.DINOSAURS)
+     * @returns {Object} Flying entity with altitude, landing, and flight methods
+     *
+     * @remarks
+     * Provides shared flying behavior for aerial creatures (pterodons, future flying dinos).
+     *
+     * Landing preference system:
+     * - Defines preferred landing spots with weights (e.g., tall trees > rock clusters)
+     * - Respects landing capacity to prevent overcrowding
+     * - Positions creatures around perimeter for multi-capacity spots
+     *
+     * Stamina system:
+     * - Depletes during flight, recovers during rest
+     * - Minimum threshold for takeoff (prevents exhausted creatures from fleeing)
+     *
+     * Usage:
+     * const ptero = {
+     *   ...createFlyingEntity(x, y, size, PTERANODON),
+     *   type: PTERANODON,
+     *   state: FLYING_PATROL,
+     *   // ... other properties
+     * };
+     */
+    const createFlyingEntity = (x, y, radius, flyingConfig) => {
+      return {
+        x,
+        y,
+        radius,
+        altitude: 0, // Start on ground (will take off when player approaches)
+        isFlying: false,
+        exhaustionTimer: flyingConfig.flightDuration, // Full stamina when rested
+        restTimer: Math.floor(flyingConfig.restDuration * 0.5), // Start 50% rested (gives player time to approach)
+        landingSpot: null,                       // Reference to obstacle being perched on
+        diveTarget: null,                        // Cached dive target position
+        diveCooldownTimer: 0,                    // Frames until can dive again
+        telegraphTimer: 0,                       // Telegraph warning countdown
+
+        /**
+         * Find nearest available landing spot based on preferences
+         * @param {Object} game - Game state object
+         * @returns {Object|null} Landing spot {obstacle, position: {x, y}} or null
+         *
+         * @remarks
+         * Scoring algorithm:
+         * 1. Filter obstacles by type preferences
+         * 2. Check capacity: currentOccupants < maxCapacity
+         * 3. Score: (1 / distance) * preferenceWeight * (1 - occupancyRatio)
+         * 4. Return highest scored spot within searchRadius
+         *
+         * Multi-capacity positioning:
+         * - Single capacity (1): Center of obstacle
+         * - Multi capacity (2+): Spread around perimeter using angles
+         */
+        findNearestLandingSpot(game) {
+          const allFlyers = game.dinosaurs.filter(d => d.type.canFly);
+          const preferences = flyingConfig.landingPreferences;
+
+          let bestSpot = null;
+          let bestScore = -Infinity;
+
+          for (const pref of preferences) {
+            let candidates = [];
+
+            if (pref.obstacleTypes) {
+              // Filter obstacles by preferred types
+              candidates = game.obstacles.filter(obs =>
+                pref.obstacleTypes.includes(obs.obstacleType.id.toUpperCase())
+              );
+            } else if (pref.groundLanding) {
+              // Ground landing: find clear spots (simplified - just use entity position)
+              const clearSpot = { x: this.x, y: this.y, obstacleType: { landingCapacity: 1, landingSpacing: 0 } };
+              if (isValidPosition(this.x, this.y, this.radius, game, 0)) {
+                candidates = [clearSpot];
+              }
+            }
+
+            // Score each candidate
+            for (const obstacle of candidates) {
+              const dist = distance(this.x, this.y, obstacle.x, obstacle.y);
+              if (dist > pref.searchRadius) continue;
+
+              // Check capacity
+              const capacity = obstacle.obstacleType.landingCapacity || 0;
+              if (capacity === 0) continue;
+
+              const occupants = allFlyers.filter(f =>
+                f.landingSpot === obstacle && !f.isFlying
+              ).length;
+
+              if (occupants >= capacity) continue; // Full
+
+              // Score: closer + higher weight + less crowded = better
+              const occupancyRatio = occupants / capacity;
+              const score = (1 / (dist + 1)) * pref.weight * (1 - occupancyRatio * 0.3);
+
+              if (score > bestScore) {
+                bestScore = score;
+
+                // Calculate position on/around obstacle
+                let position;
+                if (capacity === 1) {
+                  // Single occupant: center
+                  position = { x: obstacle.x, y: obstacle.y };
+                } else {
+                  // Multi-capacity: spread around perimeter
+                  const angle = (occupants / capacity) * Math.PI * 2;
+                  const spacing = obstacle.obstacleType.landingSpacing || 20;
+                  position = {
+                    x: obstacle.x + Math.cos(angle) * (obstacle.radius + spacing),
+                    y: obstacle.y + Math.sin(angle) * (obstacle.radius + spacing)
+                  };
+                }
+
+                bestSpot = { obstacle, position };
+              }
+            }
+          }
+
+          return bestSpot;
+        },
+
+        /**
+         * Get current stamina as percentage (0-1)
+         * Based on restTimer relative to restDuration
+         */
+        getStamina() {
+          return Math.min(1, this.restTimer / flyingConfig.restDuration);
+        }
+      };
+    };
+
+    /**
      * Update dinosaur AI behavior and movement
      *
      * @param {Object} dino - Dinosaur object
      * @param {Object} player - Player object
      * @param {Object} game - Game state object
      * @param {string} difficulty - Current difficulty setting
+     * @param {Function} playSound - Sound playing function (for warning sounds, not damage)
      *
      * @remarks
      * Three-branch AI system based on dinosaur personality:
@@ -5448,12 +6249,241 @@
      * - PATROL_SPEED_MULTIPLIER (0.3) makes patrol slower than chase/flee
      * - Gives player time to strategize and plan approaches
      */
-    const updateDinosaurAI = (dino, player, game, difficulty) => {
+    const updateDinosaurAI = (dino, player, game, difficulty, playSound) => {
       const dist = distance(dino.x, dino.y, player.x, player.y);
       const diffMod = DIFFICULTY_MODIFIERS[difficulty];
 
       // Apply difficulty scaling to base speed
       dino.speed = dino.baseSpeed * diffMod.enemySpeedMultiplier;
+
+      // Flying dinosaur AI (Pteranodon)
+      if (dino.type.canFly) {
+        const states = GAME_CONSTANTS.AI.STATES;
+
+        // Update dive cooldown
+        if (dino.diveCooldownTimer > 0) {
+          dino.diveCooldownTimer--;
+        }
+
+        // State machine
+        if (dino.state === states.GROUNDED_RESTING) {
+          // Perched on landing spot, recovering stamina
+          dino.vx = 0;
+          dino.vy = 0;
+          dino.altitude = 0;
+          dino.isFlying = false;
+          dino.restTimer++;
+
+          const stamina = dino.getStamina();
+          const playerClose = dist < dino.type.takeoffAlertRange;
+
+          // Take off conditions (scaled stamina requirement by difficulty - lower on hard = takes off sooner)
+          const scaledStaminaRequirement = 1.0 / diffMod.pteranodonRestMultiplier;
+          const scaledMinTakeoff = dino.type.minTakeoffStamina / diffMod.pteranodonRestMultiplier;
+          if (stamina >= scaledStaminaRequirement || (playerClose && stamina >= scaledMinTakeoff)) {
+            dino.state = states.ASCENDING;
+            dino.landingSpot = null; // Release landing spot
+            // Only screech if taking off because player is close (aggressive takeoff)
+            if (playerClose) {
+              playSound(SOUNDS.PTERANODON_SCREECH);
+            }
+          }
+
+        } else if (dino.state === states.ASCENDING) {
+          // Taking off
+          dino.altitude += dino.type.ascentSpeed;
+          dino.isFlying = true;
+
+          // Move away from landing spot slightly
+          if (dino.altitude < dino.type.cruiseAltitude / 2) {
+            const awayAngle = Math.random() * Math.PI * 2;
+            dino.vx = Math.cos(awayAngle) * dino.speed * 0.5;
+            dino.vy = Math.sin(awayAngle) * dino.speed * 0.5;
+          }
+
+          if (dino.altitude >= dino.type.cruiseAltitude) {
+            dino.altitude = dino.type.cruiseAltitude;
+            dino.state = states.FLYING_PATROL;
+            dino.exhaustionTimer = dino.type.flightDuration * diffMod.pteranodonFlightMultiplier; // Reset exhaustion (scaled)
+            dino.restTimer = 0;
+          }
+
+        } else if (dino.state === states.FLYING_PATROL) {
+          // Cruising at altitude, pursuing player or wandering
+          dino.isFlying = true;
+          dino.exhaustionTimer--;
+
+          // Check if player is within aggro range
+          const aggroRange = dino.aggroRange || GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_AGGRO_RANGE;
+
+          if (dist < aggroRange) {
+            // Pursue player: move toward player with slight wandering
+            const targetAngle = Math.atan2(player.y - dino.y, player.x - dino.x);
+            // Smooth pursuit: blend current angle with target angle
+            const angleBlend = 0.05; // How quickly to turn toward player
+            let angleDiff = targetAngle - dino.motionAngle;
+            // Normalize angle difference to [-PI, PI]
+            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            dino.motionAngle += angleDiff * angleBlend;
+            // Add slight wandering for natural flight
+            dino.motionAngle += (Math.random() - 0.5) * 0.02;
+          } else {
+            // Out of range: gentle wandering patrol
+            dino.motionAngle += (Math.random() - 0.5) * 0.05;
+          }
+
+          dino.vx = Math.cos(dino.motionAngle) * dino.speed * states.FLYING_PATROL.speedMultiplier;
+          dino.vy = Math.sin(dino.motionAngle) * dino.speed * states.FLYING_PATROL.speedMultiplier;
+
+          // Avoid collisions with other flying pteranodons
+          const avoidanceRadius = dino.size * 3; // Detection range for avoidance
+          for (const other of game.dinosaurs) {
+            if (other === dino || !other.type.canFly || !other.isFlying) continue;
+
+            const distToOther = distance(dino.x, dino.y, other.x, other.y);
+            if (distToOther < avoidanceRadius && distToOther > 0) {
+              // Steer away from other pteranodon
+              const avoidAngle = Math.atan2(dino.y - other.y, dino.x - other.x);
+              const avoidStrength = (1 - distToOther / avoidanceRadius) * 0.15; // Stronger when closer
+              dino.motionAngle += Math.sin(avoidAngle - dino.motionAngle) * avoidStrength;
+            }
+          }
+
+          // Check dive conditions (range and cooldown scaled by difficulty)
+          const scaledDiveRange = dino.type.diveRange * diffMod.pteranodonDiveRangeMultiplier;
+
+          // Check dive conditions first (higher priority than exhaustion)
+          if (dist < scaledDiveRange && dino.diveCooldownTimer === 0 && player.invincibilityTimer === 0) {
+            dino.state = states.DIVE_TELEGRAPH;
+            dino.telegraphTimer = dino.type.diveTelegraph;
+            dino.diveTarget = { x: player.x, y: player.y };
+            playSound(SOUNDS.PTERANODON_SCREECH);
+            dino.vx = 0;
+            dino.vy = 0;
+          }
+
+          // Check exhaustion only if not initiating a dive
+          if (dino.exhaustionTimer <= 0 && dino.state === states.FLYING_PATROL) {
+            // Exhausted, must land
+            dino.state = states.DESCENDING;
+            const landingSpot = dino.findNearestLandingSpot(game);
+            if (landingSpot) {
+              dino.landingSpot = landingSpot.obstacle;
+              dino.diveTarget = landingSpot.position;
+            } else {
+              // No landing spot available, land on ground at current position
+              dino.diveTarget = { x: dino.x, y: dino.y };
+            }
+          }
+
+        } else if (dino.state === states.DIVE_TELEGRAPH) {
+          // Warning phase before dive
+          dino.telegraphTimer--;
+          dino.vx = 0;
+          dino.vy = 0;
+
+          if (dino.telegraphTimer <= 0) {
+            dino.state = states.DIVING;
+          }
+
+        } else if (dino.state === states.DIVING) {
+          // Diving toward cached target position
+          dino.isFlying = true;
+          const targetX = dino.diveTarget.x;
+          const targetY = dino.diveTarget.y;
+
+          const { dx, dy } = normalize(targetX - dino.x, targetY - dino.y);
+          dino.vx = dx * dino.type.diveSpeed;
+          dino.vy = dy * dino.type.diveSpeed;
+
+          // Descend
+          dino.altitude = Math.max(0, dino.altitude - dino.type.diveDescentSpeed);
+
+          // Check if hit player (state transition and screech, damage handled in updateDinosaurs collision loop)
+          if (circleCollision(dino.x, dino.y, dino.size, player.x, player.y, player.radius) && player.invincibilityTimer === 0) {
+            // Hit! Pull up after successful attack
+            dino.state = states.PULL_UP;
+            dino.diveCooldownTimer = dino.type.diveCooldown * diffMod.pteranodonDiveCooldownMultiplier;
+            playSound(SOUNDS.PTERANODON_SCREECH); // Victory screech
+          } else if (dino.altitude <= 0) {
+            // Missed, hit ground
+            dino.state = states.GROUNDED_STUNNED;
+            dino.altitude = 0;
+            dino.isFlying = false;
+            dino.stunTimer = states.GROUNDED_STUNNED.duration;
+            dino.diveCooldownTimer = dino.type.diveCooldown * diffMod.pteranodonDiveCooldownMultiplier;
+          }
+
+        } else if (dino.state === states.GROUNDED_STUNNED) {
+          // Brief stun after missed dive
+          dino.vx = 0;
+          dino.vy = 0;
+          dino.altitude = 0;
+          dino.isFlying = false;
+          dino.stunTimer--;
+
+          if (dino.stunTimer <= 0) {
+            dino.state = states.ASCENDING;
+            playSound(SOUNDS.PTERANODON_SCREECH);
+          }
+
+        } else if (dino.state === states.PULL_UP) {
+          // Climbing back to cruise altitude after successful dive
+          dino.altitude += dino.type.pullUpSpeed;
+          dino.isFlying = true;
+
+          // Move away from player
+          const { dx, dy } = normalize(dino.x - player.x, dino.y - player.y);
+          dino.vx = dx * dino.speed;
+          dino.vy = dy * dino.speed;
+
+          if (dino.altitude >= dino.type.cruiseAltitude) {
+            dino.altitude = dino.type.cruiseAltitude;
+            dino.state = states.FLYING_PATROL;
+          }
+
+        } else if (dino.state === states.DESCENDING) {
+          // Landing to rest
+          dino.altitude = Math.max(0, dino.altitude - dino.type.descentSpeed);
+          dino.isFlying = true;
+
+          // Move toward landing spot
+          if (dino.diveTarget) {
+            const { dx, dy } = normalize(dino.diveTarget.x - dino.x, dino.diveTarget.y - dino.y);
+            dino.vx = dx * dino.speed * 0.5;
+            dino.vy = dy * dino.speed * 0.5;
+
+            // Check if reached landing spot
+            if (dino.altitude <= 0 && distance(dino.x, dino.y, dino.diveTarget.x, dino.diveTarget.y) < dino.type.landingProximity) {
+              dino.x = dino.diveTarget.x;
+              dino.y = dino.diveTarget.y;
+              dino.state = states.GROUNDED_RESTING;
+              dino.altitude = 0;
+              dino.isFlying = false;
+              dino.vx = 0;
+              dino.vy = 0;
+              dino.restTimer = 0;
+            }
+          } else {
+            // No target, just land
+            if (dino.altitude <= 0) {
+              dino.state = states.GROUNDED_RESTING;
+              dino.altitude = 0;
+              dino.isFlying = false;
+              dino.vx = 0;
+              dino.vy = 0;
+              dino.restTimer = 0;
+            }
+          }
+        }
+
+        // Update animation frame
+        dino.animationFrame = (dino.animationFrame || 0) + 1;
+
+        // Skip ground-based AI
+        return;
+      }
 
       if (dino.territorial) {
         // Territorial AI: defend territory, return to center
@@ -5581,7 +6611,7 @@
         }
 
         // Update AI behavior
-        updateDinosaurAI(dino, game.player, game, difficulty);
+        updateDinosaurAI(dino, game.player, game, difficulty, playSound);
 
         // Check if in tar pit
         let dinoInTarPit = false;
@@ -5753,10 +6783,10 @@
         dino.x = clamp(dino.x, dino.size, game.mapWidth - dino.size);
         dino.y = clamp(dino.y, dino.size, game.mapHeight - dino.size);
 
-        // Boundary bounce for PATROL and FLEE states
+        // Boundary bounce for PATROL, FLEE, and FLYING_PATROL states
         // When dinosaurs hit map edges, bounce them away to prevent getting stuck
         // Chase/Return states recalculate direction each frame, so they don't need this
-        if (dino.state === GAME_CONSTANTS.AI.STATES.PATROL || dino.state === GAME_CONSTANTS.AI.STATES.FLEE) {
+        if (dino.state === GAME_CONSTANTS.AI.STATES.PATROL || dino.state === GAME_CONSTANTS.AI.STATES.FLEE || dino.state === GAME_CONSTANTS.AI.STATES.FLYING_PATROL) {
           const hitLeftOrRight = preClampX !== dino.x;
           const hitTopOrBottom = preClampY !== dino.y;
 
@@ -5777,12 +6807,27 @@
 
         // Check collision with player (only aggressive dinosaurs and not sleeping)
         if (dino.aggressive && !dino.isSleeping) {
+          // Flying creatures only damage during dive attacks, not regular contact
+          if (dino.type.canFly && dino.state !== GAME_CONSTANTS.AI.STATES.DIVING) {
+            continue; // Skip collision check for non-diving flyers
+          }
+
           if (circleCollision(dino.x, dino.y, dino.size, game.player.x, game.player.y, game.player.radius)) {
             if (!isInvincible(game.player)) {
               const invincibilityFrames = Math.round(GAME_CONSTANTS.CORE.COMBAT.INVINCIBILITY_FRAMES * diffMod.invincibilityMultiplier);
-              game.player.health -= GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_DAMAGE;
+
+              // Check if this is a pteranodon dive attack (special damage and no pushback)
+              const isDiveAttack = dino.type.canFly && dino.state === GAME_CONSTANTS.AI.STATES.DIVING;
+              const damage = isDiveAttack ? dino.type.diveContactDamage : GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_DAMAGE;
+
+              game.player.health -= damage;
               grantInvincibility(game.player, invincibilityFrames);
-              pushEntityAway(game.player, dino.x, dino.y, GAME_CONSTANTS.CORE.COMBAT.PUSHBACK_FORCE);
+
+              // Only pushback for ground dinosaurs, not dive attacks
+              if (!isDiveAttack) {
+                pushEntityAway(game.player, dino.x, dino.y, GAME_CONSTANTS.CORE.COMBAT.PUSHBACK_FORCE);
+              }
+
               stateAccumulator.playerHealth = game.player.health;
               playSound(SOUNDS.PLAYER_HURT);
 
@@ -5830,6 +6875,7 @@
     // Weapon bullet factory functions
     GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR.bulletFactory = createBullet;
     GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.bulletFactory = createTranquilizer;
+    // GUIDED_MISSILE.bulletFactory bound at game initialization (requires game context for target acquisition)
 
     // Dinosaur draw functions
     GAME_CONSTANTS.ENTITIES.DINOSAURS.VELOCIRAPTOR.drawFunction = drawVelociraptor;
@@ -5838,6 +6884,7 @@
     GAME_CONSTANTS.ENTITIES.DINOSAURS.PARASAUROLOPHUS.drawFunction = drawParasaurolophus;
     GAME_CONSTANTS.ENTITIES.DINOSAURS.TRICERATOPS.drawFunction = drawTriceratops;
     GAME_CONSTANTS.ENTITIES.DINOSAURS.DILOPHOSAURUS.drawFunction = drawDilophosaurus;
+    GAME_CONSTANTS.ENTITIES.DINOSAURS.PTERANODON.drawFunction = drawPteranodon;
 
     // Obstacle draw functions
     GAME_CONSTANTS.ENTITIES.OBSTACLES.TREE.drawFunction = drawTree;
@@ -5866,6 +6913,7 @@
       maxHealth,
       ammo,
       tranqAmmo,
+      missileAmmo,
       currentWeapon,
       score,
       currentLevel,
@@ -5917,6 +6965,16 @@
           >
             <span className="text-base">{GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.icon}</span>
             <span className="text-lg font-bold font-mono text-right flex-1">{tranqAmmo}</span>
+          </div>
+
+          {/* Missile Ammo - Fixed width with monospace, clickable on mobile */}
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded min-w-[4.5rem] ${currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE ? 'bg-red-600' : 'bg-gray-700'} ${isTouchDevice ? 'cursor-pointer active:scale-95 transition-transform' : ''}`}
+            onClick={isTouchDevice && currentWeapon !== GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE ? onWeaponSwitch : undefined}
+            style={isTouchDevice ? { touchAction: 'manipulation' } : {}}
+          >
+            <span className="text-base">{GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.icon}</span>
+            <span className="text-lg font-bold font-mono text-right flex-1">{missileAmmo ?? 0}</span>
           </div>
 
           {/* Status Icons - Compact badges */}
@@ -6302,6 +7360,7 @@
       const [playerHealth, setPlayerHealth] = useState(GAME_CONSTANTS.CORE.PLAYER.MAX_HEALTH);
       const [playerAmmo, setPlayerAmmo] = useState(GAME_CONSTANTS.CORE.PLAYER.START_AMMO);
       const [playerTranqAmmo, setPlayerTranqAmmo] = useState(GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.startAmmo);
+      const [playerMissileAmmo, setPlayerMissileAmmo] = useState(GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.ammoConfig.startAmmo);
       const [currentWeapon, setCurrentWeapon] = useState(GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR);
       const [currentLevel, setCurrentLevel] = useState(1);
       const [speedBoostActive, setSpeedBoostActive] = useState(false);
@@ -6640,6 +7699,7 @@
           maxHealth: GAME_CONSTANTS.CORE.PLAYER.MAX_HEALTH,
           ammo: GAME_CONSTANTS.CORE.PLAYER.START_AMMO,
           tranqAmmo: GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER.startAmmo,
+          missileAmmo: GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.ammoConfig.startAmmo,
           currentWeapon: GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR,
           speed: GAME_CONSTANTS.CORE.PLAYER.BASE_SPEED,
           baseSpeed: GAME_CONSTANTS.CORE.PLAYER.BASE_SPEED,
@@ -6650,11 +7710,13 @@
           invincibilityTimer: 0
         },
         bullets: [],
+        missiles: [],
         spit: [],
         dinosaurs: [],
         territories: [],
         ammoPickups: [],
         tranqDepots: [],
+        missileDepots: [],
         ammoDepots: [],
         floatingTexts: [],
         powerups: [],
@@ -6705,9 +7767,11 @@
           zapTimer: 0
         };
         game.bullets = [];
+        game.missiles = [];
         game.spit = [];
         game.ammoPickups = [];
         game.tranqDepots = [];
+        game.missileDepots = [];
         game.ammoDepots = [];
         game.floatingTexts = [];
         game.powerups = [];
@@ -6811,7 +7875,7 @@
             for (let i = 0; i < guardType.count; i++) {
               // Calculate evenly spaced angle around exit
               const angle = (guardIndex / totalGuards) * 360;
-              const guard = createExitGuard(guardType.type, angle, config.exitX, config.exitY, exitTerritoryIndex, difficulty);
+              const guard = createExitGuard(guardType.type, angle, config.exitX, config.exitY, exitTerritoryIndex, difficulty, game);
               game.dinosaurs.push(guard);
               guardIndex++;
             }
@@ -6843,9 +7907,13 @@
               game
             );
 
-            // Mix in navigation/avoidance behavior
+            // Mix in navigation/avoidance or flying behavior
+            const baseMixin = dinoConfig.type.canFly
+              ? createFlyingEntity(spawnPos.x, spawnPos.y, dinoConfig.type.baseSize, dinoConfig.type)
+              : createNavigatingEntity(spawnPos.x, spawnPos.y, dinoConfig.type.baseSize, GAME_CONSTANTS.AI.HAZARD_AVOIDANCE);
+
             const dino = {
-              ...createNavigatingEntity(spawnPos.x, spawnPos.y, dinoConfig.type.baseSize, GAME_CONSTANTS.AI.HAZARD_AVOIDANCE),
+              ...baseMixin,
               health: dinoConfig.type.health,
               maxHealth: dinoConfig.type.health,
               speed: baseSpeed * diffMod.enemySpeedMultiplier, // Apply difficulty
@@ -6858,7 +7926,7 @@
               territorial: dinoConfig.type.territorial,
               aggroRange: dinoConfig.type.aggressive ? GAME_CONSTANTS.CORE.COMBAT.DINOSAUR_AGGRO_RANGE : 0,
               fleeRange: dinoConfig.type.aggressive ? 0 : GAME_CONSTANTS.AI.STATES.FLEE.range,
-              state: GAME_CONSTANTS.AI.STATES.PATROL,
+              state: dinoConfig.type.canFly ? GAME_CONSTANTS.AI.STATES.GROUNDED_RESTING : GAME_CONSTANTS.AI.STATES.PATROL,
               motionAngle: Math.random() * Math.PI * 2,
               fleeDurationTimer: 0, // Frames remaining before recalculating flee direction
               isSleeping: false,
@@ -6868,6 +7936,11 @@
               facingLeft: false, // Track facing direction to prevent rapid flipping
               zapTimer: 0, // Electric shock animation timer
               avoidFences: [], // Array of {fence, timer} objects for learned fence avoidance
+              // Dive attack properties (for flying dinosaurs)
+              diveCooldownTimer: dinoConfig.type.canFly ? 0 : undefined,
+              diveTarget: dinoConfig.type.canFly ? null : undefined,
+              telegraphTimer: dinoConfig.type.canFly ? 0 : undefined,
+              stunTimer: dinoConfig.type.canFly ? 0 : undefined,
               // Animation properties
               animationFrame: 0, // Counter incremented each frame when moving
               legCycle: 0 // Sine wave value for leg positions (-1 to 1)
@@ -6907,13 +7980,7 @@
           game.powerups.push(createPowerup(game));
         }
 
-        // Create tranquilizer depots
-        const depotCount = GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.TRANQ.COUNT_BASE + level;
-        for (let i = 0; i < depotCount; i++) {
-          game.tranqDepots.push(createTranqDepot(game));
-        }
-
-        // Create regular ammo depots (minimal ammo for strongest guard + 1 buffer)
+        // Create regular ammo depots FIRST (fixed positions - other depots will avoid these)
         // Depot 1: Near spawn, visible from start
         game.ammoDepots.push(createAmmoDepot(250, 150, config.ammoPerDepot));
 
@@ -6921,6 +7988,18 @@
         const farCornerX = game.mapWidth - 200;
         const farCornerY = game.mapHeight - 200;
         game.ammoDepots.push(createAmmoDepot(farCornerX, farCornerY, config.ammoPerDepot));
+
+        // Create tranquilizer depots (will avoid ammo depots via isValidPosition)
+        const depotCount = GAME_CONSTANTS.WORLD.SPAWN.DEPOTS.TRANQ.COUNT_BASE + level;
+        for (let i = 0; i < depotCount; i++) {
+          game.tranqDepots.push(createTranqDepot(game));
+        }
+
+        // Create missile depots (will avoid ammo and tranq depots via isValidPosition)
+        const missileDepotCount = config.missileDepots || 0;
+        for (let i = 0; i < missileDepotCount; i++) {
+          game.missileDepots.push(createMissileDepot(game));
+        }
 
         // Create electric fences
         for (let i = 0; i < config.electricFences; i++) {
@@ -6931,6 +8010,11 @@
         for (let i = 0; i < config.duckFamilies; i++) {
           game.duckFamilies.push(createDuckFamily(game));
         }
+
+        // Bind guided missile factory with game context
+        // This allows the factory to access game.dinosaurs for target acquisition
+        // while maintaining the standard bulletFactory(fromX, fromY, toX, toY) signature
+        GAME_CONSTANTS.ENTITIES.WEAPONS.GUIDED_MISSILE.bulletFactory = createGuidedMissile(game);
       }, [difficulty]);
 
       // ============================================================================
@@ -6955,6 +8039,7 @@
         const previousHealth = game.player.health;
         const previousAmmo = game.player.ammo;
         const previousTranqAmmo = game.player.tranqAmmo;
+        const previousMissileAmmo = game.player.missileAmmo;
 
         // Initialize new level (resets everything)
         initGame(next);
@@ -6966,11 +8051,13 @@
           game.player.health = previousHealth;
           game.player.ammo = previousAmmo;
           game.player.tranqAmmo = previousTranqAmmo;
+          game.player.missileAmmo = previousMissileAmmo;
 
           // Update React state to match
           setPlayerHealth(previousHealth);
           setPlayerAmmo(previousAmmo);
           setPlayerTranqAmmo(previousTranqAmmo);
+          setPlayerMissileAmmo(previousMissileAmmo);
         }
 
         setGameState(GAME_CONSTANTS.CORE.GAME_STATES.PLAYING);
@@ -6979,7 +8066,8 @@
       // Ammo setters mapping for fireWeapon function
       const ammoSetters = useMemo(() => ({
         playerAmmo: setPlayerAmmo,
-        playerTranqAmmo: setPlayerTranqAmmo
+        playerTranqAmmo: setPlayerTranqAmmo,
+        playerMissileAmmo: setPlayerMissileAmmo
       }), []);
 
       // Desktop Input Handlers
@@ -7009,7 +8097,7 @@
 
         // Handle weapon switching with Q key
         if (key === 'q') {
-          game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR;
+          game.player.currentWeapon = cycleWeapon(game.player.currentWeapon);
           setCurrentWeapon(game.player.currentWeapon);
         }
       }, [playSound]);
@@ -7274,7 +8362,7 @@
 
           // Handle touch weapon switching
           if (game.touch.switchWeapon) {
-            game.player.currentWeapon = game.player.currentWeapon === GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR ? GAME_CONSTANTS.ENTITIES.WEAPONS.TRANQUILIZER : GAME_CONSTANTS.ENTITIES.WEAPONS.REGULAR;
+            game.player.currentWeapon = cycleWeapon(game.player.currentWeapon);
             stateAccumulator.currentWeapon = game.player.currentWeapon;
             game.touch.switchWeapon = false;
           }
@@ -7304,6 +8392,7 @@
 
           updateCollectibles(game, difficulty, playSound, stateAccumulator);
           updateBullets(game, playSound, stateAccumulator);
+          updateMissiles(game, playSound, stateAccumulator);
           updateSpitProjectiles(game, difficulty, playSound, stateAccumulator);
           updateDinosaurs(game, difficulty, playSound, stateAccumulator);
           updateDuckFamilies(game);
@@ -7314,6 +8403,7 @@
             playerHealth: setPlayerHealth,
             playerAmmo: setPlayerAmmo,
             playerTranqAmmo: setPlayerTranqAmmo,
+            playerMissileAmmo: setPlayerMissileAmmo,
             currentWeapon: setCurrentWeapon,
             speedBoostActive: setSpeedBoostActive,
             score: (val) => setScore(s => s + val),
@@ -7364,8 +8454,9 @@
             game.obstacles,        // Layer 6: Blocking obstacles (trees, bushes)
             game.powerups,         // Layer 7: Collectible powerups
             game.tranqDepots,      // Layer 8: Tranquilizer depots
-            game.ammoDepots,       // Layer 9: Regular ammo depots
-            game.territories       // Layer 10: Territory markers
+            game.missileDepots,    // Layer 9: Missile depots
+            game.ammoDepots,       // Layer 10: Regular ammo depots
+            game.territories       // Layer 11: Territory markers
           );
 
           // Draw duck families (ambient wildlife)
@@ -7423,6 +8514,11 @@
           game.dinosaurs.forEach(dino => {
             const screenX = dino.x - game.cameraX;
             const screenY = dino.y - game.cameraY;
+
+            // Draw shadow in screen space (before transform) for flying creatures
+            if (dino.type.canFly) {
+              drawFlyerShadow(ctx, screenX, screenY, dino);
+            }
 
             ctx.save();
             ctx.translate(screenX, screenY);
@@ -7491,10 +8587,11 @@
           // Draw player
           drawPlayer(ctx, game.player, game.cameraX, game.cameraY, game.mouseX, game.mouseY, game.speedBoostTimer);
 
-          // Draw projectiles (bullets and spit) using batch rendering
+          // Draw projectiles (bullets, missiles, and spit) using batch rendering
           drawEntities(ctx, game.cameraX, game.cameraY,
             game.bullets,  // Layer 1: Bullets
-            game.spit      // Layer 2: Spit projectiles
+            game.missiles, // Layer 2: Missiles
+            game.spit      // Layer 3: Spit projectiles
           );
 
           // Draw ammo pickups (using instance methods)
@@ -7593,6 +8690,7 @@
                 maxHealth={5}
                 ammo={playerAmmo}
                 tranqAmmo={playerTranqAmmo}
+                missileAmmo={playerMissileAmmo}
                 currentWeapon={currentWeapon}
                 score={score}
                 currentLevel={currentLevel}

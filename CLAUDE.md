@@ -332,6 +332,7 @@ The audio system uses the strategy pattern to avoid if/else type discrimination:
 - `applyCanvasStyles(ctx, styles)` - Batch apply canvas state (fillStyle, lineWidth, shadowBlur, etc.)
 - `toScreenCoords(worldX, worldY, cameraX, cameraY)` - Convert world coordinates to screen coordinates
 - `drawEntities(ctx, cameraX, cameraY, ...entityArrays)` - Batch render entity arrays (argument order = z-index)
+- `drawFlyerShadow(ctx, screenX, screenY, flyer)` - Altitude-based shadow rendering for flying creatures (screen space)
 
 **Game Logic Utilities:**
 
@@ -384,6 +385,8 @@ The audio system uses the strategy pattern to avoid if/else type discrimination:
 - `createBullet(fromX, fromY, toX, toY)` - Regular bullets (physics + rendering)
 - `createTranquilizer(fromX, fromY, toX, toY)` - Tranquilizer darts (physics + rendering)
 - `createSpitProjectile(fromX, fromY, toX, toY, dinoType)` - Spit attacks (physics + rendering)
+- `createGuidedMissile(fromX, fromY)` - Homing missiles that auto-track flying targets (physics + rendering + AI)
+- `createMissileDepot(game)` - Missile ammo crates (uses `spawnWithCollisionCheck`, guaranteed to succeed)
 
 ## Game Loop Structure
 
@@ -468,6 +471,70 @@ Duck families demonstrate a complete implementation of the architectural pattern
 - `family.findNearestPond(game, excludePond)` - Pathfinding
 - `family.updateDucklings()` - Chain following logic
 - `mama.applyAvoidance(game)` - Navigation mixin method (inherited from `createNavigatingEntity`)
+
+## Flying Creatures Pattern: Pteranodons
+
+Pteranodons demonstrate aerial AI with altitude-based mechanics and dive attacks:
+
+**Flight State Machine:**
+
+- GROUNDED_RESTING → ASCENDING → FLYING_PATROL → DIVE_TELEGRAPH → DIVING → PULL_UP → DESCENDING → GROUNDED_STUNNED
+- Each state defined in `GAME_CONSTANTS.AI.STATES` with flight-specific behavior
+- States include `avoidsHazards` and `speedMultiplier` properties
+  - FLYING_PATROL: `avoidsHazards: false` (flying creatures ignore ground hazards)
+  - Boundary bounce system prevents getting stuck at map edges
+
+**Altitude System:**
+
+- `altitude` property tracks height above ground (0 = grounded, maxAltitude = full height)
+- `cruiseAltitude`: Normal patrol height (80 pixels)
+- `vulnerableAltitude`: Below this height, regular weapons can hit (20 pixels)
+- Missiles can hit at any altitude
+
+**Dive Attack Mechanics:**
+
+- **Telegraph phase**: 1-second warning before dive (stationary, screeching)
+- **Diving phase**: Fast shallow swoop toward cached player position
+  - `diveSpeed: 6` pixels/frame horizontal
+  - `diveDescentSpeed: 2` pixels/frame vertical
+  - Ratio 3:1 allows covering 240 pixels from 80 altitude
+- **Pull-up phase**: Recovery after successful hit
+- **Stunned phase**: Recovery after crash-landing
+
+**Stamina & Exhaustion:**
+
+- `flightDuration: 1800` frames (30 seconds) before exhaustion
+- `restDuration: 180` frames (3 seconds) to recover
+- `minTakeoffStamina: 0.3` (30% required to take off)
+- Aggressive takeoff with screech when player is close
+
+**Landing Behavior:**
+
+- Weighted preference system: TALL_TREE (50%) → ROCK_CLUSTER (30%) → TREE (15%) → BOULDER (5%) → ground (1%)
+- `sharesLandingSpots: true` - multiple pteranodons can perch together
+- `respectsCapacity: true` - checks availability before landing
+
+**Collision Avoidance:**
+
+- Pteranodons steer away from each other while flying
+- Boundary bounce system prevents edge-of-map circling
+- Uses existing boundary reflection logic from ground dinosaurs
+
+**Rendering:**
+
+- **Shadow rendering**: Separate from body for proper z-ordering
+  - `drawFlyerShadow()` called in screen space before transform
+  - Shadow scales and fades with altitude
+  - Elliptical shadow shape for realistic appearance
+- **Body rendering**: `drawPteranodon()` draws body in local space after transform
+  - Flying pose: wings spread with flapping animation
+  - Grounded pose: wings folded, legs visible
+
+**Instance Methods:**
+
+- `ptero.findNearestLandingSpot(game)` - Landing site selection
+- `ptero.draw(ctx)` - Body rendering (inherited pattern)
+- Shadow drawn separately via `drawFlyerShadow(ctx, screenX, screenY, ptero)`
 
 ## Code Organization Rules
 

@@ -20,7 +20,7 @@ Jurassic Escape is a top-down action game built entirely in a single HTML file u
 
 - **WASD** or **Arrow Keys**: Move your character
 - **Spacebar**: Jump over obstacles
-- **Q**: Switch between regular gun (💥) and tranquilizer (💉)
+- **Q**: Switch between regular gun (💥), tranquilizer (💉), and guided missile (🚀)
 - **Mouse**: Aim your weapon (or enable auto-aim 🎯 in Settings for trackpad users)
 - **Click**: Shoot (consumes ammo)
 - **ESC**: Pause game menu
@@ -157,6 +157,17 @@ This provides two debug configurations:
   - Spit attack: ranged projectile dealing 1 damage
   - Returns to territory center when straying too far
 
+**Flying Predators** (aerial threat):
+
+- **Pteranodon**: Flying reptile with altitude-based combat (2 HP, 125 points, 1 tranq shot)
+  - Patrols at 80-pixel cruise altitude for 30 seconds before needing rest
+  - **Dive attack**: Telegraph warning (screech + stationary) → fast shallow swoop
+  - Vulnerable to regular bullets only when below 20-pixel altitude
+  - Can be hit by guided missiles at any altitude
+  - Perches on tall trees, rock clusters, or other high points to rest
+  - Collision avoidance prevents mid-air crashes with other pteranodons
+  - Gets stunned if dive attack misses and crashes into ground
+
 **Peaceful Herbivores** (flee from player, no damage):
 
 - **Parasaurolophus**: Duck-billed with head crest (2 HP, 50 points, 1 tranq shot)
@@ -181,13 +192,21 @@ This provides two debug configurations:
   - Bounces vertically 10 times with decreasing amplitude
   - Physics simulation with gravity and damping (no horizontal movement)
   - **Difficulty scaling**: Affects bounce height/duration (Easy: taller/slower bounces, Hard: shorter/faster bounces) - all difficulties have 10 bounces total
-- **💉 Tranquilizer Depot**: Green crate with 5 tranquilizer darts (randomly placed)
+- **💉 Tranquilizer Depot**: Green crate with 7 tranquilizer darts (randomly placed)
+  - Base count: 4 depots + 1 per level (5/6/7 depots across levels 1/2/3)
 - **💥 Regular Ammo Depot**: Blue crate with minimal regular ammunition (fixed locations)
   - 2 depots per level to prevent softlocks at exit guards
   - One near spawn point (visible from start)
   - One in furthest corner of map (rewards exploration)
   - Provides just enough ammo for strongest guard + 1 buffer
   - Total ammo insufficient without collecting drops - resource management is key!
+- **🚀 Missile Depot**: Dark red crate with 3 guided missiles (randomly placed)
+  - Level 1: 2 depots (6 missiles for 5 pteranodons)
+  - Level 2: 4 depots (12 missiles for 10 pteranodons)
+  - Level 3: 5 depots (15 missiles for 15 pteranodons)
+  - Missiles auto-track flying enemies within 400-pixel range
+  - Instant kill on pteranodons, guaranteed hit at any altitude
+  - Limited capacity (max 5 missiles) - use wisely!
 
 ## ⚠️ Environmental Hazards
 
@@ -221,14 +240,21 @@ This provides two debug configurations:
   - Guards patrol 300-pixel territory around exit (larger than normal territories)
   - Defeat all guards to unlock the golden exit
 - **Environmental hazards**: Tar pits and ponds that slow movement, electric fences that damage/stun
-- **Dual weapon system**: Regular gun and tranquilizer dart
-  - **Tranquilizer**: Non-lethal option that puts dinosaurs to sleep
-  - Multi-shot mechanic: larger dinosaurs need more shots
-  - Awards 50% points when tranquilizing vs 100% for killing
-  - Sleeping dinosaurs display Z-Z-Z animation and don't attack
-- **Six dinosaur species** with distinct behaviors:
+- **Triple weapon system**: Regular gun, tranquilizer dart, and guided missile
+  - **Regular Gun (💥)**: Standard weapon, unlimited ammo via pickups
+  - **Tranquilizer (💉)**: Non-lethal option that puts dinosaurs to sleep
+    - Multi-shot mechanic: larger dinosaurs need more shots
+    - Awards 50% points when tranquilizing vs 100% for killing
+    - Sleeping dinosaurs display Z-Z-Z animation and don't attack
+  - **Guided Missile (🚀)**: Anti-air weapon for pteranodons
+    - Auto-tracks flying enemies within 400-pixel lock-on range
+    - Instant kill (999 damage) on pteranodons at any altitude
+    - Limited capacity (max 5) and precious supply - strategic use required
+    - Smoke trail visual effect, 5-second max flight time
+- **Seven dinosaur species** with distinct behaviors:
   - Aggressive predators that chase and attack
   - Territorial predators that defend marked zones with spit attacks
+  - Flying predators with aerial patrol and dive attacks
   - Peaceful herbivores that flee when approached
 - **Mobile and desktop support** with responsive canvas and touch controls
   - Automatic orientation detection: portrait mode uses 4:3 canvas, landscape mode uses 16:9 widescreen
@@ -278,6 +304,9 @@ Place the following `.wav` files in the `./assets/` folder for full audio experi
 - `shoot.wav` - Firing regular gun
 - `tranq_hit.wav` - Tranquilizer dart hits dinosaur
 - `tranq_shoot.wav` - Firing tranquilizer dart
+- `missile_launch.wav` - Firing guided missile
+- `missile_explode.wav` - Missile hits target
+- `alert.wav` - Pteranodon screech (aggressive takeoff/dive attack)
 
 **Pickup Sounds:**
 
