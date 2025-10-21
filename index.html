@@ -7309,19 +7309,10 @@
             }
           }
 
-          // Update collectibles
           updateCollectibles(game, difficulty, playSound, stateAccumulator);
-
-          // Update bullets
           updateBullets(game, playSound, stateAccumulator);
-
-          // Update spit projectiles
           updateSpitProjectiles(game, difficulty, playSound, stateAccumulator);
-
-          // Update dinosaurs (includes AI, movement, collisions)
           updateDinosaurs(game, difficulty, playSound, stateAccumulator);
-
-          // Update duck families (ambient wildlife)
           updateDuckFamilies(game);
 
           // Batch apply all state updates (reduces re-renders)
